@@ -1,0 +1,40 @@
+# Building process toolkit (used to generate the plugin, not part of the plugin itself)
+building-process/
+
+# Documentation (generated during research phase)
+docs/
+
+# macOS
+.DS_Store
+
+# CMake build output
+build/
+cmake-build-*/
+
+# JUCE generated
+Builds/
+JuceLibraryCode/
+
+# IDE
+.vs/
+.vscode/
+*.xcodeproj/
+*.xcworkspace/
+
+# Node (WebUI)
+node_modules/
+dist/
+
+# Compiled objects
+*.o
+*.obj
+*.a
+*.lib
+*.dylib
+*.so
+*.dll
+
+# Plugin binaries
+*.vst3
+*.component
+*.aax
