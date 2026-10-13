@@ -1,0 +1,44 @@
+#pragma once
+
+#include <juce_audio_processors/juce_audio_processors.h>
+
+namespace ParameterIDs
+{
+    // Stage 1 — InputGain
+    static constexpr const char* inputPad      = "inputPad";
+    static constexpr const char* inputHiLo     = "inputHiLo";
+
+    // Stage 2 — PreFilters
+    static constexpr const char* bright        = "bright";
+    static constexpr const char* ultraHi       = "ultraHi";
+    static constexpr const char* ultraLo       = "ultraLo";
+
+    // Stage 3 — TubePreamp
+    static constexpr const char* gain          = "gain";
+    static constexpr const char* tubeGain      = "tubeGain";
+
+    // Stage 4 — ToneStack
+    static constexpr const char* bass          = "bass";
+    static constexpr const char* midrange      = "midrange";
+    static constexpr const char* midFreq       = "midFreq";
+    static constexpr const char* treble        = "treble";
+
+    // Stage 5 — GraphicEQ
+    static constexpr const char* geqOn         = "geqOn";
+    static constexpr const char* geq33         = "geq33";
+    static constexpr const char* geq80         = "geq80";
+    static constexpr const char* geq150        = "geq150";
+    static constexpr const char* geq300        = "geq300";
+    static constexpr const char* geq600        = "geq600";
+    static constexpr const char* geq900        = "geq900";
+    static constexpr const char* geq2k         = "geq2k";
+    static constexpr const char* geq5k         = "geq5k";
+    static constexpr const char* geq8k         = "geq8k";
+    static constexpr const char* geqLevel      = "geqLevel";
+
+    // Stage 6 — MasterVolume
+    static constexpr const char* master        = "master";
+
+    // Phase 2 — Preset selection
+    static constexpr const char* presetSelect  = "presetSelect";
+}
