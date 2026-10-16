@@ -7,12 +7,12 @@ on the DSP in parallel on another branch. The repo-level `../CLAUDE.md` also app
 Rebuild the UI to match the reference plugin (Brainworx **Ampeg SVT-3 PRO**,
 Plugin Alliance) following the spec:
 
-- **Spec (authority for this work):** `../docs/ui/Ampeg SVT-3 Pro UI - Svelte Specification v2.md`
+- **Spec (authority for this work, not in git):** `/Users/italo/Desktop/Temp Projects/amp-bass/docs/ui/Ampeg SVT-3 Pro UI - Svelte Specification v2.md`
 - **Reference screenshot** (not in git): `/Users/italo/Desktop/Temp Projects/amp-bass/building-process/references/UI-reference-AMPEG.png`
 - **Reference plugin manual** (not in git): `/Users/italo/Desktop/Temp Projects/amp-bass/building-process/references/ampeg_svt3pro_manual.md`
 
-Do not copy the screenshot, manual or Ampeg logo into the repo (third-party / trademark;
-spec §12 #14).
+Do not copy the spec, screenshot, manual or Ampeg logo into the repo, and never commit
+`building-process/` (the user keeps these local; Ampeg is a trademark, spec §12 #14).
 
 ## Scope — what this session may touch
 - ✅ Anything under `WebUI/` (except `src/bridge/juce/`, which is vendored JUCE code).
@@ -42,13 +42,11 @@ schedule it.
 ## Spec vs current parameters — known gaps (need user sign-off / C++ work)
 | Spec item | Current plugin | Action in this session |
 |---|---|---|
-| GEQ ±12 dB all bands, "9k" band (§12 #3–4) | per-band ±15/±8/±9/±10, ID `geq8k` | Show the printed scale from the spec, but read real ranges from the relay. Never rename `geq8k` (IDs are frozen). |
-| LEVEL −10…+8 (§12 #5) | −10…+10 | Same as above. |
+| GEQ ±12 dB all bands, LEVEL −10…+8 (§12 #3–5) | **Done in C++** (user confirmed). ID `geq8k` stays; label it "9k" if the spec says so | Read ranges from the relay; update any hard-coded scales in the old UI. |
 | Dry/Wet, Input HI/LO removed (§12 #6–7) | params `dryWet`, `inputHiLo` exist | Hide from faceplate; don't delete params. |
-| `mute`, `ampPower`, toolbar `bypass` | don't exist | Placeholders + PARAM-REQUESTS entry. |
-| PEAK/MUTE `clip` flag | no meter from C++ | Placeholder `clip = false` + request. |
-| Defaults `bright` on, `geqOn` on (§7.3) | both off in C++ | Request; don't fake it in JS. |
-| Presets A–D (§4, §8) | `presetSelect` int 1–4, no DSP | JS-only slots are lost when the DAW reloads the session — mark as placeholder + request persistence in plugin state. |
+| `mute`, POWER rocker, toolbar bypass, PEAK/MUTE LED | being designed in the DSP session (POWER and toolbar icon are likely **one** bypass param) | Placeholders only; check PARAM-REQUESTS.md / ask the user before wiring. |
+| Defaults `bright` on, `geqOn` on (§7.3) | **User decision: everything off by default** | Follow C++ defaults; ignore the spec here. |
+| Presets A–D (§4, §8) | `presetSelect` int 1–4, no DSP | **Out of scope for now** (user decision). Toolbar buttons may be visual stubs. |
 
 ## Svelte / tooling
 - Svelte 5. Existing components use legacy `export let`; new components may use runes

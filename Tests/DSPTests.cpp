@@ -358,7 +358,7 @@ namespace
         add ("treble 0",          [] (Params& p) { p.treble = 0; });
         add ("treble 1",          [] (Params& p) { p.treble = 1; });
         add ("geq600 +8, EQ off", [] (Params& p) { p.geq[4] = 8; }, true);
-        add ("geqLevel +10, EQ off", [] (Params& p) { p.geqLevel = 10; }, true);
+        add ("geqLevel +8, EQ off", [] (Params& p) { p.geqLevel = 8; }, true);
         add ("geq600 +8, EQ on",  [] (Params& p) { p.geq[4] = 8; }, false, [] (Params& p) { p.geqOn = true; });
         add ("master 1",          [] (Params& p) { p.master = 1; });
         add ("dryWet 0 (dry)",    [] (Params& p) { p.dryWet = 0; });
@@ -406,7 +406,7 @@ namespace
             p.gain = p.tubeGain = p.bass = p.mid = p.treble = p.master = 1.0f;
             p.bright = p.ultraHi = p.ultraLo = p.geqOn = true;
             for (auto& g : p.geq) g = 8.0f;
-            p.geqLevel = 10.0f;
+            p.geqLevel = 8.0f;
             juce::Random rng (1234);
             std::vector<float> noise (static_cast<size_t> (kSr * 2.0));
             for (auto& s : noise) s = rng.nextFloat() * 2.0f - 1.0f;
