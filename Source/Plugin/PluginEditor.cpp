@@ -25,9 +25,9 @@ AmpBassAudioProcessorEditor::AmpBassAudioProcessorEditor (AmpBassAudioProcessor&
     webView = std::make_unique<juce::WebBrowserComponent> (options);
     addAndMakeVisible (webView.get());
 
-    setSize (960, 700);
+    setSize (1350, 460);
     setResizable (true, true);
-    setResizeLimits (450, 280, 1800, 1120);
+    setResizeLimits (675, 230, 1800, 620);
 
     // Navigate to the embedded index.html via resource provider
     webView->goToURL (juce::WebBrowserComponent::getResourceProviderRoot() + "index.html");

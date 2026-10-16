@@ -16,7 +16,8 @@ export type SliderParamId =
     | 'geq2k'
     | 'geq5k'
     | 'geq8k'
-    | 'geqLevel';
+    | 'geqLevel'
+    | 'dryWet';
 
 export type ToggleParamId =
     | 'inputPad'

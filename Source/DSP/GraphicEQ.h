@@ -9,7 +9,7 @@ class GraphicEQ
 public:
     static constexpr int kNumBands = 9;
 
-    void prepare (double sampleRate, int maxBlockSize)
+    void prepare (double sampleRate, int /*maxBlockSize*/)
     {
         sr = sampleRate;
         crossfadeSamples = static_cast<int> (sampleRate * 64.0 / 48000.0); // ~64 samples at 48k
@@ -35,8 +35,6 @@ public:
 
         smoothBypass.reset (sampleRate, static_cast<double> (crossfadeSamples) / sampleRate);
         smoothBypass.setCurrentAndTargetValue (0.0f); // 0 = bypassed, 1 = active
-
-        dryBuffer.setSize (2, maxBlockSize);
     }
 
     void reset()
@@ -59,11 +57,7 @@ public:
     void process (juce::AudioBuffer<float>& buffer)
     {
         const int numChannels = buffer.getNumChannels();
-        const int numSamples  = juce::jmin (buffer.getNumSamples(), dryBuffer.getNumSamples());
-
-        // Save dry signal for crossfade
-        for (int ch = 0; ch < numChannels; ++ch)
-            dryBuffer.copyFrom (ch, 0, buffer, ch, 0, numSamples);
+        const int numSamples  = buffer.getNumSamples();
 
         static constexpr int kCoeffUpdateInterval = 32;
 
@@ -86,17 +80,18 @@ public:
 
             for (int ch = 0; ch < numChannels; ++ch)
             {
-                float wet = buffer.getWritePointer (ch)[s];
+                float* data = buffer.getWritePointer (ch);
+                const float dry = data[s];
 
                 // Process through all 9 bands
+                float wet = dry;
                 for (int b = 0; b < kNumBands; ++b)
                     wet = bands[b][ch].processSample (wet);
 
                 wet *= levelGain;
 
                 // Crossfade between dry and wet based on bypass state
-                const float dry = dryBuffer.getReadPointer (ch)[s];
-                buffer.getWritePointer (ch)[s] = dry + bypassMix * (wet - dry);
+                data[s] = dry + bypassMix * (wet - dry);
             }
         }
     }
@@ -109,6 +104,4 @@ private:
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothBandDb[kNumBands];
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothLevel;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothBypass;
-
-    juce::AudioBuffer<float> dryBuffer;
 };

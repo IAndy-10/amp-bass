@@ -39,6 +39,9 @@ namespace ParameterIDs
     // Stage 6 — MasterVolume
     static constexpr const char* master        = "master";
 
+    // Global dry/wet mix
+    static constexpr const char* dryWet        = "dryWet";
+
     // Phase 2 — Preset selection
     static constexpr const char* presetSelect  = "presetSelect";
 }
