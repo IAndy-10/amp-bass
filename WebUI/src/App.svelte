@@ -193,7 +193,7 @@
       <div class="section output-section">
         <div class="section-inner output-inner">
           <div class="output-labels">
-            <span class="eq-range">+8dB</span>
+            <span class="eq-range">+10dB</span>
             <span class="eq-range">-10dB</span>
           </div>
           <NeuSlider label="LEVEL" value={$geqLevel} min={-10} max={10} unit="dB"
