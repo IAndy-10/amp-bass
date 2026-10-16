@@ -39,3 +39,4 @@ dist/
 *.vst3
 *.component
 *.aax
+package-release.sh
