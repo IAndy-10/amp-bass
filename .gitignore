@@ -2,7 +2,9 @@
 building-process/
 
 # Documentation (generated during research phase)
-docs/
+docs/*
+!docs/how-ampbass-works.md
+!docs/ui/
 
 # macOS
 .DS_Store
@@ -39,3 +41,4 @@ dist/
 *.vst3
 *.component
 *.aax
+package-release.sh

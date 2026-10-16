@@ -25,17 +25,14 @@ public:
             f.setParams (Biquad::Type::HighShelf, 5000.0f, 0.707f, 0.0f);
         }
 
-        // Ultra LO compound: low-shelf@50, peak@560, high-shelf@5k
+        // Ultra LO (manual): +2 dB at 40 Hz, -10 dB at 500 Hz
         for (int ch = 0; ch < 2; ++ch)
         {
             ultraLoLowShelf[ch].prepare (sampleRate);
-            ultraLoLowShelf[ch].setParams (Biquad::Type::LowShelf, 50.0f, 0.707f, 0.0f);
+            ultraLoLowShelf[ch].setParams (Biquad::Type::LowShelf, kUltraLoShelfHz, 0.707f, 0.0f);
 
             ultraLoMidCut[ch].prepare (sampleRate);
-            ultraLoMidCut[ch].setParams (Biquad::Type::Peak, 560.0f, 1.5f, 0.0f);
-
-            ultraLoHighShelf[ch].prepare (sampleRate);
-            ultraLoHighShelf[ch].setParams (Biquad::Type::HighShelf, 5000.0f, 0.707f, 0.0f);
+            ultraLoMidCut[ch].setParams (Biquad::Type::Peak, 500.0f, 1.5f, 0.0f);
         }
 
         smoothBrightGain.reset (sampleRate, 0.02);
@@ -55,7 +52,6 @@ public:
         {
             ultraLoLowShelf[ch].reset();
             ultraLoMidCut[ch].reset();
-            ultraLoHighShelf[ch].reset();
         }
     }
 
@@ -90,9 +86,8 @@ public:
 
                 for (int ch = 0; ch < 2; ++ch)
                 {
-                    ultraLoLowShelf[ch].setGainDb (2.5f * ultraLoAmt);
-                    ultraLoMidCut[ch].setGainDb (-12.0f * ultraLoAmt);
-                    ultraLoHighShelf[ch].setGainDb (1.5f * ultraLoAmt);
+                    ultraLoLowShelf[ch].setGainDb (kUltraLoShelfDb * ultraLoAmt);
+                    ultraLoMidCut[ch].setGainDb (-10.0f * ultraLoAmt);
                 }
             }
 
@@ -103,7 +98,6 @@ public:
                 sample = ultraHiFilter[ch].processSample (sample);
                 sample = ultraLoLowShelf[ch].processSample (sample);
                 sample = ultraLoMidCut[ch].processSample (sample);
-                sample = ultraLoHighShelf[ch].processSample (sample);
                 buffer.getWritePointer (ch)[s] = sample;
             }
         }
@@ -112,11 +106,14 @@ public:
 private:
     double sr = 44100.0;
 
+    // Shelf corner above 40 Hz so the boost measured at 40 Hz is ~2 dB
+    static constexpr float kUltraLoShelfHz = 80.0f;
+    static constexpr float kUltraLoShelfDb = 2.15f;
+
     Biquad brightFilter[2];
     Biquad ultraHiFilter[2];
     Biquad ultraLoLowShelf[2];
     Biquad ultraLoMidCut[2];
-    Biquad ultraLoHighShelf[2];
 
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothBrightGain;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothUltraHiGain;
