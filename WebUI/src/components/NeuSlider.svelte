@@ -6,26 +6,32 @@
   export let min = 0;
   export let max = 100;
   export let unit = '';
+  export let disabled = false;   // greyed out and ignores input
 
   const dispatch = createEventDispatcher();
 
+  /** @type {HTMLDivElement | undefined} */
   let trackEl;
   let dragging = false;
 
   $: displayVal = (min + value * (max - min)).toFixed(0);
 
+  /** @param {MouseEvent} e */
   function onMouseDown(e) {
+    if (disabled) return;
     dragging = true;
     dispatch('dragstart');
     update(e);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   }
+  /** @param {MouseEvent} e */
   function onMove(e) {
     if (!dragging) return;
     update(e);
     dispatch('change', { value });
   }
+  /** @param {MouseEvent} e */
   function update(e) {
     if (!trackEl) return;
     const rect = trackEl.getBoundingClientRect();
@@ -38,17 +44,43 @@
     window.removeEventListener('mousemove', onMove);
     window.removeEventListener('mouseup', onUp);
   }
+  // If disabled mid-drag (e.g. GEQ switched off), end the gesture cleanly.
+  $: if (disabled && dragging) onUp();
+
+  /** @param {KeyboardEvent} e */
+  function onKeyDown(e) {
+    if (disabled) return;
+    const step = e.shiftKey ? 0.1 : 0.01;
+    let next = value;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') next = value + step;
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') next = value - step;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = 1;
+    else return;
+    e.preventDefault();
+    value = Math.min(1, Math.max(0, next));
+    dispatch('dragstart');
+    dispatch('change', { value });
+    dispatch('dragend');
+  }
+  /** @param {WheelEvent} e */
   function onWheel(e) {
+    if (disabled) return;
     e.preventDefault();
     value = Math.min(1, Math.max(0, value - e.deltaY * 0.001));
     dispatch('change', { value });
   }
 </script>
 
-<div class="wrap">
+<div class="wrap" class:disabled>
   <div class="label">{label}</div>
 
-  <div class="track" bind:this={trackEl} on:mousedown={onMouseDown} on:wheel={onWheel}>
+  <div class="track" bind:this={trackEl}
+    role="slider" tabindex={disabled ? -1 : 0}
+    aria-label={label} aria-orientation="vertical" aria-disabled={disabled}
+    aria-valuemin={min} aria-valuemax={max} aria-valuenow={Number(displayVal)}
+    aria-valuetext="{displayVal}{unit}"
+    on:mousedown={onMouseDown} on:wheel={onWheel} on:keydown={onKeyDown}>
     <!-- Inset groove -->
     <div class="groove">
       <div class="fill" style="height: {value * 100}%"></div>
@@ -69,6 +101,17 @@
     align-items: center;
     gap: 7px;
     user-select: none;
+  }
+
+  .wrap.disabled {
+    opacity: 0.4;
+    filter: grayscale(0.6);
+    transition: opacity 0.15s;
+  }
+
+  .wrap.disabled .track,
+  .wrap.disabled .thumb {
+    cursor: not-allowed;
   }
 
   .label {

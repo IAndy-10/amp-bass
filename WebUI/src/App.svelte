@@ -179,6 +179,7 @@
         <div class="eq-sliders">
           {#each geqIds as id, i}
             <NeuSlider label={eqLabels[i]} value={$geqValues[i]} min={geqRanges[i][0]} max={geqRanges[i][1]} unit="dB"
+              disabled={!$geqOn}
               on:dragstart={() => sliderDragStarted(id)}
               on:change={e => setSliderValue(id, e.detail.value)}
               on:dragend={() => sliderDragEnded(id)} />
@@ -196,6 +197,7 @@
             <span class="eq-range">-10dB</span>
           </div>
           <NeuSlider label="LEVEL" value={$geqLevel} min={-10} max={10} unit="dB"
+            disabled={!$geqOn}
             on:dragstart={() => sliderDragStarted('geqLevel')}
             on:change={e => setSliderValue('geqLevel', e.detail.value)}
             on:dragend={() => sliderDragEnded('geqLevel')} />
