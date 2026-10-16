@@ -52,6 +52,8 @@ private:
     PowerSection  powerSection;
     DryWetMixer   dryWetMixer;
 
+    int preparedBlockSize = 512;   // max sub-block size passed to the DSP stages
+
     // ── Cached parameter pointers (set once in constructor) ──
     std::atomic<float>* paramInputPad   = nullptr;
     std::atomic<float>* paramInputHiLo  = nullptr;

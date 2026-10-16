@@ -74,6 +74,8 @@ bool AmpBassAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) c
 }
 
 void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
+    preparedBlockSize = juce::jmax (1, samplesPerBlock);
+
     inputGain.prepare (sampleRate, samplesPerBlock);
     preFilters.prepare (sampleRate, samplesPerBlock);
     tubePreamp.prepare (sampleRate, samplesPerBlock);
@@ -143,20 +145,32 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // ── Update parameter targets from APVTS ──
     updateDSPParameters();
 
-    // ── Save dry signal for dry/wet mix ──
-    dryWetMixer.saveDry (buffer);
+    // ── Process in sub-blocks no larger than prepareToPlay's block size ──
+    // Some hosts deliver blocks larger than announced; this keeps the
+    // dry/wet buffer from reallocating on the audio thread.
+    const int numChannels = buffer.getNumChannels();
+    const int numSamples  = buffer.getNumSamples();
 
-    // ── Signal chain (7 stages) ──
-    inputGain.process (buffer);      // Stage 1
-    preFilters.process (buffer);     // Stage 2
-    tubePreamp.process (buffer);     // Stage 3
-    toneStack.process (buffer);      // Stage 4
-    graphicEQ.process (buffer);      // Stage 5
-    masterVolume.process (buffer);   // Stage 6
-    powerSection.process (buffer);   // Stage 7
+    for (int start = 0; start < numSamples; start += preparedBlockSize)
+    {
+        const int n = juce::jmin (preparedBlockSize, numSamples - start);
+        juce::AudioBuffer<float> sub (buffer.getArrayOfWritePointers(), numChannels, start, n);
 
-    // ── Blend dry/wet (equal-power crossfade) ──
-    dryWetMixer.mixToOutput (buffer);
+        // ── Save dry signal for dry/wet mix ──
+        dryWetMixer.saveDry (sub);
+
+        // ── Signal chain (7 stages) ──
+        inputGain.process (sub);      // Stage 1
+        preFilters.process (sub);     // Stage 2
+        tubePreamp.process (sub);     // Stage 3
+        toneStack.process (sub);      // Stage 4
+        graphicEQ.process (sub);      // Stage 5
+        masterVolume.process (sub);   // Stage 6
+        powerSection.process (sub);   // Stage 7
+
+        // ── Blend dry/wet (equal-power crossfade) ──
+        dryWetMixer.mixToOutput (sub);
+    }
 }
 
 bool AmpBassAudioProcessor::hasEditor() const { return true; }
