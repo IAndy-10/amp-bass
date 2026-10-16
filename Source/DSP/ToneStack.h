@@ -14,13 +14,13 @@ public:
         for (int ch = 0; ch < 2; ++ch)
         {
             lowShelf[ch].prepare (sampleRate);
-            lowShelf[ch].setParams (Biquad::Type::LowShelf, 50.0f, 0.707f, 0.0f);
+            lowShelf[ch].setParams (Biquad::Type::LowShelf, 100.0f, 0.5f, 0.0f);
 
             midPeak[ch].prepare (sampleRate);
             midPeak[ch].setParams (Biquad::Type::Peak, 800.0f, 1.5f, 0.0f);
 
             highShelf[ch].prepare (sampleRate);
-            highShelf[ch].setParams (Biquad::Type::HighShelf, 5000.0f, 0.707f, 0.0f);
+            highShelf[ch].setParams (Biquad::Type::HighShelf, 2500.0f, 0.5f, 0.0f);
         }
 
         smoothBassDb.reset (sampleRate, 0.02);

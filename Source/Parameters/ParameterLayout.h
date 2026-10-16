@@ -154,6 +154,14 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.0f, 1.0f),
         0.5f));
 
+    // --- Global dry/wet mix ---
+
+    params.push_back (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { ParameterIDs::dryWet, 1 },
+        "Dry/Wet",
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.0f, 1.0f),
+        1.0f));  // default 100% wet (fully processed)
+
     // --- Phase 2: Preset selection ---
 
     params.push_back (std::make_unique<juce::AudioParameterInt> (

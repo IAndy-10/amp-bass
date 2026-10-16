@@ -6,8 +6,9 @@
 #include "../DSP/TubePreamp.h"
 #include "../DSP/ToneStack.h"
 #include "../DSP/GraphicEQ.h"
-#include "../DSP/MasterVolume.h"
+#include "../DSP/MasterVolume.h" 
 #include "../DSP/PowerSection.h"
+#include "../DSP/Primitives/DryWetMixer.h"
 
 class AmpBassAudioProcessor final : public juce::AudioProcessor {
 public:
@@ -49,6 +50,9 @@ private:
     GraphicEQ     graphicEQ;
     MasterVolume  masterVolume;
     PowerSection  powerSection;
+    DryWetMixer   dryWetMixer;
+
+    int preparedBlockSize = 512;   // max sub-block size passed to the DSP stages
 
     // ── Cached parameter pointers (set once in constructor) ──
     std::atomic<float>* paramInputPad   = nullptr;
@@ -74,6 +78,7 @@ private:
     std::atomic<float>* paramGeq8k      = nullptr;
     std::atomic<float>* paramGeqLevel   = nullptr;
     std::atomic<float>* paramMaster     = nullptr;
+    std::atomic<float>* paramDryWet     = nullptr;
 
     void updateDSPParameters();
 

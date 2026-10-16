@@ -41,6 +41,9 @@ juce_add_plugin(AmpBass
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
 
+    MICROPHONE_PERMISSION_ENABLED TRUE
+    MICROPHONE_PERMISSION_TEXT "AmpBass needs audio input to process your instrument."
+
     NEEDS_JUCE_CORE TRUE
     NEEDS_JUCE_AUDIO_PROCESSORS TRUE
     NEEDS_JUCE_GUI_BASICS TRUE
@@ -172,3 +175,12 @@ endmacro()
 
 copy_resources_to_target(AmpBass)
 copy_resources_to_target(AmpBass_Standalone)
+
+# ============================================================
+# Diagnostics (DSP tests + offline VST3 host)
+# ============================================================
+
+option(AMPBASS_BUILD_TESTS "Build DSP diagnostics and offline host" OFF)
+if(AMPBASS_BUILD_TESTS)
+    add_subdirectory(Tests)
+endif()

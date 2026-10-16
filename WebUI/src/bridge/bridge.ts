@@ -1,71 +1,67 @@
 /**
  * JUCE 8 Native Bridge — relay-based parameter sync.
  *
- * Uses getSliderState / getToggleState / getComboBoxState from the
- * JUCE frontend module. Each state object auto-syncs with its C++ relay.
+ * Uses getSliderState / getToggleState from the vendored JUCE frontend module
+ * (./juce/index.js, copied from juce_gui_extra/native/javascript, JUCE 8.0.4).
+ * Each state object auto-syncs with its C++ relay.
+ *
+ * The int parameters (midFreq, presetSelect) are backed by WebSliderRelays on
+ * the C++ side: WebComboBoxParameterAttachment only sends choices for
+ * AudioParameterChoice, so a combo relay on an AudioParameterInt is unusable.
+ * Choice indices are mapped onto the normalised slider value here instead.
  */
 
+import * as Juce from './juce/index.js';
+import type { SliderState, ToggleState } from './juce/index.js';
 import type { SliderParamId, ToggleParamId, ComboParamId } from '../types/parameters';
 
-// JUCE 8 frontend module — injected by WebBrowserComponent's native integration
-declare function __JUCE__getSliderState(name: string): SliderState;
-declare function __JUCE__getToggleState(name: string): ToggleState;
-declare function __JUCE__getComboBoxState(name: string): ComboState;
+// Number of discrete positions for each int parameter (see ParameterLayout.h).
+const comboChoiceCount: Record<ComboParamId, number> = {
+    midFreq: 5,
+    presetSelect: 4,
+};
 
-interface SliderState {
-    setNormalisedValue(v: number): void;
-    sliderDragStarted(): void;
-    sliderDragEnded(): void;
-    getScaledValue(): number;
-    getNormalisedValue(): number;
-    name: string;
-    valueChangedEvent: EventTarget;
-    propertiesChangedEvent: EventTarget;
-    properties: {
-        start: number;
-        end: number;
-        label: string;
-        numSteps: number;
-        interval: number;
-        parameterIndex: number;
-    };
+// check_native_interop.js installs a placeholder window.__JUCE__ outside the
+// plugin, so check that the backend actually registered each relay.
+function backendHas(kind: '__juce__sliders' | '__juce__toggles', id: string): boolean {
+    return window.__JUCE__?.initialisationData?.[kind]?.includes(id) ?? false;
 }
 
-interface ToggleState {
-    getValue(): boolean;
-    setValue(v: boolean): void;
-    valueChangedEvent: EventTarget;
-    name: string;
-    parameterIndex: number;
+let warnedNoBackend = false;
+function warnNoBackend(id: string): void {
+    if (warnedNoBackend) return;
+    warnedNoBackend = true;
+    console.warn(`[bridge] No JUCE backend relay for '${id}' — controls are not connected (dev mode?).`);
 }
 
-interface ComboState {
-    getChoiceIndex(): number;
-    setChoiceIndex(i: number): void;
-    valueChangedEvent: EventTarget;
-    properties: { choices: string[] };
-    name: string;
-    parameterIndex: number;
+function subscribe(state: { valueChangedEvent: Juce.ListenerList } | null, cb: () => void): () => void {
+    if (!state) return () => {};
+    const listenerId = state.valueChangedEvent.addListener(cb);
+    return () => state.valueChangedEvent.removeListener(listenerId);
 }
-
-// Check if running inside JUCE WebView
-const isJuce = typeof __JUCE__getSliderState === 'function';
 
 // Cached state objects
 const sliderStates = new Map<string, SliderState>();
 const toggleStates = new Map<string, ToggleState>();
-const comboStates = new Map<string, ComboState>();
+
+// Shared lookup for every slider-relay-backed parameter (floats and ints).
+function sliderStateFor(id: SliderParamId | ComboParamId): SliderState | null {
+    let s = sliderStates.get(id);
+    if (!s) {
+        if (!backendHas('__juce__sliders', id)) {
+            warnNoBackend(id);
+            return null;
+        }
+        s = Juce.getSliderState(id);
+        sliderStates.set(id, s);
+    }
+    return s;
+}
 
 // --- Slider (float) parameters ---
 
 export function getSlider(id: SliderParamId): SliderState | null {
-    if (!isJuce) return null;
-    let s = sliderStates.get(id);
-    if (!s) {
-        s = __JUCE__getSliderState(id);
-        sliderStates.set(id, s);
-    }
-    return s;
+    return sliderStateFor(id);
 }
 
 export function setSliderValue(id: SliderParamId, normalised: number): void {
@@ -89,19 +85,19 @@ export function sliderDragEnded(id: SliderParamId): void {
 }
 
 export function onSliderChanged(id: SliderParamId, cb: () => void): () => void {
-    const s = getSlider(id);
-    if (!s) return () => {};
-    s.valueChangedEvent.addEventListener('change', cb);
-    return () => s.valueChangedEvent.removeEventListener('change', cb);
+    return subscribe(getSlider(id), cb);
 }
 
 // --- Toggle (bool) parameters ---
 
 export function getToggle(id: ToggleParamId): ToggleState | null {
-    if (!isJuce) return null;
     let s = toggleStates.get(id);
     if (!s) {
-        s = __JUCE__getToggleState(id);
+        if (!backendHas('__juce__toggles', id)) {
+            warnNoBackend(id);
+            return null;
+        }
+        s = Juce.getToggleState(id);
         toggleStates.set(id, s);
     }
     return s;
@@ -116,35 +112,27 @@ export function getToggleValue(id: ToggleParamId): boolean {
 }
 
 export function onToggleChanged(id: ToggleParamId, cb: () => void): () => void {
-    const s = getToggle(id);
-    if (!s) return () => {};
-    s.valueChangedEvent.addEventListener('change', cb);
-    return () => s.valueChangedEvent.removeEventListener('change', cb);
+    return subscribe(getToggle(id), cb);
 }
 
-// --- Combo (int) parameters ---
+// --- Combo (int) parameters, backed by slider relays ---
 
-export function getCombo(id: ComboParamId): ComboState | null {
-    if (!isJuce) return null;
-    let s = comboStates.get(id);
-    if (!s) {
-        s = __JUCE__getComboBoxState(id);
-        comboStates.set(id, s);
-    }
-    return s;
+export function getCombo(id: ComboParamId): SliderState | null {
+    return sliderStateFor(id);
 }
 
 export function setComboIndex(id: ComboParamId, index: number): void {
-    getCombo(id)?.setChoiceIndex(index);
+    const n = comboChoiceCount[id];
+    const clamped = Math.min(n - 1, Math.max(0, Math.round(index)));
+    getCombo(id)?.setNormalisedValue(n > 1 ? clamped / (n - 1) : 0);
 }
 
 export function getComboIndex(id: ComboParamId): number {
-    return getCombo(id)?.getChoiceIndex() ?? 0;
+    const s = getCombo(id);
+    if (!s) return 0;
+    return Math.round(s.getNormalisedValue() * (comboChoiceCount[id] - 1));
 }
 
 export function onComboChanged(id: ComboParamId, cb: () => void): () => void {
-    const s = getCombo(id);
-    if (!s) return () => {};
-    s.valueChangedEvent.addEventListener('change', cb);
-    return () => s.valueChangedEvent.removeEventListener('change', cb);
+    return subscribe(getCombo(id), cb);
 }

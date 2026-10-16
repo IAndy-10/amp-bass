@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <algorithm>
 #include <cmath>
 
 class TubePreamp
@@ -10,8 +11,9 @@ public:
     {
         sr = sampleRate;
 
-        // Pre-emphasis HPF at 80Hz: a = 1 / (1 + 2*pi*80/sr)
-        preEmphCoeff = static_cast<float> (1.0 / (1.0 + 2.0 * 3.14159265358979 * 80.0 / sampleRate));
+        // Subsonic HPF at 25Hz before the asymmetric shaper: a = 1 / (1 + 2*pi*25/sr)
+        // (low enough to keep the low-E fundamental at 41Hz within ~1.3dB)
+        preEmphCoeff = static_cast<float> (1.0 / (1.0 + 2.0 * 3.14159265358979 * 25.0 / sampleRate));
 
         // DC blocker HPF at 10Hz
         dcBlockCoeff = static_cast<float> (1.0 / (1.0 + 2.0 * 3.14159265358979 * 10.0 / sampleRate));
@@ -60,6 +62,8 @@ public:
         {
             const float drive    = smoothDrive.getNextValue();
             const float headroom = smoothHeadroom.getNextValue();
+            // Partial level compensation: GAIN mostly changes distortion,
+            // not loudness (~6dB rise across the full range).
             const float normGain = headroom / std::max (1.0f, drive * 0.3f);
 
             for (int ch = 0; ch < numChannels; ++ch)
