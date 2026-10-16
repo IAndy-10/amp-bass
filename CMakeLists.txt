@@ -172,3 +172,12 @@ endmacro()
 
 copy_resources_to_target(AmpBass)
 copy_resources_to_target(AmpBass_Standalone)
+
+# ============================================================
+# Diagnostics (DSP tests + offline VST3 host)
+# ============================================================
+
+option(AMPBASS_BUILD_TESTS "Build DSP diagnostics and offline host" OFF)
+if(AMPBASS_BUILD_TESTS)
+    add_subdirectory(Tests)
+endif()
