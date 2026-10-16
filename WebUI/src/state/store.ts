@@ -10,7 +10,7 @@ import { writable } from 'svelte/store';
 import {
     getSlider, onSliderChanged,
     getToggle, onToggleChanged,
-    getCombo, onComboChanged,
+    getComboIndex, onComboChanged,
 } from '../bridge/bridge';
 import type { SliderParamId, ToggleParamId, ComboParamId } from '../types/parameters';
 
@@ -45,11 +45,11 @@ export function createToggleStore(id: ToggleParamId) {
 // --- Combo stores (index number) ---
 
 export function createComboStore(id: ComboParamId) {
-    const initial = getCombo(id)?.getChoiceIndex() ?? 0;
+    const initial = getComboIndex(id);
     const store = writable(initial);
 
     onComboChanged(id, () => {
-        const v = getCombo(id)?.getChoiceIndex() ?? 0;
+        const v = getComboIndex(id);
         store.set(v);
     });
 

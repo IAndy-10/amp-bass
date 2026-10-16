@@ -34,9 +34,9 @@ void NativeBridge::connectToAPVTS (juce::AudioProcessorValueTreeState& apvts)
     ultraLoAttach   = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::ultraLo),   ultraLoRelay);
     geqOnAttach     = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::geqOn),     geqOnRelay);
 
-    // --- Int/Combo attachments ---
-    midFreqAttach      = std::make_unique<juce::WebComboBoxParameterAttachment> (*params.getParameter (ParameterIDs::midFreq),      midFreqRelay);
-    presetSelectAttach = std::make_unique<juce::WebComboBoxParameterAttachment> (*params.getParameter (ParameterIDs::presetSelect), presetSelectRelay);
+    // --- Int selector attachments (slider relays: combo relays need AudioParameterChoice) ---
+    midFreqAttach      = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::midFreq),      midFreqRelay);
+    presetSelectAttach = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::presetSelect), presetSelectRelay);
 }
 
 juce::WebBrowserComponent::Options NativeBridge::buildOptions (
@@ -71,9 +71,9 @@ juce::WebBrowserComponent::Options NativeBridge::buildOptions (
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (ultraHiRelay))
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (ultraLoRelay))
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (geqOnRelay))
-        // Combo relays
-        .withOptionsFrom (const_cast<juce::WebComboBoxRelay&> (midFreqRelay))
-        .withOptionsFrom (const_cast<juce::WebComboBoxRelay&> (presetSelectRelay));
+        // Int selector relays (slider-backed)
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (midFreqRelay))
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (presetSelectRelay));
 
     return options;
 }

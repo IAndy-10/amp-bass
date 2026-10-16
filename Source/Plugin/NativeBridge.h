@@ -7,7 +7,7 @@
 /// JUCE 8 native WebView bridge using relay objects for bidirectional parameter sync.
 ///
 /// Each parameter gets a typed relay (WebSliderRelay for floats, WebToggleButtonRelay
-/// for bools, WebComboBoxRelay for int selectors) plus a corresponding
+/// for bools; int selectors also use WebSliderRelay) plus a corresponding
 /// ParameterAttachment that handles gesture begin/end automatically.
 ///
 /// No Timer polling. No evaluateJavascript(). No juce:// URL intercept.
@@ -54,8 +54,8 @@ private:
     juce::WebToggleButtonRelay geqOnRelay     { "geqOn" };
 
     // --- Int parameter relays (combo box / selector) ---
-    juce::WebComboBoxRelay midFreqRelay      { "midFreq" };
-    juce::WebComboBoxRelay presetSelectRelay { "presetSelect" };
+    juce::WebSliderRelay midFreqRelay        { "midFreq" };
+    juce::WebSliderRelay presetSelectRelay   { "presetSelect" };
 
     // --- Parameter attachments (own gesture begin/end) ---
     // Stored as unique_ptrs because they're constructed after APVTS is ready.
@@ -85,8 +85,8 @@ private:
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> ultraLoAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> geqOnAttach;
 
-    std::unique_ptr<juce::WebComboBoxParameterAttachment> midFreqAttach;
-    std::unique_ptr<juce::WebComboBoxParameterAttachment> presetSelectAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> midFreqAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> presetSelectAttach;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NativeBridge)
 };
