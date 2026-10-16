@@ -53,13 +53,11 @@ public:
                 float coeff = (absY > envelope[ch]) ? attackCoeff : releaseCoeff;
                 envelope[ch] = coeff * envelope[ch] + (1.0f - coeff) * absY;
 
-                // Gentle 2:1 compression above threshold
+                // Gentle 2:1 compression above threshold:
+                // out = T * (env / T)^(1/2)  =>  gain = sqrt (T / env)
+                // (envelope is always > threshold here, so no division by zero)
                 if (envelope[ch] > kThreshold)
-                {
-                    float gainReduction = kThreshold / std::sqrt (envelope[ch] / kThreshold);
-                    // Avoid division by zero: envelope is always > threshold here
-                    y *= gainReduction / envelope[ch];
-                }
+                    y *= std::sqrt (kThreshold / envelope[ch]);
 
                 buffer.getWritePointer (ch)[s] = y;
             }
