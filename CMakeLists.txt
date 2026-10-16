@@ -24,6 +24,10 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(JUCE)
 
+# Turn off in secondary worktrees so their builds don't overwrite the
+# installed VST3/AU that the DAW loads.
+option(AMPBASS_COPY_PLUGIN "Copy built plugins to the system plugin folders" ON)
+
 # ============================================================
 # Plugin Definition
 # ============================================================
@@ -49,7 +53,7 @@ juce_add_plugin(AmpBass
     NEEDS_JUCE_GUI_BASICS TRUE
     NEEDS_WEB_BROWSER TRUE
 
-    COPY_PLUGIN_AFTER_BUILD TRUE
+    COPY_PLUGIN_AFTER_BUILD ${AMPBASS_COPY_PLUGIN}
 
     VST3_CATEGORIES Fx
     AU_MAIN_TYPE kAudioUnitType_Effect
