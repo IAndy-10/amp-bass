@@ -52,7 +52,7 @@ The three voicing switches, all RBJ biquads, always in the path (0 dB when off):
 |---|---|
 | Bright | High shelf +6 dB @ 2 kHz |
 | Ultra Hi | High shelf +6 dB @ 5 kHz |
-| Ultra Lo | Low shelf +2.5 dB @ 50 Hz, **peak −12 dB @ 560 Hz (Q 1.5)**, high shelf +1.5 dB @ 5 kHz |
+| Ultra Lo | Low shelf (80 Hz corner) giving +2 dB at 40 Hz, **peak −10 dB @ 500 Hz (Q 1.5)** — values from the reference manual |
 
 Ultra Lo is the classic "scooped" SVT voicing — the mid cut is far bigger than
 the boosts. Because these sit *before* the preamp, they also change what
@@ -163,7 +163,7 @@ Changing them doesn't break saved sessions (parameter IDs are untouched).
 | Loudness vs Gain | `0.3` in `normGain` | `TubePreamp.h` process, step 5 |
 | Low-end tightness into the preamp | HPF 25 Hz | `TubePreamp.h` `prepare` |
 | Tone-stack corners / widths | 100 Hz, 2.5 kHz, Q 0.5 / mid Q 1.5 | `ToneStack.h` `prepare` |
-| Voicing switches | shelf freqs/gains, Ultra Lo −12 dB @ 560 | `PreFilters.h` |
+| Voicing switches | shelf freqs/gains, Ultra Lo +2 dB @ 40 / −10 dB @ 500 | `PreFilters.h` |
 | GEQ band width | Q 2.0 | `GraphicEQ.h` `prepare` |
 | Master taper | knob² | `MasterVolume.h` |
 | Power amp onset / squash | threshold 0.8, 2:1, 1 ms / 50 ms | `PowerSection.h` |

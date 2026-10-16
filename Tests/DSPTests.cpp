@@ -141,7 +141,7 @@ namespace
     void testPreFilters()
     {
         section ("Stage 2 — PreFilters");
-        const double freqs[] = { 41, 100, 560, 2000, 5000, 10000 };
+        const double freqs[] = { 40, 100, 500, 2000, 5000, 10000 };
         std::printf ("%-10s", "Hz");
         for (auto f : freqs) std::printf ("%8.0f", f);
         std::printf ("\n");
@@ -169,8 +169,9 @@ namespace
         check (maxDev < 0.1,              "all off is flat",            fmt ("max dev %.2f dB", maxDev));
         check (br[5] - br[1] > 4.0,       "bright lifts highs",         fmt ("10k-100Hz = %.2f dB", br[5] - br[1]));
         check (uh[5] - uh[1] > 4.0,       "ultraHi lifts highs",        fmt ("10k-100Hz = %.2f dB", uh[5] - uh[1]));
-        check (ul[2] < -8.0,              "ultraLo scoops 560 Hz",      fmt ("%.2f dB", ul[2]));
-        check (ul[0] > 1.0,               "ultraLo lifts 41 Hz",        fmt ("%.2f dB", ul[0]));
+        check (std::abs (ul[2] + 10.0) < 1.0, "ultraLo -10 dB at 500 Hz",  fmt ("%.2f dB", ul[2]));
+        check (std::abs (ul[0] - 2.0) < 0.5,  "ultraLo +2 dB at 40 Hz",    fmt ("%.2f dB", ul[0]));
+        check (std::abs (ul[4]) < 0.5,        "ultraLo leaves 5 kHz flat", fmt ("%.2f dB", ul[4]));
     }
 
     void testToneStack()
