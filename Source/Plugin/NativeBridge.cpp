@@ -24,6 +24,7 @@ void NativeBridge::connectToAPVTS (juce::AudioProcessorValueTreeState& apvts)
     geq5kAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::geq5k),    geq5kRelay);
     geq8kAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::geq8k),    geq8kRelay);
     geqLevelAttach = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::geqLevel), geqLevelRelay);
+    dryWetAttach   = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::dryWet),   dryWetRelay);
 
     // --- Bool attachments ---
     inputPadAttach  = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::inputPad),  inputPadRelay);
@@ -62,6 +63,7 @@ juce::WebBrowserComponent::Options NativeBridge::buildOptions (
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (geq5kRelay))
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (geq8kRelay))
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (geqLevelRelay))
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (dryWetRelay))
         // Bool relays
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (inputPadRelay))
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (inputHiLoRelay))

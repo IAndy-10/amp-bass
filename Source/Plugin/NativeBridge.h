@@ -43,6 +43,7 @@ private:
     juce::WebSliderRelay geq5kRelay      { "geq5k" };
     juce::WebSliderRelay geq8kRelay      { "geq8k" };
     juce::WebSliderRelay geqLevelRelay   { "geqLevel" };
+    juce::WebSliderRelay dryWetRelay     { "dryWet" };
 
     // --- Bool parameter relays (toggle buttons) ---
     juce::WebToggleButtonRelay inputPadRelay  { "inputPad" };
@@ -75,6 +76,7 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment> geq5kAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> geq8kAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> geqLevelAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> dryWetAttach;
 
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> inputPadAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> inputHiLoAttach;

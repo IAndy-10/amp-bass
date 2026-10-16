@@ -75,6 +75,7 @@ export const sliders = {
     geq5k:     createSliderStore('geq5k'),
     geq8k:     createSliderStore('geq8k'),
     geqLevel:  createSliderStore('geqLevel'),
+    dryWet:    createSliderStore('dryWet'),
 } as const;
 
 export const toggles = {

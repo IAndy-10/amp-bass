@@ -41,6 +41,7 @@ AmpBassAudioProcessor::AmpBassAudioProcessor()
     paramGeq8k     = apvts.getRawParameterValue (ParameterIDs::geq8k);
     paramGeqLevel  = apvts.getRawParameterValue (ParameterIDs::geqLevel);
     paramMaster    = apvts.getRawParameterValue (ParameterIDs::master);
+    paramDryWet    = apvts.getRawParameterValue (ParameterIDs::dryWet);
 }
 
 AmpBassAudioProcessor::~AmpBassAudioProcessor() {}
@@ -80,6 +81,7 @@ void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     graphicEQ.prepare (sampleRate, samplesPerBlock);
     masterVolume.prepare (sampleRate, samplesPerBlock);
     powerSection.prepare (sampleRate, samplesPerBlock);
+    dryWetMixer.prepare (2, samplesPerBlock);
 
     updateDSPParameters();
 }
@@ -123,6 +125,9 @@ void AmpBassAudioProcessor::updateDSPParameters() {
 
     // Stage 6: MasterVolume
     masterVolume.setParams (paramMaster->load());
+
+    // Global dry/wet
+    dryWetMixer.setMix (paramDryWet->load());
 }
 
 void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
@@ -138,6 +143,9 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // ── Update parameter targets from APVTS ──
     updateDSPParameters();
 
+    // ── Save dry signal for dry/wet mix ──
+    dryWetMixer.saveDry (buffer);
+
     // ── Signal chain (7 stages) ──
     inputGain.process (buffer);      // Stage 1
     preFilters.process (buffer);     // Stage 2
@@ -146,6 +154,9 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     graphicEQ.process (buffer);      // Stage 5
     masterVolume.process (buffer);   // Stage 6
     powerSection.process (buffer);   // Stage 7
+
+    // ── Blend dry/wet (equal-power crossfade) ──
+    dryWetMixer.mixToOutput (buffer);
 }
 
 bool AmpBassAudioProcessor::hasEditor() const { return true; }

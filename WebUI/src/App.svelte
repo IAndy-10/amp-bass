@@ -1,5 +1,6 @@
 <script>
   import { derived } from 'svelte/store';
+  import { onMount } from 'svelte';
   import NeuKnob from './components/NeuKnob.svelte';
   import NeuKnobDiscrete from './components/NeuKnobDiscrete.svelte';
   import NeuButton from './components/NeuButton.svelte';
@@ -8,6 +9,24 @@
 
   import { sliders, toggles, combos } from './state/store';
   import { setSliderValue, sliderDragStarted, sliderDragEnded, setToggleValue, setComboIndex } from './bridge/bridge';
+
+  const DESIGN_W = 1350;
+  const DESIGN_H = 460;
+
+  let sceneEl;
+  let scale = 1;
+
+  function rescale() {
+    const sw = window.innerWidth / DESIGN_W;
+    const sh = window.innerHeight / DESIGN_H;
+    scale = Math.min(sw, sh, 1);
+  }
+
+  onMount(() => {
+    rescale();
+    window.addEventListener('resize', rescale);
+    return () => window.removeEventListener('resize', rescale);
+  });
 
   // Destructure stores into top-level const so Svelte's $-prefix auto-subscribe works.
   // In Svelte, $foo.bar means "subscribe to store foo, then access .bar" — NOT "access bar on object foo".
@@ -21,6 +40,7 @@
   const treble = sliders.treble;
   const master = sliders.master;
   const geqLevel = sliders.geqLevel;
+  const dryWet = sliders.dryWet;
 
   // Toggle stores
   const bright = toggles.bright;
@@ -34,6 +54,7 @@
   const midFreq = combos.midFreq;
 
   // ── GEQ band mapping ──
+  /** @type {import('./types/parameters').SliderParamId[]} */
   const geqIds = ['geq33','geq80','geq150','geq300','geq600','geq900','geq2k','geq5k','geq8k'];
   const eqLabels = ['33', '80', '150', '300', '600', '900', '2K', '5K', '8K'];
   const geqRanges = [
@@ -51,8 +72,8 @@
 
 <Tooltip />
 
-<div class="scene">
-  <div class="panel">
+<div class="scene" bind:this={sceneEl}>
+  <div class="panel" style="transform: scale({scale}); transform-origin: center center;">
 
     <!-- Header -->
     <div class="header">
@@ -178,6 +199,11 @@
             on:dragstart={() => sliderDragStarted('geqLevel')}
             on:change={e => setSliderValue('geqLevel', e.detail.value)}
             on:dragend={() => sliderDragEnded('geqLevel')} />
+          <NeuKnob label="DRY/WET" value={$dryWet} min={0} max={100} unit="%"
+            formatFn={v => v.toFixed(0)}
+            on:dragstart={() => sliderDragStarted('dryWet')}
+            on:change={e => setSliderValue('dryWet', e.detail.value)}
+            on:dragend={() => sliderDragEnded('dryWet')} />
         </div>
         <div class="section-label">OUTPUT</div>
       </div>
@@ -204,7 +230,8 @@
   }
 
   .scene {
-    min-height: 100vh;
+    width: 100vw;
+    height: 100vh;
     background:
       radial-gradient(ellipse at 25% 35%, rgba(60,55,48,0.4), transparent 55%),
       radial-gradient(ellipse at 75% 70%, rgba(50,45,38,0.3), transparent 50%),
@@ -212,7 +239,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    overflow: hidden;
     font-family: 'DM Sans', sans-serif;
   }
 
@@ -226,8 +253,7 @@
       -4px -4px 14px rgba(80,72,62,0.15),
       inset 0 1px 0 rgba(100,90,78,0.25);
     padding: 24px 28px;
-    max-width: 960px;
-    width: 100%;
+    width: max-content;
     /* Textured metal feel */
     background-image:
       url("data:image/svg+xml,%3Csvg viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='1' height='1' fill='rgba(255,255,255,0.015)'/%3E%3C/svg%3E");
