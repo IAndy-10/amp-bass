@@ -94,6 +94,7 @@ target_sources(AmpBass PRIVATE
     Source/DSP/GraphicEQ.h
     Source/DSP/MasterVolume.h
     Source/DSP/PowerSection.h
+    Source/DSP/OutputSwitch.h
 )
 
 target_include_directories(AmpBass PRIVATE

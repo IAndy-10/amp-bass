@@ -52,6 +52,8 @@ private:
     juce::WebToggleButtonRelay ultraHiRelay   { "ultraHi" };
     juce::WebToggleButtonRelay ultraLoRelay   { "ultraLo" };
     juce::WebToggleButtonRelay geqOnRelay     { "geqOn" };
+    juce::WebToggleButtonRelay bypassRelay    { "bypass" };
+    juce::WebToggleButtonRelay muteRelay      { "mute" };
 
     // --- Int parameter relays (combo box / selector) ---
     juce::WebSliderRelay midFreqRelay        { "midFreq" };
@@ -84,6 +86,8 @@ private:
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> ultraHiAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> ultraLoAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> geqOnAttach;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> bypassAttach;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> muteAttach;
 
     std::unique_ptr<juce::WebSliderParameterAttachment> midFreqAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> presetSelectAttach;

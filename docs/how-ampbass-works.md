@@ -129,6 +129,19 @@ section does nothing.** It only engages with low Gain + high Tube Gain (ceiling
 near 1.0) and Master near the top. If the reference plugin has audible
 "power amp" squash, this stage is under-driven by comparison.
 
+### Output switches · `Source/DSP/OutputSwitch.h`
+Runs last, after Dry/Wet. Both switches fade over 10 ms (no clicks).
+
+| Control | Effect |
+|---|---|
+| Bypass (faceplate POWER / toolbar icon; also the host's bypass) | Output = the untouched input |
+| Mute | Output = silence (wins over Bypass) |
+
+**PEAK/MUTE LED** (`PluginProcessor::processBlock`, `PluginEditor::timerCallback`):
+lit when Mute is on, or for 300 ms after any overload — raw input ≥ 0.98,
+preamp drive ≥ 4 (hard saturation), or signal ≥ 1.0 after the tone stack and GEQ
+(too much boost). Same causes the reference manual lists.
+
 ### Dry/Wet · `Source/DSP/Primitives/DryWetMixer.h`
 Equal-power crossfade (`cos/sin`) between the untouched input and the chain
 output. Default 100 % wet.

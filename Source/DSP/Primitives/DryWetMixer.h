@@ -35,6 +35,9 @@ public:
         }
     }
 
+    /// The input saved by the last saveDry() call.
+    const juce::AudioBuffer<float>& getDry() const { return dryBuffer; }
+
 private:
     float mix = 0.5f;
     juce::AudioBuffer<float> dryBuffer;

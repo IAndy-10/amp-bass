@@ -44,4 +44,8 @@ namespace ParameterIDs
 
     // Phase 2 — Preset selection
     static constexpr const char* presetSelect  = "presetSelect";
+
+    // Output switches (faceplate POWER / toolbar power icon = bypass)
+    static constexpr const char* bypass        = "bypass";
+    static constexpr const char* mute          = "mute";
 }

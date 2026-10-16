@@ -31,9 +31,28 @@ AmpBassAudioProcessorEditor::AmpBassAudioProcessorEditor (AmpBassAudioProcessor&
 
     // Navigate to the embedded index.html via resource provider
     webView->goToURL (juce::WebBrowserComponent::getResourceProviderRoot() + "index.html");
+
+    startTimerHz (30);
 }
 
-AmpBassAudioProcessorEditor::~AmpBassAudioProcessorEditor() {}
+AmpBassAudioProcessorEditor::~AmpBassAudioProcessorEditor()
+{
+    stopTimer();
+}
+
+void AmpBassAudioProcessorEditor::timerCallback()
+{
+    const double now = juce::Time::getMillisecondCounterHiRes();
+    if (processorRef.peakFlag.exchange (false, std::memory_order_relaxed))
+        lastPeakMs = now;
+
+    const bool lit = (now - lastPeakMs) < kPeakHoldMs;
+    if (lit != peakLit && webView != nullptr)
+    {
+        peakLit = lit;
+        webView->emitEventIfBrowserIsVisible ("peak", lit);
+    }
+}
 
 void AmpBassAudioProcessorEditor::paint (juce::Graphics& g)
 {

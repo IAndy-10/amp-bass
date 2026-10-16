@@ -42,6 +42,8 @@ AmpBassAudioProcessor::AmpBassAudioProcessor()
     paramGeqLevel  = apvts.getRawParameterValue (ParameterIDs::geqLevel);
     paramMaster    = apvts.getRawParameterValue (ParameterIDs::master);
     paramDryWet    = apvts.getRawParameterValue (ParameterIDs::dryWet);
+    paramBypass    = apvts.getRawParameterValue (ParameterIDs::bypass);
+    paramMute      = apvts.getRawParameterValue (ParameterIDs::mute);
 }
 
 AmpBassAudioProcessor::~AmpBassAudioProcessor() {}
@@ -84,6 +86,7 @@ void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     masterVolume.prepare (sampleRate, samplesPerBlock);
     powerSection.prepare (sampleRate, samplesPerBlock);
     dryWetMixer.prepare (2, samplesPerBlock);
+    outputSwitch.prepare (sampleRate, samplesPerBlock);
 
     updateDSPParameters();
 }
@@ -96,6 +99,13 @@ void AmpBassAudioProcessor::releaseResources() {
     graphicEQ.reset();
     masterVolume.reset();
     powerSection.reset();
+    outputSwitch.reset();
+}
+
+juce::AudioParameterBool* AmpBassAudioProcessor::getBypassParameter() const
+{
+    // Lets hosts that support it map their own bypass button to this parameter.
+    return dynamic_cast<juce::AudioParameterBool*> (apvts.getParameter (ParameterIDs::bypass));
 }
 
 void AmpBassAudioProcessor::updateDSPParameters() {
@@ -130,6 +140,9 @@ void AmpBassAudioProcessor::updateDSPParameters() {
 
     // Global dry/wet
     dryWetMixer.setMix (paramDryWet->load());
+
+    // Output switches
+    outputSwitch.setParams (paramBypass->load() >= 0.5f, paramMute->load() >= 0.5f);
 }
 
 void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
@@ -165,11 +178,22 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         tubePreamp.process (sub);     // Stage 3
         toneStack.process (sub);      // Stage 4
         graphicEQ.process (sub);      // Stage 5
+
+        // ── PEAK: input clipping, preamp driven into hard saturation,
+        //    or tone/EQ boosts pushing the signal past full scale ──
+        if (dryWetMixer.getDry().getMagnitude (0, n) >= kPeakInput
+            || tubePreamp.takePeakDrive() >= kPeakDrive
+            || sub.getMagnitude (0, n) >= kPeakPreMaster)
+            peakFlag.store (true, std::memory_order_relaxed);
+
         masterVolume.process (sub);   // Stage 6
         powerSection.process (sub);   // Stage 7
 
         // ── Blend dry/wet (equal-power crossfade) ──
         dryWetMixer.mixToOutput (sub);
+
+        // ── Bypass (crossfade to dry input) and mute ──
+        outputSwitch.process (sub, dryWetMixer.getDry());
     }
 }
 
