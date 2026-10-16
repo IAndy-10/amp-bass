@@ -79,70 +79,70 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geq33, 1 },
         "GEQ 33 Hz",
-        juce::NormalisableRange<float> (-15.0f, 15.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geq80, 1 },
         "GEQ 80 Hz",
-        juce::NormalisableRange<float> (-8.0f, 8.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geq150, 1 },
         "GEQ 150 Hz",
-        juce::NormalisableRange<float> (-8.0f, 8.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geq300, 1 },
         "GEQ 300 Hz",
-        juce::NormalisableRange<float> (-8.0f, 8.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geq600, 1 },
         "GEQ 600 Hz",
-        juce::NormalisableRange<float> (-8.0f, 8.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geq900, 1 },
         "GEQ 900 Hz",
-        juce::NormalisableRange<float> (-8.0f, 8.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geq2k, 1 },
         "GEQ 2 kHz",
-        juce::NormalisableRange<float> (-8.0f, 8.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geq5k, 1 },
         "GEQ 5 kHz",
-        juce::NormalisableRange<float> (-9.0f, 9.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geq8k, 1 },
         "GEQ 8 kHz",
-        juce::NormalisableRange<float> (-10.0f, 10.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::geqLevel, 1 },
         "GEQ Level",
-        juce::NormalisableRange<float> (-10.0f, 10.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-10.0f, 8.0f, 0.0f, 1.0f),
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
@@ -151,7 +151,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::master, 1 },
         "Master Volume",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-10.0f, 8.0f, 0.0f, 1.0f),
         0.5f));
 
     // --- Global dry/wet mix ---
@@ -159,7 +159,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::dryWet, 1 },
         "Dry/Wet",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.0f, 1.0f),
+        juce::NormalisableRange<float> (-10.0f, 8.0f, 0.0f, 1.0f),
         1.0f));  // default 100% wet (fully processed)
 
     // --- Phase 2: Preset selection ---
