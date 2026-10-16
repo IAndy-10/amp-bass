@@ -8,6 +8,7 @@
 #include "../DSP/GraphicEQ.h"
 #include "../DSP/MasterVolume.h" 
 #include "../DSP/PowerSection.h"
+#include "../DSP/OutputSwitch.h"
 #include "../DSP/Primitives/DryWetMixer.h"
 
 class AmpBassAudioProcessor final : public juce::AudioProcessor {
@@ -41,6 +42,12 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
 
+    juce::AudioParameterBool* getBypassParameter() const override;
+
+    /// Set on the audio thread when the input, preamp or EQ overloads.
+    /// The editor reads and clears it to drive the PEAK/MUTE LED.
+    std::atomic<bool> peakFlag { false };
+
 private:
     // ── DSP chain (7 stages) ──
     InputGain     inputGain;
@@ -51,6 +58,12 @@ private:
     MasterVolume  masterVolume;
     PowerSection  powerSection;
     DryWetMixer   dryWetMixer;
+    OutputSwitch  outputSwitch;
+
+    // PEAK/MUTE LED thresholds (see processBlock)
+    static constexpr float kPeakInput     = 0.98f; // raw input near full scale
+    static constexpr float kPeakDrive     = 4.0f;  // preamp drive, tanh(4) = 0.999
+    static constexpr float kPeakPreMaster = 1.0f;  // after tone stack + GEQ
 
     int preparedBlockSize = 512;   // max sub-block size passed to the DSP stages
 
@@ -79,6 +92,8 @@ private:
     std::atomic<float>* paramGeqLevel   = nullptr;
     std::atomic<float>* paramMaster     = nullptr;
     std::atomic<float>* paramDryWet     = nullptr;
+    std::atomic<float>* paramBypass     = nullptr;
+    std::atomic<float>* paramMute       = nullptr;
 
     void updateDSPParameters();
 

@@ -16,6 +16,7 @@
 #include "GraphicEQ.h"
 #include "MasterVolume.h"
 #include "PowerSection.h"
+#include "OutputSwitch.h"
 #include "Primitives/DryWetMixer.h"
 
 #include "TestSignals.h"
@@ -315,6 +316,75 @@ namespace
                monotonic ? "ok" : where + " — compressor gain is T/sqrt(env/T)/env, i.e. slope -1, not 2:1");
     }
 
+    void testOutputSwitch()
+    {
+        section ("Output — bypass / mute");
+
+        // "processed" signal = input inverted, so bypass is easy to tell apart
+        auto run = [] (bool bypass, bool mute, bool switchMidway, double& maxStep)
+        {
+            OutputSwitch sw;
+            sw.prepare (kSr, kBlock);
+            const auto in = sine (kSr, 100.0, 0.5f, 0.5);
+            const int total = static_cast<int> (in.size());
+            juce::AudioBuffer<float> out (1, total);
+            maxStep = 0.0;
+            float prev = 0.0f;
+
+            for (int start = 0; start < total; start += kBlock)
+            {
+                const int n = std::min (kBlock, total - start);
+                const bool on = ! switchMidway || start >= total / 2;
+                sw.setParams (bypass && on, mute && on);
+
+                juce::AudioBuffer<float> dry (1, n), buf (1, n);
+                for (int i = 0; i < n; ++i)
+                {
+                    dry.setSample (0, i, in[(size_t) (start + i)]);
+                    buf.setSample (0, i, -in[(size_t) (start + i)]);
+                }
+                sw.process (buf, dry);
+                for (int i = 0; i < n; ++i)
+                {
+                    const float v = buf.getSample (0, i);
+                    out.setSample (0, start + i, v);
+                    maxStep = std::max (maxStep, (double) std::abs (v - prev));
+                    prev = v;
+                }
+            }
+            return out;
+        };
+
+        double step = 0.0;
+        const auto in = sine (kSr, 100.0, 0.5f, 0.5);
+        const int n = static_cast<int> (in.size());
+
+        const auto active = run (false, false, false, step);
+        double err = 0.0;
+        for (int i = 0; i < n; ++i) err = std::max (err, (double) std::abs (active.getSample (0, i) + in[(size_t) i]));
+        check (err < 1e-6, "active passes the processed signal", fmt ("max err %.2g", err));
+
+        const auto byp = run (true, false, false, step);
+        err = 0.0;
+        for (int i = n / 2; i < n; ++i) err = std::max (err, (double) std::abs (byp.getSample (0, i) - in[(size_t) i]));
+        check (err < 1e-6, "bypass outputs the dry input", fmt ("max err %.2g", err));
+
+        const auto muted = run (false, true, false, step);
+        const double mutedPeak = peak (muted.getReadPointer (0), n / 2, n);
+        check (mutedPeak < 1e-6, "mute is silent", fmt ("peak %.2g", mutedPeak));
+
+        const auto bypMuted = run (true, true, false, step);
+        const double bmPeak = peak (bypMuted.getReadPointer (0), n / 2, n);
+        check (bmPeak < 1e-6, "mute wins over bypass", fmt ("peak %.2g", bmPeak));
+
+        // A 100 Hz sine at 0.5 changes by at most ~0.0033 per sample at 48 kHz;
+        // a hard switch from -x to +x would jump up to 1.0.
+        run (true, false, true, step);
+        check (step < 0.01, "bypass switch has no click", fmt ("max step %.4f", step));
+        run (false, true, true, step);
+        check (step < 0.01, "mute switch has no click", fmt ("max step %.4f", step));
+    }
+
     void testChainSensitivity()
     {
         section ("Full chain — does every control change the sound?");
@@ -483,6 +553,7 @@ int main()
     testGraphicEQ();
     testMasterVolume();
     testPowerSection();
+    testOutputSwitch();
     testChainSensitivity();
     testDefaultsAndSafety();
 

@@ -70,7 +70,7 @@ public:
             {
                 float x = buffer.getWritePointer (ch)[s];
 
-                // Pre-emphasis HPF at 80Hz
+                // Subsonic HPF at 25Hz
                 float yPre = preEmphCoeff * (yPrevPre[ch] + x - xPrevPre[ch]);
                 xPrevPre[ch] = x;
                 yPrevPre[ch] = yPre;
@@ -81,6 +81,7 @@ public:
 
                 // Drive scaling
                 float xDriven = xBiased * drive / headroom;
+                peakDrive = std::max (peakDrive, std::abs (xDriven));
 
                 // Asymmetric waveshaper with Pade tanh approximation
                 float y;
@@ -109,7 +110,16 @@ public:
         }
     }
 
+    /// Largest drive level reached since the last call (1 = clipping onset).
+    float takePeakDrive()
+    {
+        const float p = peakDrive;
+        peakDrive = 0.0f;
+        return p;
+    }
+
 private:
+    float peakDrive = 0.0f;
     double sr = 44100.0;
     float preEmphCoeff = 0.0f;
     float dcBlockCoeff = 0.0f;

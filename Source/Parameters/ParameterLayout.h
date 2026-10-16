@@ -169,5 +169,15 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         "Preset",
         1, 4, 1));
 
+    // --- Output switches ---
+
+    params.push_back (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { ParameterIDs::bypass, 1 },
+        "Bypass", false));
+
+    params.push_back (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { ParameterIDs::mute, 1 },
+        "Mute", false));
+
     return { params.begin(), params.end() };
 }

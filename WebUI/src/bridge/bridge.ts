@@ -136,3 +136,20 @@ export function getComboIndex(id: ComboParamId): number {
 export function onComboChanged(id: ComboParamId, cb: () => void): () => void {
     return subscribe(getCombo(id), cb);
 }
+
+// --- Events pushed from C++ (not parameters) ---
+
+type EventToken = [string, number];
+interface JuceBackend {
+    addEventListener(eventId: string, fn: (payload: unknown) => void): EventToken;
+    removeEventListener(token: EventToken): void;
+}
+
+/** PEAK overload indicator: the editor sends `true` on overload and `false`
+ *  ~300 ms after the last one. Never fires outside the plugin (dev mode). */
+export function onPeakChanged(cb: (lit: boolean) => void): () => void {
+    const backend = window.__JUCE__?.backend as JuceBackend | undefined;
+    if (!backend) return () => {};
+    const token = backend.addEventListener('peak', (payload) => cb(payload === true));
+    return () => backend.removeEventListener(token);
+}

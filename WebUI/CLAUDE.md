@@ -44,7 +44,9 @@ schedule it.
 |---|---|---|
 | GEQ ±12 dB all bands, LEVEL −10…+8 (§12 #3–5) | **Done in C++** (user confirmed). ID `geq8k` stays; label it "9k" if the spec says so | Read ranges from the relay; update any hard-coded scales in the old UI. |
 | Dry/Wet, Input HI/LO removed (§12 #6–7) | params `dryWet`, `inputHiLo` exist | Hide from faceplate; don't delete params. |
-| `mute`, POWER rocker, toolbar bypass, PEAK/MUTE LED | being designed in the DSP session (POWER and toolbar icon are likely **one** bypass param) | Placeholders only; check PARAM-REQUESTS.md / ask the user before wiring. |
+| POWER rocker + toolbar power icon | **Done:** one toggle param `bypass` (also the host's bypass) | Bind both controls to `toggles.bypass`; ON LED = `!$bypass`. |
+| MUTE | **Done:** toggle param `mute` | Bind to `toggles.mute`. |
+| PEAK/MUTE LED (§7.4) | **Done:** read-only store `peak` in `state/store.ts` (C++ event, held ~300 ms) | LED lit = `$peak \|\| $mute`. In `npm run dev` `peak` stays false. |
 | Defaults `bright` on, `geqOn` on (§7.3) | **User decision: everything off by default** | Follow C++ defaults; ignore the spec here. |
 | Presets A–D (§4, §8) | `presetSelect` int 1–4, no DSP | **Out of scope for now** (user decision). Toolbar buttons may be visual stubs. |
 

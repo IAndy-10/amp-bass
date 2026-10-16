@@ -25,7 +25,9 @@ export type ToggleParamId =
     | 'bright'
     | 'ultraHi'
     | 'ultraLo'
-    | 'geqOn';
+    | 'geqOn'
+    | 'bypass'
+    | 'mute';
 
 export type ComboParamId =
     | 'midFreq'
