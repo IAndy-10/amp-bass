@@ -6,3 +6,4 @@
 - Graphic EQ bands ±12 dB, Level -10 to +8 dB (matches reference); UI spec no longer tracked.
 - Add Bypass and Mute parameters and a PEAK overload indicator for the UI.
 - New SVT-3 PRO style UI (EPIC-AMP-1), undo fix for single-step changes, editor sized to the new faceplate, peak LED fixes.
+- Cleanup: remove legacy UI components, unused DSP primitives and npm packages; enable editor keyboard focus; fix PEAK drive reset; refresh README/CLAUDE docs.

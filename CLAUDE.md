@@ -4,65 +4,88 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Bass amplifier plugin modeled after the Ampeg SVT-3 PRO. Hybrid DSP signal chain with tube preamp saturation and MOSFET power section. Built with JUCE 8 + Svelte 5.
+Bass amplifier plugin (shown as **EPIC-AMP-1**) whose sound and layout follow the Brainworx / Plugin Alliance
+**Ampeg SVT-3 PRO** plugin. Tube-style preamp saturation plus a MOSFET-style power section. JUCE 8 + Svelte 5.
 
 ## Build Commands
 
 ```bash
-# Full plugin build (fetches JUCE, builds Svelte UI, compiles C++, copies to system plugin folder)
-cd build && cmake .. && cmake --build .
+# Full plugin build (fetches JUCE, builds the Svelte UI, compiles C++, copies VST3/AU to the system folders)
+cmake -S . -B build && cmake --build build
+#   -DAMPBASS_COPY_PLUGIN=OFF   don't overwrite the installed plugin (secondary checkouts)
 
-# UI-only development (hot reload at localhost:5173, bridge functions stubbed)
+# UI-only development (hot reload at localhost:5173; no plugin backend, controls start at 0)
 cd WebUI && npm install && npm run dev
 
-# UI production build
-cd WebUI && tsc && npm run build
+# UI checks (run before committing UI changes)
+cd WebUI && npm run build && npx svelte-check
+
+# Tests: DSP diagnostics + offline VST3 host (see docs/how-ampbass-works.md §5)
+cmake -S . -B build-tests -G Ninja -DAMPBASS_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release \
+      -DFETCHCONTENT_SOURCE_DIR_JUCE=$PWD/build/_deps/juce-src
+cmake --build build-tests
+build-tests/Tests/AmpBassDSPTests_artefacts/Release/AmpBassDSPTests   # expect 0 FAIL
 ```
 
-Prerequisites: CMake 3.22+, C++17 compiler, Node.js 18+.
-
-No test suite exists yet. No linter is configured for C++. TypeScript checking is via `tsc` (part of the build script).
+Prerequisites: CMake 3.22+, C++17 compiler, Node.js 18+, Python 3 with numpy/scipy/matplotlib (comparison only).
+No C++ linter is configured.
 
 ## Architecture
 
-### Signal Chain (7 stages, processed in order)
+### Signal chain (`PluginProcessor::processBlock`)
 
 ```
-Input → InputGain → PreFilters → TubePreamp → ToneStack → GraphicEQ → MasterVolume → PowerSection
+Input → InputGain → PreFilters → TubePreamp → ToneStack → GraphicEQ → [PEAK check]
+      → MasterVolume → PowerSection → Dry/Wet → OutputSwitch (bypass, mute) → Output
 ```
 
-Each DSP stage is a **header-only** class in `Source/DSP/` with `prepare(sampleRate, blockSize)` and `process(buffer, params)`. Stages are wired together in `PluginProcessor.cpp`.
+Each stage is a **header-only** class in `Source/DSP/` with `prepare (sampleRate, blockSize)`,
+`setParams (...)` and `process (buffer)`. The host block is processed in sub-blocks no larger than the
+size given to `prepareToPlay`. `docs/how-ampbass-works.md` explains every stage with numbers.
 
-### Three-Layer Architecture
+### Three layers
 
-1. **C++ DSP + Plugin** (`Source/`): JUCE 8 audio processor, APVTS parameter tree, DSP stages
-2. **Native Bridge** (`Source/Plugin/NativeBridge.*` + `WebUI/src/bridge/`): JUCE 8 native relay integration (`withNativeIntegrationEnabled()`). Never use `juce://` URL intercept.
-3. **Svelte UI** (`WebUI/`): Neumorphic component library, Svelte 5 stores backed by relay params
+1. **C++ DSP + plugin** (`Source/`): JUCE 8 processor, APVTS parameter tree, DSP stages.
+2. **Native bridge** (`Source/Plugin/NativeBridge.*` + `WebUI/src/bridge/`): JUCE 8 relays
+   (`withNativeIntegrationEnabled()`), using JUCE's frontend module vendored in `WebUI/src/bridge/juce/`.
+   Int parameters (`midFreq`, `presetSelect`) use slider relays. The PEAK LED is a `peak` event sent by
+   `PluginEditor::timerCallback`. Never use `juce://` URL intercept.
+3. **Svelte UI** (`WebUI/src/lib/`): faceplate components positioned in reference pixels (2562 × 558 canvas).
+   `src/state/store.ts` holds the stores synced with C++; `src/lib/stores/amp.ts` is a display-unit view
+   that writes through the bridge (never keep a second copy of a value). The production build is a single
+   inlined `index.html` embedded via BinaryData.
 
-### Parameter System
+### Parameters
 
-- 24 parameters across 7 stages, defined in `Source/Parameters/ParameterIDs.h` (frozen IDs — changing breaks saved sessions) and `ParameterLayout.h`
-- TypeScript mirror in `WebUI/src/types/parameters.ts`
-- Bridge pushes only changed params from C++ to JS (delta > 0.001)
-- Every float parameter on the audio thread uses `SmoothedValue` (10ms minimum)
+- 27 parameters in `Source/Parameters/ParameterIDs.h` (**frozen IDs** — changing one breaks saved sessions)
+  and `ParameterLayout.h`; TypeScript mirror in `WebUI/src/types/parameters.ts`.
+- `geq8k` is labelled 9k on the faceplate. `inputHiLo`, `dryWet` and `presetSelect` exist but aren't on the
+  faceplate. `bypass` is also the host's bypass parameter.
+- Every float parameter is smoothed on the audio thread with `juce::SmoothedValue` (10 ms minimum).
 
-### DSP Primitives (`Source/DSP/Primitives/`)
+### DSP primitives (`Source/DSP/Primitives/`)
 
-Shared building blocks: Biquad, DelayLine, OnePoleFilter, SmoothedParam, LFO, DryWetMixer. All header-only.
-
-### UI Components (`WebUI/src/components/`)
-
-Neumorphic component library: NeuKnob, NeuSlider, NeuButton, NeuSelector, NeuPanel, etc. Uses Tailwind CSS + Three.js optional shader layer.
+`Biquad` (RBJ cookbook, DF-II transposed) and `DryWetMixer`. Header-only.
 
 ## Key Conventions
 
-- **Real-time safety in processBlock**: No heap allocations, no locks, no I/O, no string ops. Cache all component refs in `Awake()`-equivalent. Use `SmoothedParam` for parameter interpolation.
-- **Sample-rate scaling**: All delay/filter calculations must scale by `sampleRate / 44100.0`.
+- **Real-time safety in processBlock**: no heap allocations, no locks, no I/O, no string ops.
+- **Sample rate**: filter coefficients are computed from the actual sample rate.
 - **Equal-power crossfade**: `cos/sin(mix * pi/2)`, not linear.
-- **Filter cutoff interpolation**: Logarithmic, not linear Hz.
-- **Bridge threading**: All bridge calls on message thread only.
-- **Denormal flushing**: Required in all DSP stages.
+- **Filter cutoff interpolation**: logarithmic, not linear Hz.
+- **Bridge threading**: all bridge calls on the message thread.
+- **Denormals**: `ScopedNoDenormals` in `processBlock`; filters also flush their state.
+- **Sound changes are measured**: check `AmpBassDSPTests` and, against the reference plugin, `Tests/compare/`.
+
+## Project files
+
+- `BACKLOG.md` — open bugs, cleanup and planned work (P1–P3). Add findings here.
+- `CHANGELOG.md` — one line per merge to `dev`.
+- `Tests/compare/` — AmpBass vs reference comparison (see its README).
+- `docs/` is gitignored except `how-ampbass-works.md`; the UI spec and reference material are local only.
 
 ## Building Process Toolkit
 
-The `building-process/` directory is a **separate toolkit** used to generate and manage plugins (gitignored). It contains agent definitions, skills, hooks, rules, and workflows. See `building-process/CLAUDE.md` for its own conventions. Do not modify it as part of normal plugin development.
+The `building-process/` directory is a **separate toolkit** used to generate and manage plugins (gitignored).
+It contains agent definitions, skills, hooks, rules, workflows and reference material. See
+`building-process/CLAUDE.md` for its own conventions. Do not modify or commit it as part of plugin development.

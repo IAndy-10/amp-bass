@@ -182,8 +182,10 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         // ── PEAK: input clipping, preamp driven into hard saturation,
         //    or tone/EQ boosts pushing the signal past full scale ──
         //    All channels are checked. Nothing is reported while fully bypassed.
+        //    takePeakDrive() also resets the preamp's peak, so call it every sub-block.
+        const float peakDrive = tubePreamp.takePeakDrive();
         const bool overload = dryWetMixer.getDry().getMagnitude (0, n) >= kPeakInput
-                           || tubePreamp.takePeakDrive() >= kPeakDrive
+                           || peakDrive >= kPeakDrive
                            || sub.getMagnitude (0, n) >= kPeakPreMaster;
         if (overload && ! outputSwitch.isFullyBypassed())
             peakFlag.store (true, std::memory_order_relaxed);
