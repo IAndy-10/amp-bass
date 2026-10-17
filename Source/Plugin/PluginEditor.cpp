@@ -25,9 +25,12 @@ AmpBassAudioProcessorEditor::AmpBassAudioProcessorEditor (AmpBassAudioProcessor&
     webView = std::make_unique<juce::WebBrowserComponent> (options);
     addAndMakeVisible (webView.get());
 
-    setSize (1350, 460);
+    // Faceplate design canvas is 2562 x 558 (UI spec §2.1): keep that aspect.
+    constexpr double kAspect = 2562.0 / 558.0;
     setResizable (true, true);
-    setResizeLimits (675, 230, 1800, 620);
+    setResizeLimits (960, juce::roundToInt (960 / kAspect), 1800, juce::roundToInt (1800 / kAspect));
+    getConstrainer()->setFixedAspectRatio (kAspect);
+    setSize (1400, juce::roundToInt (1400 / kAspect));
 
     // Navigate to the embedded index.html via resource provider
     webView->goToURL (juce::WebBrowserComponent::getResourceProviderRoot() + "index.html");
@@ -47,7 +50,9 @@ void AmpBassAudioProcessorEditor::timerCallback()
         lastPeakMs = now;
 
     const bool lit = (now - lastPeakMs) < kPeakHoldMs;
-    if (lit != peakLit && webView != nullptr)
+    // Only record a state the page actually received; a hidden WebView drops
+    // events, and the change is sent again once it is showing.
+    if (lit != peakLit && webView != nullptr && webView->isShowing())
     {
         peakLit = lit;
         webView->emitEventIfBrowserIsVisible ("peak", lit);

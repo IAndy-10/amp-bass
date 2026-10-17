@@ -41,3 +41,6 @@ dist/
 *.component
 *.aax
 package-release.sh
+
+# Python
+__pycache__/

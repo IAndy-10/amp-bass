@@ -9,6 +9,9 @@ export default defineConfig({
         svelte({ preprocess: vitePreprocess() }),
         glsl(),
     ],
+    resolve: {
+        alias: { $lib: decodeURIComponent(new URL('./src/lib', import.meta.url).pathname) },
+    },
     build: {
         outDir: 'dist',
         emptyOutDir: true,
