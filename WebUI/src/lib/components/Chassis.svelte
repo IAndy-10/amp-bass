@@ -23,7 +23,7 @@
 	<span class="at screw" style:--x={1280} style:--y={497} style:--d={24}></span>
 	<!-- Placeholder wordmark: Ampeg is a trademark (spec §12 #14). Swap for a cleared SVG. -->
 	<span class="at wordmark" style:--x={1830} style:--y={145}>Ampeg</span>
-	<span class="at model" style:--x={1826} style:--y={192}>SVT-3 PRO</span>
+	<span class="at model" style:--x={1826} style:--y={192}>EPIC-AMP-1</span>
 </div>
 
 {@render children?.()}
