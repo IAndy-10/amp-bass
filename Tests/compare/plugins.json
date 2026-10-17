@@ -1,0 +1,74 @@
+{
+  "_help": [
+    "How each plugin's parameters map onto the shared faceplate keys used by cases.py.",
+    "as = 'knob10': faceplate 0-10 -> normalised value/10 (--set)",
+    "as = 'text'  : value passed as display text (--set-text); booleans become On/Off",
+    "as = 'norm'  : value is already normalised 0-1 (--set)",
+    "baseline = settings applied to every render (text values), e.g. reference cabinet bypass.",
+    "Reference entries marked TODO must be checked with: AmpBassHostRender --plugin <path> --list / --probe <name>"
+  ],
+  "ampbass": {
+    "path": "~/Library/Audio/Plug-Ins/VST3/AmpBass.vst3",
+    "baseline": {},
+    "map": {
+      "gain":     {"param": "Gain",          "as": "knob10"},
+      "tubeGain": {"param": "Tube Gain",     "as": "knob10"},
+      "bass":     {"param": "Bass",          "as": "knob10"},
+      "midrange": {"param": "Midrange",      "as": "knob10"},
+      "midFreq":  {"param": "Mid Frequency", "as": "text"},
+      "treble":   {"param": "Treble",        "as": "knob10"},
+      "master":   {"param": "Master Volume", "as": "knob10"},
+      "bright":   {"param": "Bright",        "as": "text"},
+      "inputPad": {"param": "Input Pad",     "as": "text"},
+      "ultraHi":  {"param": "Ultra Hi",      "as": "text"},
+      "ultraLo":  {"param": "Ultra Lo",      "as": "text"},
+      "geqOn":    {"param": "Graphic EQ On", "as": "text"},
+      "geq33":    {"param": "GEQ 33 Hz",     "as": "text"},
+      "geq80":    {"param": "GEQ 80 Hz",     "as": "text"},
+      "geq150":   {"param": "GEQ 150 Hz",    "as": "text"},
+      "geq300":   {"param": "GEQ 300 Hz",    "as": "text"},
+      "geq600":   {"param": "GEQ 600 Hz",    "as": "text"},
+      "geq900":   {"param": "GEQ 900 Hz",    "as": "text"},
+      "geq2k":    {"param": "GEQ 2 kHz",     "as": "text"},
+      "geq5k":    {"param": "GEQ 5 kHz",     "as": "text"},
+      "geq9k":    {"param": "GEQ 8 kHz",     "as": "text"},
+      "geqLevel": {"param": "GEQ Level",     "as": "text"}
+    }
+  },
+  "reference": {
+    "path": "TODO ~/Library/Audio/Plug-Ins/VST3/<reference>.vst3",
+    "baseline": {
+      "TODO Rec Chain": "Cabinet Bypass",
+      "TODO Noise Gate": "Off",
+      "TODO Tight": "Off",
+      "TODO Smooth": "Off",
+      "TODO Input Gain": "0",
+      "TODO Power Soak": "0",
+      "TODO Noise": "-inf"
+    },
+    "map": {
+      "gain":     {"param": "TODO Gain",      "as": "text"},
+      "tubeGain": {"param": "TODO Tube Gain", "as": "text"},
+      "bass":     {"param": "TODO Bass",      "as": "text"},
+      "midrange": {"param": "TODO Midrange",  "as": "text"},
+      "midFreq":  {"param": "TODO Frequency", "as": "text"},
+      "treble":   {"param": "TODO Treble",    "as": "text"},
+      "master":   {"param": "TODO Master",    "as": "text"},
+      "bright":   {"param": "TODO Bright",    "as": "text"},
+      "inputPad": {"param": "TODO -15dB",     "as": "text"},
+      "ultraHi":  {"param": "TODO Hi",        "as": "text"},
+      "ultraLo":  {"param": "TODO Lo",        "as": "text"},
+      "geqOn":    {"param": "TODO EQ",        "as": "text"},
+      "geq33":    {"param": "TODO 33",        "as": "text"},
+      "geq80":    {"param": "TODO 80",        "as": "text"},
+      "geq150":   {"param": "TODO 150",       "as": "text"},
+      "geq300":   {"param": "TODO 300",       "as": "text"},
+      "geq600":   {"param": "TODO 600",       "as": "text"},
+      "geq900":   {"param": "TODO 900",       "as": "text"},
+      "geq2k":    {"param": "TODO 2k",        "as": "text"},
+      "geq5k":    {"param": "TODO 5k",        "as": "text"},
+      "geq9k":    {"param": "TODO 9k",        "as": "text"},
+      "geqLevel": {"param": "TODO Level",     "as": "text"}
+    }
+  }
+}

@@ -11,6 +11,9 @@
 // Options:
 //   --plugin <path>   default ~/Library/Audio/Plug-Ins/VST3/AmpBass.vst3
 //   --set Name=v      parameter by display name, v normalised 0..1 (repeatable)
+//   --set-text Name=t parameter by display name, value as the plugin displays it,
+//                     e.g. "Rec Chain=Cabinet Bypass" (repeatable)
+//   --probe Name      print the displayed text at normalised 0, 0.1 … 1
 //   --sr <hz>         sample rate when no --in is given (default 48000)
 //   --block <n>       block size (default 512)
 
@@ -33,6 +36,8 @@ namespace
                                 .getChildFile ("Library/Audio/Plug-Ins/VST3/AmpBass.vst3");
         juce::File in, out;
         std::map<juce::String, float> sets;
+        std::map<juce::String, juce::String> textSets;
+        juce::String probe;
         double sr = 48000.0;
         int block = 512;
         bool list = false, sweep = false;
@@ -59,6 +64,13 @@ namespace
                 o.sets[kv.upToLastOccurrenceOf ("=", false, false).trim().toLowerCase()]
                     = kv.fromLastOccurrenceOf ("=", false, false).getFloatValue();
             }
+            else if (a == "--set-text")
+            {
+                const auto kv = next();
+                o.textSets[kv.upToFirstOccurrenceOf ("=", false, false).trim().toLowerCase()]
+                    = kv.fromFirstOccurrenceOf ("=", false, false).trim();
+            }
+            else if (a == "--probe") o.probe = next().trim().toLowerCase();
             else std::fprintf (stderr, "Ignoring unknown argument: %s\n", argv[i]);
         }
         return o;
@@ -106,7 +118,33 @@ namespace
             }
             param->setValue (v);
         }
+
+        for (auto& [name, text] : o.textSets)
+        {
+            auto* param = findParam (p, name);
+            if (param == nullptr)
+            {
+                std::fprintf (stderr, "Unknown parameter '%s' (use --list)\n", name.toRawUTF8());
+                return false;
+            }
+            const float v = param->getValueForText (text);
+            param->setValue (v);
+            const auto shown = param->getText (v, 64);
+            if (! shown.trim().startsWithIgnoreCase (text) && ! text.startsWithIgnoreCase (shown.trim()))
+                std::fprintf (stderr, "Warning: '%s' = '%s' resolved to %.4f, which displays as '%s'\n",
+                              name.toRawUTF8(), text.toRawUTF8(), v, shown.toRawUTF8());
+        }
         return true;
+    }
+
+    int probeParam (juce::AudioPluginInstance& p, const juce::String& name)
+    {
+        auto* param = findParam (p, name);
+        if (param == nullptr) { std::fprintf (stderr, "Unknown parameter '%s'\n", name.toRawUTF8()); return 1; }
+        std::printf ("%s (steps: %d)\n", param->getName (128).toRawUTF8(), param->getNumSteps());
+        for (int i = 0; i <= 10; ++i)
+            std::printf ("  %.1f  %s\n", i / 10.0, param->getText (i / 10.0f, 64).toRawUTF8());
+        return 0;
     }
 
     juce::AudioBuffer<float> renderThrough (juce::AudioPluginInstance& p, const juce::AudioBuffer<float>& input,
@@ -251,7 +289,9 @@ int main (int argc, char* argv[])
     std::printf ("Loaded %s (%d in / %d out)\n\n", plugin->getName().toRawUTF8(),
                  plugin->getTotalNumInputChannels(), plugin->getTotalNumOutputChannels());
 
+    std::printf ("Latency: %d samples\n", plugin->getLatencySamples());
     if (o.list) { listParams (*plugin); return 0; }
+    if (o.probe.isNotEmpty()) return probeParam (*plugin, o.probe);
     if (o.sweep) return sweep (*plugin, Options (o));
 
     if (! applyBaseline (*plugin, o)) return 1;
@@ -263,7 +303,7 @@ int main (int argc, char* argv[])
         o.out.deleteFile();
         juce::WavAudioFormat wav;
         std::unique_ptr<juce::AudioFormatWriter> writer (
-            wav.createWriterFor (new juce::FileOutputStream (o.out), sr, 2, 24, {}, 0));
+            wav.createWriterFor (new juce::FileOutputStream (o.out), sr, 2, 32, {}, 0)); // 32-bit float: no clipping above 0 dBFS
         if (writer == nullptr) { std::fprintf (stderr, "Cannot write %s\n", o.out.getFullPathName().toRawUTF8()); return 1; }
         writer->writeFromAudioSampleBuffer (output, 0, output.getNumSamples());
         std::printf ("wrote %s\n", o.out.getFullPathName().toRawUTF8());
