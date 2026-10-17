@@ -1,105 +1,101 @@
 # AmpBass
 
-Bass amplifier plugin modeled after the Ampeg SVT-3 PRO. Hybrid DSP signal chain with tube preamp saturation and MOSFET power section character.
+Bass amplifier plugin (faceplate name **EPIC-AMP-1**) whose sound and layout follow the
+Ampeg SVT-3 PRO plugin by Brainworx / Plugin Alliance: tube-style preamp saturation, a
+3-band semi-parametric tone stack, a 9-band graphic EQ and a MOSFET-style power section.
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
 | DSP | C++17, JUCE 8.0.4 |
-| UI | Svelte 5, TypeScript, Vite |
+| UI | Svelte 5, TypeScript, Vite (single inlined `index.html`) |
+| Bridge | JUCE 8 native relays (WebView) |
 | Build | CMake 3.22+, FetchContent for JUCE |
-| Formats | VST3, AU, Standalone |
-| Bridge | JUCE 8 native relay integration |
+| Formats | VST3, AU, Standalone (macOS) |
 
-## Signal Chain
+## Signal chain
 
 ```
-Input → InputGain (-15dB pad, HI/LO)
-      → PreFilters (Bright, Ultra HI, Ultra LO)
-      → TubePreamp (12AX7 waveshaper + starved plate)
-      → ToneStack (Bass/Mid+Freq/Treble)
-      → GraphicEQ (9-band, bypassable)
+Input → InputGain (−15 dB pad)
+      → PreFilters (Bright, Hi, Lo)
+      → TubePreamp (asymmetric waveshaper, Gain + Tube Gain "starved plate")
+      → ToneStack (Bass, Midrange + 5-position Frequency, Treble)
+      → GraphicEQ (9 bands 33 Hz–9k, ±12 dB, Level −10…+8 dB, switchable)
       → MasterVolume
-      → PowerSection (MOSFET soft clip + compression)
+      → PowerSection (soft clip + 2:1 compression)
+      → Dry/Wet → Bypass / Mute
 ```
+
+A detailed, stage-by-stage explanation with the numbers that matter for tuning is in
+[`docs/how-ampbass-works.md`](docs/how-ampbass-works.md).
 
 ## Building
 
 ```bash
 # Prerequisites: CMake 3.22+, C++17 compiler, Node.js 18+
-
-# Clone and build
-cd amp-bass
-mkdir build && cd build
-cmake ..
-cmake --build .
+cmake -S . -B build
+cmake --build build
 ```
 
-CMake will:
-1. Fetch JUCE 8.0.4 via FetchContent
-2. Build the Svelte UI (`npm install && npm run build` in `WebUI/`)
-3. Embed the UI into the plugin binary via `juce_add_binary_data`
-4. Compile DSP + plugin code
-5. Copy plugin to system plugin folder (`COPY_PLUGIN_AFTER_BUILD`)
+CMake fetches JUCE, builds the Svelte UI, embeds it in the binary, compiles the plugin and
+copies the VST3/AU to the system plugin folders. Pass `-DAMPBASS_COPY_PLUGIN=OFF` to skip the copy.
 
 ## Development
 
 ```bash
-# Run the UI standalone for development
-cd WebUI
-npm install
-npm run dev
+cd WebUI && npm install && npm run dev      # UI in the browser at localhost:5173 (no audio)
+cd WebUI && npm run build && npx svelte-check
 ```
 
-The UI runs in the browser at `localhost:5173` with default parameter values. JUCE relay functions are stubbed when running outside the plugin.
+### Tests and measurement
 
-## Project Structure
+```bash
+cmake -S . -B build-tests -G Ninja -DAMPBASS_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release \
+      -DFETCHCONTENT_SOURCE_DIR_JUCE=$PWD/build/_deps/juce-src
+cmake --build build-tests
+```
+
+- `AmpBassDSPTests` — per-stage checks (gain, frequency response, THD, bypass/mute, block sizes).
+- `AmpBassHostRender` — loads any VST3 offline: list/probe parameters, render WAV files.
+- `Tests/compare/` — renders the same signals through AmpBass and the reference plugin and
+  writes a comparison report ([README](Tests/compare/README.md)).
+
+## Project structure
 
 ```
 amp-bass/
 ├── CMakeLists.txt
+├── BACKLOG.md                    # open work, P1–P3
+├── CHANGELOG.md
 ├── Source/
-│   ├── DSP/                    # Signal chain stages (header-only)
-│   │   ├── InputGain.h
-│   │   ├── PreFilters.h
-│   │   ├── TubePreamp.h
-│   │   ├── ToneStack.h
-│   │   ├── GraphicEQ.h
-│   │   ├── MasterVolume.h
-│   │   ├── PowerSection.h
-│   │   └── Primitives/         # Shared DSP building blocks
-│   ├── Parameters/
-│   │   ├── ParameterIDs.h      # Frozen parameter identifiers
-│   │   └── ParameterLayout.h   # APVTS parameter definitions
-│   └── Plugin/
-│       ├── PluginProcessor.*   # Audio processing + stage wiring
-│       ├── PluginEditor.*      # WebView host + resource provider
-│       └── NativeBridge.*      # JUCE 8 relay parameter sync
-└── WebUI/
-    ├── src/
-    │   ├── App.svelte          # Main UI layout
-    │   ├── bridge/bridge.ts    # JUCE 8 relay frontend bridge
-    │   ├── state/store.ts      # Svelte stores backed by relays
-    │   ├── components/         # Neumorphic UI components
-    │   └── types/parameters.ts # TypeScript parameter ID types
-    ├── vite.config.ts
-    └── package.json
+│   ├── DSP/                      # header-only stages + OutputSwitch (bypass/mute)
+│   │   └── Primitives/           # Biquad, DryWetMixer
+│   ├── Parameters/               # ParameterIDs.h (frozen), ParameterLayout.h
+│   └── Plugin/                   # processor, editor (WebView + PEAK event), NativeBridge
+├── Tests/                        # DSPTests, HostRender, compare/ (Python)
+├── WebUI/
+│   └── src/
+│       ├── bridge/               # bridge.ts + vendored JUCE frontend module
+│       ├── state/store.ts        # stores synced with the plugin parameters
+│       ├── lib/                  # faceplate components, actions, amp/history stores, tokens
+│       └── types/parameters.ts   # TypeScript mirror of ParameterIDs.h
+└── docs/how-ampbass-works.md
 ```
 
 ## Parameters
 
-24 parameters across 7 DSP stages. All parameter IDs are frozen — changing them breaks saved sessions.
+27 parameters. IDs are frozen — changing one breaks saved sessions.
 
 | Group | Parameters |
 |---|---|
-| Input | -15dB Pad, HI/LO |
-| Pre-filters | Bright, Ultra HI, Ultra LO |
+| Input | −15 dB Pad, Input Select (HI/LO, not on faceplate) |
+| Pre-filters | Bright, Ultra Hi, Ultra Lo |
 | Preamp | Gain, Tube Gain |
-| Tone | Bass, Midrange, Mid Freq (5-pos), Treble |
-| Graphic EQ | 9 bands (33Hz-8kHz), Level, On/Off |
-| Output | Master |
-| Meta | Preset Select (Phase 2) |
+| Tone | Bass, Midrange, Mid Frequency (220/450/800/1.6k/3k), Treble |
+| Graphic EQ | On, 9 bands (ID `geq8k` = 9k band), Level |
+| Output | Master Volume, Dry/Wet (not on faceplate), Bypass, Mute |
+| Later | Preset (no function yet) |
 
 ## License
 
