@@ -93,22 +93,25 @@ export function numeric(key: NumericKey): Readable<number> {
 
 export const midFreqPos: Readable<number> = derived(combos.midFreq, (i) => i + 1);
 
-// --- Raw writes (bridge, or the store itself when there is no backend) ---
+// --- Raw writes ---
+// The bridge only updates the stores when C++ echoes the value back, which
+// arrives asynchronously. The store is also set here so the UI and undo
+// snapshots see the new value immediately; the echo then confirms it.
 
 function writeNormalised(id: SliderParamId, n: number): void {
     if (getSlider(id)) setSliderValue(id, n);
-    else sliders[id].set(n);
+    sliders[id].set(n);
 }
 
 function writeFlag(id: ToggleParamId, v: boolean): void {
     if (getToggle(id)) setToggleValue(id, v);
-    else toggles[id].set(v);
+    toggles[id].set(v);
 }
 
 function writeMidFreqIndex(i: number): void {
     const idx = Math.min(4, Math.max(0, Math.round(i)));
     if (getCombo('midFreq')) setComboIndex('midFreq', idx);
-    else combos.midFreq.set(idx);
+    combos.midFreq.set(idx);
 }
 
 // --- Snapshots for history (bypass excluded: undo never powers the amp off) ---
