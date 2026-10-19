@@ -4,6 +4,7 @@ Reads <renders>/ampbass/<case>/<signal>.wav and <renders>/reference/<case>/<sign
 writes <out>/report.md, <out>/summary.json and one PNG per case.
 
     python3 Tests/compare/analyze.py [--cases bass treble]
+    python3 Tests/compare/analyze.py --compare-to old/summary.json   # regression gate vs an earlier run
 
 Measurements (each plugin's latency is found from its clean_flat sweep and removed):
   sweep    frequency response via exponential-sweep deconvolution (Farina), 1/6-octave smoothed
@@ -12,6 +13,7 @@ Measurements (each plugin's latency is found from its clean_flat sweep and remov
   bursts   level envelope over time (attack / release)
   silence  output noise floor
   di       null test after time and level alignment, 1/3-octave level difference
+Every signal: left/right difference of each plugin (both inputs are identical stereo).
 """
 
 from __future__ import annotations
@@ -40,6 +42,12 @@ C_AMP, C_REF = "#2a78d6", "#eb6834"
 INK, INK_SOFT, GRID, SURFACE = "#1a1a19", "#6b6a64", "#e4e3de", "#fcfcfb"
 FREQS = np.geomspace(20, 20_000, 240)
 FR_BAND = (40.0, 8_000.0)  # where FR differences are scored
+FR_FULL = (25.0, 16_000.0)  # wide band; sweep edges are unreliable beyond this
+HARM_FLOOR_DBC = -60.0  # harmonics below this in both plugins count as matching
+LEVEL_FLOOR_DB = -120.0  # levels are clamped here before comparing (a silent plugin reads -240)
+# Regression gate: a metric is "worse" when it moves by more than this against --compare-to.
+GATE = {"level": 0.5, "fr": 0.5, "fr_full": 0.5, "harm": 3.0, "ramp": 0.5,
+        "burst": 0.5, "settle": 0.02, "null": 1.0, "noise": 6.0, "lr": 6.0}
 EPS = 1e-12
 
 log = logging.getLogger("analyze")
@@ -48,13 +56,25 @@ log = logging.getLogger("analyze")
 # ─── I/O ────────────────────────────────────────────────────────────────
 
 def load(path: Path) -> np.ndarray:
+    x = load_stereo(path)
+    return x[:, 0] if x.ndim == 2 else x
+
+
+def load_stereo(path: Path) -> np.ndarray:
     try:
         sr, data = wavfile.read(path)
     except (OSError, ValueError) as e:
         raise SystemExit(f"Cannot read {path}: {e}")
     scale = {np.dtype(np.int16): 32_768.0, np.dtype(np.int32): 2_147_483_648.0}.get(data.dtype, 1.0)
-    x = data.astype(np.float64) / scale
-    return x[:, 0] if x.ndim == 2 else x
+    return data.astype(np.float64) / scale
+
+
+def lr_diff_db(path: Path) -> float | None:
+    """Left minus right relative to left (dB); None for mono files."""
+    x = load_stereo(path)
+    if x.ndim != 2 or x.shape[1] < 2:
+        return None
+    return float(db(rms(x[:, 0] - x[:, 1]) / max(rms(x[:, 0]), EPS)))
 
 
 def db(x: np.ndarray | float) -> np.ndarray | float:
@@ -150,7 +170,23 @@ def analyze_ramp(y: np.ndarray, info: dict, sr: int, start: int) -> dict:
 def analyze_bursts(y: np.ndarray, info: dict, sr: int, start: int) -> dict:
     n = int(info["step_seconds"] * sr * 2 * info["pairs"])
     env = envelope_db(y[start: start + n], sr, 0.02)  # 2 cycles of 100 Hz
-    return {"t": (np.arange(len(env)) * 0.02).tolist(), "env_db": env.tolist()}
+    # Steady level (last half of each step) and settle time (first frame within 1 dB of it).
+    # Steps alternate quiet, loud. 10 ms frames = one cycle of the 100 Hz tone.
+    fine = envelope_db(y[start: start + n], sr, 0.01)
+    per = int(round(info["step_seconds"] / 0.01))
+    steady = {"quiet": [], "loud": []}
+    settle = {"quiet": [], "loud": []}
+    for i in range(2 * info["pairs"]):
+        seg = fine[i * per:(i + 1) * per]
+        kind = "quiet" if i % 2 == 0 else "loud"
+        lvl = float(np.median(seg[per // 2:]))
+        steady[kind].append(lvl)
+        if i > 0:  # the first step starts from silence
+            within = np.nonzero(np.abs(seg - lvl) <= 1.0)[0]
+            settle[kind].append(0.01 * float(within[0]) if len(within) else info["step_seconds"])
+    return {"t": (np.arange(len(env)) * 0.02).tolist(), "env_db": env.tolist(),
+            "quiet_db": float(np.mean(steady["quiet"])), "loud_db": float(np.mean(steady["loud"])),
+            "settle_quiet_s": float(np.mean(settle["quiet"])), "settle_loud_s": float(np.mean(settle["loud"]))}
 
 
 def third_octave_db(y: np.ndarray, sr: int) -> tuple[np.ndarray, np.ndarray]:
@@ -182,6 +218,15 @@ class CaseResult:
     di_null_db: float | None = None
     noise_amp_db: float | None = None
     noise_ref_db: float | None = None
+    fr_full_max_db: float | None = None    # like fr_max_diff_db, over FR_FULL
+    harm_err_db: float | None = None       # worst |H2|/|H3| error (dBc) over tone levels, 41/100/400 Hz
+    harm_worst: str | None = None          # where it occurs, e.g. "H3 @100 Hz -16 dBFS"
+    ramp_err_db: float | None = None       # worst output-level error along the ramp (not level matched)
+    burst_quiet_db: float | None = None    # steady burst level, reference minus AmpBass
+    burst_loud_db: float | None = None
+    settle_err_s: float | None = None      # worst settle-time difference (s) after a level jump
+    lr_amp_db: float | None = None         # worst L-R difference over all signals
+    lr_ref_db: float | None = None
     plots: dict = field(default_factory=dict)
 
 
@@ -200,6 +245,11 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
         if not all(f.exists() for f in files.values()):
             continue
         ys = {p: shifted(load(f), lat[p]) for p, f in files.items()}
+        for p, f in files.items():
+            lr = lr_diff_db(f)
+            attr = "lr_amp_db" if p == "ampbass" else "lr_ref_db"
+            if lr is not None and (getattr(res, attr) is None or lr > getattr(res, attr)):
+                setattr(res, attr, lr)
         kind = info["kind"]
         d: dict[str, dict] = {}
         if kind == "sweep":
@@ -236,11 +286,39 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
         if sig in data:
             a, r = np.array(data[sig]["ampbass"]["fr_db"]), np.array(data[sig]["reference"]["fr_db"])
             band = (FREQS >= FR_BAND[0]) & (FREQS <= FR_BAND[1])
-            diff = (r - a)[band]
-            diff -= np.nanmedian(diff)  # shape only; level is reported separately
+            offset = np.nanmedian((r - a)[band])  # shape only; level is reported separately
+            diff = (r - a)[band] - offset
             i = int(np.nanargmax(np.abs(diff)))
             res.fr_max_diff_db, res.fr_worst_hz = float(diff[i]), float(FREQS[band][i])
+            full = (FREQS >= FR_FULL[0]) & (FREQS <= FR_FULL[1])
+            res.fr_full_max_db = float(np.nanmax(np.abs((r - a)[full] - offset)))
             break
+    worst = (0.0, None)
+    for sig in ("tones_41", "tones_100", "tones_400"):
+        if sig not in data:
+            continue
+        for sa, sr_ in zip(data[sig]["ampbass"]["steps"], data[sig]["reference"]["steps"]):
+            if min(sa["out_db"], sr_["out_db"]) < LEVEL_FLOOR_DB:
+                continue  # one plugin is silent; level metrics already show it
+            for h in (0, 1):  # H2, H3
+                ha, hr = sa["h_db"][h], sr_["h_db"][h]
+                if max(ha, hr) < HARM_FLOOR_DBC:
+                    continue
+                err = abs(max(ha, HARM_FLOOR_DBC) - max(hr, HARM_FLOOR_DBC))
+                if err > worst[0]:
+                    worst = (err, f"H{h + 2} @{int(data[sig]['ampbass']['freq'])} Hz {sa['in_db']} dBFS")
+    if any(s in data for s in ("tones_41", "tones_100", "tones_400")):
+        res.harm_err_db, res.harm_worst = worst
+    if "ramp" in data:
+        clamp = lambda v: np.maximum(np.array(v), LEVEL_FLOOR_DB)  # noqa: E731
+        res.ramp_err_db = float(np.max(np.abs(clamp(data["ramp"]["reference"]["out_db"])
+                                              - clamp(data["ramp"]["ampbass"]["out_db"]))))
+    if "bursts" in data:
+        a, r = data["bursts"]["ampbass"], data["bursts"]["reference"]
+        lv = lambda d, k: max(d[k], LEVEL_FLOOR_DB)  # noqa: E731
+        res.burst_quiet_db = lv(r, "quiet_db") - lv(a, "quiet_db")
+        res.burst_loud_db = lv(r, "loud_db") - lv(a, "loud_db")
+        res.settle_err_s = max(abs(r["settle_quiet_s"] - a["settle_quiet_s"]), abs(r["settle_loud_s"] - a["settle_loud_s"]))
     if "tones_100" in data:
         pick = lambda p: next(s["thd_pct"] for s in data["tones_100"][p]["steps"] if s["in_db"] == -16)  # noqa: E731
         res.thd_amp_pct, res.thd_ref_pct = pick("ampbass"), pick("reference")
@@ -331,7 +409,42 @@ def fmt(v: float | None, spec: str) -> str:
     return "—" if v is None else format(v, spec)
 
 
-def write_report(results: list[CaseResult], lat: dict[str, Latency], out: Path, self_test: bool) -> None:
+def gate_metrics(r: dict) -> dict[str, float | None]:
+    """Metrics where lower is better, keyed like GATE."""
+    a = lambda k: None if r.get(k) is None else abs(r[k])  # noqa: E731
+    burst = None if r.get("burst_quiet_db") is None else max(abs(r["burst_quiet_db"]), abs(r["burst_loud_db"]))
+    return {"level": a("level_diff_db"), "fr": a("fr_max_diff_db"), "fr_full": r.get("fr_full_max_db"),
+            "harm": r.get("harm_err_db"), "ramp": r.get("ramp_err_db"), "burst": burst,
+            "settle": r.get("settle_err_s"), "null": r.get("di_null_db"),
+            "noise": None if r.get("noise_amp_db") is None else max(r["noise_amp_db"], -140.0),
+            "lr": r.get("lr_amp_db")}
+
+
+def regression_gate(results: list[CaseResult], previous: Path) -> list[str]:
+    """Lines listing every metric that got worse or better than GATE allows, against an earlier summary.json."""
+    try:
+        old = {r["name"]: r for r in json.loads(previous.read_text())}
+    except (OSError, ValueError) as e:
+        raise SystemExit(f"Cannot read {previous}: {e}")
+    worse, better = [], []
+    for r in results:
+        if r.name not in old:
+            continue
+        new_m, old_m = gate_metrics(asdict(r)), gate_metrics(old[r.name])
+        for k, tol in GATE.items():
+            n, o = new_m[k], old_m[k]
+            if n is None or o is None:
+                continue
+            if n > o + tol:
+                worse.append(f"- WORSE {r.name} {k}: {o:.2f} -> {n:.2f}")
+            elif n < o - tol:
+                better.append(f"- better {r.name} {k}: {o:.2f} -> {n:.2f}")
+    head = f"Against `{previous}`: {len(worse)} worse, {len(better)} better (tolerances: {GATE})."
+    return [head, ""] + worse + better
+
+
+def write_report(results: list[CaseResult], lat: dict[str, Latency], out: Path, self_test: bool,
+                 gate: list[str] | None = None) -> None:
     lines = [
         "# AmpBass vs reference",
         "",
@@ -349,6 +462,23 @@ def write_report(results: list[CaseResult], lat: dict[str, Latency], out: Path, 
         lines.append(f"| [{r.name}]({r.plots.get('png', '')}) | {fmt(r.level_diff_db, '+.1f')} | "
                      f"{fmt(r.fr_max_diff_db, '+.1f')} | {fmt(r.fr_worst_hz, '.0f')} | "
                      f"{fmt(r.thd_amp_pct, '.1f')} | {fmt(r.thd_ref_pct, '.1f')} | {fmt(r.di_null_db, '.1f')} | {noise} |")
+    lines += [
+        "",
+        f"FR full = worst shape difference {FR_FULL[0]:.0f} Hz–{FR_FULL[1] / 1000:.0f} kHz. Harmonics = worst H2/H3 error in dBc "
+        f"over all tone levels (both below {HARM_FLOOR_DBC:.0f} dBc counts as a match). Ramp = worst output-level error. "
+        "Bursts = steady level reference minus AmpBass, and worst settle-time difference. L−R = worst left/right "
+        "difference (identical stereo input, so lower is better).",
+        "",
+        "| Case | FR full dB | Harmonics dB | where | Ramp dB | Burst quiet / loud dB | Settle s | L−R AmpBass / ref dB |",
+        "|---|---:|---:|---|---:|---|---:|---|",
+    ]
+    for r in results:
+        burst = "—" if r.burst_quiet_db is None else f"{r.burst_quiet_db:+.1f} / {r.burst_loud_db:+.1f}"
+        lr = "—" if r.lr_amp_db is None else f"{r.lr_amp_db:.0f} / {fmt(r.lr_ref_db, '.0f')}"
+        lines.append(f"| {r.name} | {fmt(r.fr_full_max_db, '.1f')} | {fmt(r.harm_err_db, '.1f')} | {r.harm_worst or '—'} | "
+                     f"{fmt(r.ramp_err_db, '.1f')} | {burst} | {fmt(r.settle_err_s, '.2f')} | {lr} |")
+    if gate:
+        lines += ["", "## Regression gate", ""] + gate
     if self_test:
         worst = max((abs(r.fr_max_diff_db or 0) for r in results), default=0)
         lines += ["", f"**Self-test:** worst FR difference {worst:.3f} dB (should be ~0)."]
@@ -363,6 +493,7 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "build-tests/compare/report")
     ap.add_argument("--cases", nargs="*", default=[])
     ap.add_argument("--self-test", action="store_true", help="note in the report that both sides are AmpBass")
+    ap.add_argument("--compare-to", type=Path, help="earlier summary.json; lists metrics that got worse or better")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -388,7 +519,12 @@ def main() -> None:
             results.append(r)
             log.info("%-18s level %s  FR %s dB @ %s Hz", r.name, fmt(r.level_diff_db, "+.2f"),
                      fmt(r.fr_max_diff_db, "+.2f"), fmt(r.fr_worst_hz, ".0f"))
-    write_report(results, lat, args.out, args.self_test)
+    gate = regression_gate(results, args.compare_to) if args.compare_to else None
+    write_report(results, lat, args.out, args.self_test, gate)
+    if gate:
+        for line in gate:
+            if line.startswith("- WORSE") or line.startswith("Against"):
+                log.info("%s", line)
     log.info("report: %s", args.out / "report.md")
 
 
