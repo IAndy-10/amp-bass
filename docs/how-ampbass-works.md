@@ -105,7 +105,7 @@ RBJ biquads in series for the knobs:
 | Bass | Low shelf, shape per knob position (77–152 Hz, Q 0.42–0.69) | −16.3 … +14.1 dB (fitted to the reference) |
 | Midrange | Peak @ selected freq, Q 1.5 | ±15 dB |
 | Mid Frequency | 220 / 450 / 800 / 1.6k / 3k Hz | 5 steps |
-| Treble | High shelf @ 2.5 kHz, Q 0.5 | −19 … +14 dB (asymmetric, from the SVT-3 spec) |
+| Treble | High shelf per knob position (282–2929 Hz) + peak at 19 kHz, Q 1.2 | −30 … +16.5 dB shelf (fitted to the reference) |
 
 All knobs centred = the knobs are flat (only the voicing remains). The SVT-3 PRO
 manual describes its Bass, Mid and Treble as active controls that are flat at

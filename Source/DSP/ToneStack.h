@@ -7,26 +7,32 @@
 class ToneStack
 {
 public:
-    /// A knob's filter as gain / frequency / Q measured at knob 0, 2.5, 5, 7.5 and 10,
-    /// interpolated linearly in between. Gain at 5 is 0 dB (the knobs are flat at noon).
+    /// Value at a knob position from values measured at knob 0, 2.5, 5, 7.5 and 10 (linear in between).
+    static float atKnob (const float (&v)[5], float knob)
+    {
+        const float x = juce::jlimit (0.0f, 1.0f, knob) * 4.0f;
+        const int i = juce::jmin (3, static_cast<int> (x));
+        return v[i] + (x - static_cast<float> (i)) * (v[i + 1] - v[i]);
+    }
+
+    /// A knob's filter as gain / frequency / Q measured at the five knob positions.
+    /// Gain at 5 is 0 dB (the knobs are flat at noon).
     struct KnobCurve
     {
         float gainDb[5], hz[5], q[5];
 
         void at (float knob, float& g, float& f, float& qOut) const
         {
-            const float x = juce::jlimit (0.0f, 1.0f, knob) * 4.0f;
-            const int i = juce::jmin (3, static_cast<int> (x));
-            const float t = x - static_cast<float> (i);
-            g    = gainDb[i] + t * (gainDb[i + 1] - gainDb[i]);
-            f    = hz[i]     + t * (hz[i + 1]     - hz[i]);
-            qOut = q[i]      + t * (q[i + 1]      - q[i]);
+            g = atKnob (gainDb, knob);
+            f = atKnob (hz, knob);
+            qOut = atKnob (q, knob);
         }
     };
 
     void prepare (double sampleRate, int /*maxBlockSize*/)
     {
         sr = sampleRate;
+        trebleTopHz = std::min (kTrebleTopHz, 0.45f * static_cast<float> (sampleRate));
 
         for (int ch = 0; ch < 2; ++ch)
         {
@@ -45,16 +51,19 @@ public:
 
             highShelf[ch].prepare (sampleRate);
             highShelf[ch].setParams (Biquad::Type::HighShelf, 2500.0f, 0.5f, 0.0f);
+
+            trebleTop[ch].prepare (sampleRate);
+            trebleTop[ch].setParams (Biquad::Type::Peak, trebleTopHz, kTrebleTopQ, 0.0f);
         }
 
         smoothBass.reset (sampleRate, 0.02);
         smoothMidDb.reset (sampleRate, 0.02);
-        smoothTrebleDb.reset (sampleRate, 0.02);
+        smoothTreble.reset (sampleRate, 0.02);
         smoothMidFreq.reset (sampleRate, 0.05);
 
         smoothBass.setCurrentAndTargetValue (0.5f);
         smoothMidDb.setCurrentAndTargetValue (0.0f);
-        smoothTrebleDb.setCurrentAndTargetValue (0.0f);
+        smoothTreble.setCurrentAndTargetValue (0.5f);
         smoothMidFreq.setCurrentAndTargetValue (800.0f);
     }
 
@@ -67,6 +76,7 @@ public:
             lowShelf[ch].reset();
             midPeak[ch].reset();
             highShelf[ch].reset();
+            trebleTop[ch].reset();
         }
     }
 
@@ -83,14 +93,8 @@ public:
         int idx = juce::jlimit (0, 4, midFreqSelect - 1);
         smoothMidFreq.setTargetValue (midFreqs[idx]);
 
-        // Treble: asymmetric mapping
-        float trebleDb;
-        if (trebleKnob >= 0.5f)
-            trebleDb = (trebleKnob - 0.5f) * 2.0f * 14.0f;   // 0 to +14 dB
-        else
-            trebleDb = (trebleKnob - 0.5f) * 2.0f * 19.0f;   // -19 to 0 dB
-
-        smoothTrebleDb.setTargetValue (trebleDb);
+        // Treble: shelf plus a fixed-frequency top-end peak, both per knob position (kTreble*)
+        smoothTreble.setTargetValue (trebleKnob);
     }
 
     void process (juce::AudioBuffer<float>& buffer)
@@ -104,21 +108,24 @@ public:
         {
             const float bassKnob = smoothBass.getNextValue();
             const float midDb    = smoothMidDb.getNextValue();
-            const float trebleDb = smoothTrebleDb.getNextValue();
+            const float trebleKnob = smoothTreble.getNextValue();
             const float midFreq  = smoothMidFreq.getNextValue();
 
             // Update coefficients at block-rate (every 32 samples)
             if (s % kCoeffUpdateInterval == 0)
             {
-                float bassDb, bassHz, bassQ;
+                float bassDb, bassHz, bassQ, trebleDb, trebleHz, trebleQ;
                 kBassCurve.at (bassKnob, bassDb, bassHz, bassQ);
+                kTrebleCurve.at (trebleKnob, trebleDb, trebleHz, trebleQ);
+                const float topDb = atKnob (kTrebleTopDb, trebleKnob);
 
                 for (int ch = 0; ch < numChannels; ++ch)
                 {
                     lowShelf[ch].setParams (Biquad::Type::LowShelf, bassHz, bassQ, bassDb);
                     midPeak[ch].setGainDb (midDb);
                     midPeak[ch].setFrequency (midFreq);
-                    highShelf[ch].setGainDb (trebleDb);
+                    highShelf[ch].setParams (Biquad::Type::HighShelf, trebleHz, trebleQ, trebleDb);
+                    trebleTop[ch].setGainDb (topDb);
                 }
             }
 
@@ -130,6 +137,7 @@ public:
                 sample = lowShelf[ch].processSample (sample);
                 sample = midPeak[ch].processSample (sample);
                 sample = highShelf[ch].processSample (sample);
+                sample = trebleTop[ch].processSample (sample);
                 buffer.getWritePointer (ch)[s] = sample;
             }
         }
@@ -149,6 +157,17 @@ private:
         {  0.42f,  0.589f, 0.64f, 0.688f, 0.589f }    // Q
     };
 
+    // Treble: high shelf per knob position plus a peak at 19 kHz whose gain follows the knob, which
+    // brings the response back toward 0 dB at the top like the reference (within 1.1 dB, 200 Hz-20 kHz).
+    static constexpr KnobCurve kTrebleCurve {
+        { -30.02f, -5.96f,  0.0f,  3.70f, 16.47f },   // gain dB
+        { 2928.5f, 564.4f, 420.0f, 281.5f, 913.5f },  // Hz
+        {  0.376f,  0.594f, 0.58f, 0.557f, 0.434f }   // Q
+    };
+    static constexpr float kTrebleTopDb[5] = { 1.97f, 4.42f, 0.0f, -3.82f, -2.56f };
+    static constexpr float kTrebleTopHz = 19000.0f, kTrebleTopQ = 1.2f;
+    float trebleTopHz = kTrebleTopHz;
+
     double sr = 44100.0;
 
     Biquad voicingLow[2];
@@ -156,9 +175,10 @@ private:
     Biquad lowShelf[2];
     Biquad midPeak[2];
     Biquad highShelf[2];
+    Biquad trebleTop[2];
 
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothBass;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMidDb;
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothTrebleDb;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothTreble;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMidFreq;
 };

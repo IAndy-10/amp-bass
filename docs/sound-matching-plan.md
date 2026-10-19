@@ -202,7 +202,12 @@ Do these in order. Each one uses a single knob's cases.
   shared shape misses by 1.7 dB. Added `ToneStack::KnobCurve` (gain/Hz/Q at 0/2.5/5/7.5/10, interpolated). All `bass_*` cases
   are within ±0.6 dB. The low end below 30 Hz (from 1.4) is within 1 dB after the voicing, so no high-pass change.
   Regressions for later: `topo_bass*` (step 6), screenshot ramp/bursts +1 dB louder (steps 4/6).
-- [ ] **2.3 Treble**: `treble_0`, `treble_10`, knob scale (manual: +14 / −19 dB at 5 kHz).
+- [x] **2.3 Treble**: `treble_0`, `treble_10`, knob scale (manual: +14 / −19 dB at 5 kHz).
+  **Done:** the reference's treble isn't a plain shelf. At 2.5/7.5 it's a broad band that drifts back toward 0 dB at 20 kHz
+  (a shelf alone misses by 1.9 dB; a peak alone misses by 2.6 dB at Treble 10). Model: high shelf per knob position
+  (`kTrebleCurve`, 282–2929 Hz, −30 … +16.5 dB) plus a peak at 19 kHz, Q 1.2 with per-position gain (`kTrebleTopDb`), fitted
+  together (≤ 1.1 dB, 200 Hz–20 kHz). Treble cases ±0.9 dB; bass/treble interaction ±1.4 dB. Regressions for later:
+  `topo_treble*` (step 6), screenshot level +0.6 dB (step 4), `mid0_bass10_treble10` (Mid, 2.4).
 - [ ] **2.4 Midrange**: `mid_0_f3`, `mid_10_f1…f5`. Centre frequencies already match (220/450/800/1.6k/3k).
   Fit the Q and depth (±15 dB).
 - [ ] **2.5** The interaction cases from 0.8 must be ≤ 1.5 dB. If not, step 2.1 chose the wrong model.
@@ -320,3 +325,4 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 1 | 2026-10-19 | output low-pass 12.06 kHz Q 0.5 | +7.8 / 4.9 / 8.2 vs 6.5 % / −15.3 | FR full better in 69 metrics; levels +0.7 dB (HF energy removed, step 4.1) | yes |
 | 2.1 | 2026-10-19 | fixed noon voicing + LP refit | +6.9 / −5.2 / 5.2 vs 6.5 % / −11.1 | 197 better, 36 worse (explained in 2.1) | yes |
 | 2.2 | 2026-10-19 | bass shelf per knob position | +7.1 / −5.5 / 5.4 vs 6.5 % / −10.2 | bass cases ±0.6 dB; 19 better, 8 worse (drive levels) | yes |
+| 2.3 | 2026-10-19 | treble shelf + 19 kHz peak per knob position | +7.7 / −3.6 / 5.9 vs 6.5 % / −12.3 | treble ±0.9 dB; 24 better, 7 worse (drive/level/mid) | yes |

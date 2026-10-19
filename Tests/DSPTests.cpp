@@ -207,6 +207,15 @@ namespace
                "bass 0 / 10 match the reference",
                fmt ("40 Hz %.1f / %+.1f, 100 Hz %.1f", cut40, boost40, cut100) + fmt (" / %+.1f dB", boost100));
 
+        // Treble extremes vs noon, as measured on the reference: -11.9 / +12.7 dB at 2 kHz, -23.6 / +16.1 dB at 8 kHz.
+        {
+            const double n2k = g (2000, .5f, .5f, 3, .5f), n8k = g (8000, .5f, .5f, 3, .5f);
+            const double c2 = g (2000, .5f, .5f, 3, 0) - n2k, b2 = g (2000, .5f, .5f, 3, 1) - n2k;
+            const double c8 = g (8000, .5f, .5f, 3, 0) - n8k, b8 = g (8000, .5f, .5f, 3, 1) - n8k;
+            check (std::abs (c2 + 11.9) < 1.0 && std::abs (b2 - 12.7) < 1.0 && std::abs (c8 + 23.6) < 1.0 && std::abs (b8 - 16.1) < 1.0,
+                   "treble 0 / 10 match the reference",
+                   fmt ("2 kHz %.1f / %+.1f, 8 kHz %.1f", c2, b2, c8) + fmt (" / %+.1f dB", b8));
+        }
         const double trebSwing8k = g (8000, .5f, .5f, 3, 1) - g (8000, .5f, .5f, 3, 0);
         const double trebSwing2k = g (2000, .5f, .5f, 3, 1) - g (2000, .5f, .5f, 3, 0);
         check (trebSwing8k > 20.0, "treble knob swing @8 kHz", fmt ("%.2f dB", trebSwing8k));
