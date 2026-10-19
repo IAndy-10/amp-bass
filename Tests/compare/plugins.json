@@ -41,7 +41,7 @@
     "baseline": {
       "RecChain": 1.0,
       "Horn": 0.0,
-      "NgByPass": 1.0,
+      "NgByPass": 0.0,
       "NgThres": 0.0,
       "Tight": 0.0,
       "Smooth": 0.0,
