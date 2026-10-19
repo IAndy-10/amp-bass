@@ -186,8 +186,10 @@ namespace
         };
 
         const double flat41 = g (41, .5f, .5f, 3, .5f), flat800 = g (800, .5f, .5f, 3, .5f), flat8k = g (8000, .5f, .5f, 3, .5f);
-        check (std::max ({ std::abs (flat41), std::abs (flat800), std::abs (flat8k) }) < 0.1,
-               "all centred is flat", fmt ("41Hz %.2f, 800Hz %.2f, 8k %.2f dB", flat41, flat800, flat8k));
+        // All centred = the fixed voicing fitted to the reference (bass bump, mid scoop, presence).
+        check (std::abs (flat41 - 3.8) < 0.3 && std::abs (flat800 + 3.3) < 0.3 && std::abs (flat8k - 1.1) < 0.3,
+               "all centred gives the reference voicing (+3.8 / -3.3 / +1.1 dB)",
+               fmt ("41Hz %.2f, 800Hz %.2f, 8k %.2f dB", flat41, flat800, flat8k));
 
         const double bassSwing41  = g (41, 1, .5f, 3, .5f)  - g (41, 0, .5f, 3, .5f);
         const double bassSwing100 = g (100, 1, .5f, 3, .5f) - g (100, 0, .5f, 3, .5f);
@@ -205,7 +207,7 @@ namespace
         const double midHz[] = { 220, 450, 800, 1600, 3000 };
         for (int pos = 1; pos <= 5; ++pos)
         {
-            const double peakDb = g (midHz[pos - 1], .5f, 1, pos, .5f);
+            const double peakDb = g (midHz[pos - 1], .5f, 1, pos, .5f) - g (midHz[pos - 1], .5f, .5f, pos, .5f);
             check (std::abs (peakDb - 15.0) < 1.0, "mid +15 dB at position " + std::to_string (pos),
                    fmt ("%.0f Hz → %.2f dB", midHz[pos - 1], peakDb));
         }
@@ -322,7 +324,7 @@ namespace
         const double at1k = lp (1000), at10k = lp (10000), at20k = lp (20000);
         check (std::abs (at1k) < 0.2, "output low-pass flat at 1 kHz", fmt ("%.2f dB", at1k));
         check (std::abs (at10k + 4.0) < 0.5, "output low-pass -4 dB at 10 kHz", fmt ("%.2f dB", at10k));
-        check (std::abs (at20k + 23.4) < 1.5, "output low-pass -23 dB at 20 kHz", fmt ("%.2f dB", at20k));
+        check (std::abs (at20k + 19.2) < 1.5, "output low-pass -19 dB at 20 kHz", fmt ("%.2f dB", at20k));
     }
 
     void testOutputSwitch()

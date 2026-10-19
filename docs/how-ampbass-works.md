@@ -95,7 +95,10 @@ Parameter mapping:
   even harmonics, lower ceiling.
 
 ### Stage 4 — ToneStack · `Source/DSP/ToneStack.h`
-Three RBJ biquads in series:
+A fixed **voicing** first: −3.76 dB, then peaks at 57.5 Hz (Q 0.44, +8.36 dB) and
+5.9 kHz (Q 0.69, +6.08 dB), giving +4.6 dB at 57 Hz, −3.2 dB at 1 kHz and +2.3 dB at
+5.9 kHz. It's the reference's response with every tone knob at noon. Then three
+RBJ biquads in series for the knobs:
 
 | Control | Filter | Range |
 |---|---|---|
@@ -104,9 +107,9 @@ Three RBJ biquads in series:
 | Mid Frequency | 220 / 450 / 800 / 1.6k / 3k Hz | 5 steps |
 | Treble | High shelf @ 2.5 kHz, Q 0.5 | −19 … +14 dB (asymmetric, from the SVT-3 spec) |
 
-All knobs centred = flat. This is an *idealised* tone stack: in the real amp the
-controls interact (a passive network), here they're independent. That's one of
-the main places a reference plugin could differ.
+All knobs centred = the knobs are flat (only the voicing remains). The SVT-3 PRO
+manual describes its Bass, Mid and Treble as active controls that are flat at
+centre, so independent filters are the right model.
 
 ### Stage 5 — GraphicEQ · `Source/DSP/GraphicEQ.h`
 Nine peaking biquads (Q 2.0) at 33, 80, 150, 300, 600, 900 Hz, 2, 5, 8 kHz with
@@ -122,9 +125,10 @@ Gain = knob² (an audio-taper approximation). Default 0.5 → ×0.25 = **−12 d
 1. **Symmetric soft clip** above 0.8 (linear below; tanh-shaped between 0.8 and 1.0).
 2. **2:1 compressor** with an envelope follower (1 ms attack, 50 ms release),
    threshold 0.8.
-3. **Output low-pass**: fixed 2nd-order low-pass at 12.06 kHz, Q 0.5 (−4 dB at
-   10 kHz, −23 dB at 20 kHz at 48 kHz), fitted to the reference plugin with its
-   cabinet bypassed. Its roll-off doesn't change with level or Master.
+3. **Output low-pass**: fixed 2nd-order low-pass at 14.6 kHz, Q 0.382 (−4 dB at
+   10 kHz, −19 dB at 20 kHz at 48 kHz), fitted to the reference plugin with its
+   cabinet bypassed, together with the tone-stack voicing. Its roll-off doesn't
+   change with level or Master.
 
 Combined with the numbers above: the preamp ceiling (≈ 0.39 at defaults) times
 the Master gain (0.25) is ≈ 0.1, far below 0.8. **At default settings the power

@@ -13,8 +13,9 @@ public:
         attackCoeff  = std::exp (-1.0f / static_cast<float> (sampleRate * 0.001));  // 1ms
         releaseCoeff = std::exp (-1.0f / static_cast<float> (sampleRate * 0.050));  // 50ms
 
-        // Fixed output low-pass, fitted to the reference with the cabinet bypassed
-        // (about -4 dB at 10 kHz, -23 dB at 20 kHz at 48 kHz). Kept below Nyquist at low rates.
+        // Fixed output low-pass, fitted to the reference with the cabinet bypassed together
+        // with the tone-stack voicing (-4 dB at 10 kHz, -19 dB at 20 kHz at 48 kHz).
+        // Kept below Nyquist at low rates.
         const float lpHz = std::min (kOutputLowPassHz, 0.45f * static_cast<float> (sampleRate));
         for (int ch = 0; ch < 2; ++ch)
         {
@@ -78,8 +79,8 @@ public:
 private:
     static constexpr float kThreshold        = 0.8f;
     static constexpr float kOneMinusThreshold = 0.2f;
-    static constexpr float kOutputLowPassHz   = 12056.0f;
-    static constexpr float kOutputLowPassQ    = 0.5f;
+    static constexpr float kOutputLowPassHz   = 14602.0f;
+    static constexpr float kOutputLowPassQ    = 0.382f;
 
     float attackCoeff  = 0.0f;
     float releaseCoeff = 0.0f;

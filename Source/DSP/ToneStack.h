@@ -13,6 +13,13 @@ public:
 
         for (int ch = 0; ch < 2; ++ch)
         {
+            // Fixed voicing: the reference's response with every tone knob at noon
+            // (bass bump, mid scoop, presence bump). The knobs themselves are flat at noon.
+            voicingLow[ch].prepare (sampleRate);
+            voicingLow[ch].setParams (Biquad::Type::Peak, kVoicingLowHz, kVoicingLowQ, kVoicingLowDb);
+            voicingHigh[ch].prepare (sampleRate);
+            voicingHigh[ch].setParams (Biquad::Type::Peak, kVoicingHighHz, kVoicingHighQ, kVoicingHighDb);
+
             lowShelf[ch].prepare (sampleRate);
             lowShelf[ch].setParams (Biquad::Type::LowShelf, 100.0f, 0.5f, 0.0f);
 
@@ -38,6 +45,8 @@ public:
     {
         for (int ch = 0; ch < 2; ++ch)
         {
+            voicingLow[ch].reset();
+            voicingHigh[ch].reset();
             lowShelf[ch].reset();
             midPeak[ch].reset();
             highShelf[ch].reset();
@@ -95,7 +104,9 @@ public:
 
             for (int ch = 0; ch < numChannels; ++ch)
             {
-                float sample = buffer.getWritePointer (ch)[s];
+                float sample = buffer.getWritePointer (ch)[s] * kVoicingGain;
+                sample = voicingLow[ch].processSample (sample);
+                sample = voicingHigh[ch].processSample (sample);
                 sample = lowShelf[ch].processSample (sample);
                 sample = midPeak[ch].processSample (sample);
                 sample = highShelf[ch].processSample (sample);
@@ -105,8 +116,16 @@ public:
     }
 
 private:
+    // Fitted to the reference (cabinet bypassed, all tone knobs at noon), 30 Hz-20 kHz within 0.5 dB:
+    // +4.6 dB at 57 Hz, -3.2 dB at 1 kHz, +2.3 dB at 5.9 kHz.
+    static constexpr float kVoicingLowHz  = 57.5f,  kVoicingLowQ  = 0.44f, kVoicingLowDb  = 8.36f;
+    static constexpr float kVoicingHighHz = 5906.0f, kVoicingHighQ = 0.69f, kVoicingHighDb = 6.08f;
+    static constexpr float kVoicingGain   = 0.6485f;  // -3.76 dB
+
     double sr = 44100.0;
 
+    Biquad voicingLow[2];
+    Biquad voicingHigh[2];
     Biquad lowShelf[2];
     Biquad midPeak[2];
     Biquad highShelf[2];
