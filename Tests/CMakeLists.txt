@@ -7,6 +7,7 @@ target_include_directories(AmpBassDSPTests PRIVATE ${CMAKE_SOURCE_DIR}/Source/DS
 target_compile_definitions(AmpBassDSPTests PRIVATE JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
 target_link_libraries(AmpBassDSPTests PRIVATE
     juce::juce_audio_basics
+    juce::juce_audio_processors
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags)
 

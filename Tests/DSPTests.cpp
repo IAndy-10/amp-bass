@@ -8,6 +8,7 @@
 // sync; the HostRender tool tests the real compiled plugin end-to-end.
 
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_processors/juce_audio_processors.h>
 
 #include "InputGain.h"
 #include "PreFilters.h"
@@ -20,6 +21,7 @@
 #include "Primitives/DryWetMixer.h"
 
 #include "TestSignals.h"
+#include "../Parameters/ParameterLayout.h"
 
 #include <cstdio>
 #include <string>
@@ -544,8 +546,65 @@ namespace
     }
 }
 
+namespace
+{
+    // Minimal processor so the real parameter layout can be instantiated.
+    struct LayoutProbe : juce::AudioProcessor
+    {
+        juce::AudioProcessorValueTreeState apvts { *this, nullptr, "PARAMS", createParameterLayout() };
+
+        const juce::String getName() const override { return "LayoutProbe"; }
+        void prepareToPlay (double, int) override {}
+        void releaseResources() override {}
+        void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override {}
+        double getTailLengthSeconds() const override { return 0.0; }
+        bool acceptsMidi() const override { return false; }
+        bool producesMidi() const override { return false; }
+        juce::AudioProcessorEditor* createEditor() override { return nullptr; }
+        bool hasEditor() const override { return false; }
+        int getNumPrograms() override { return 1; }
+        int getCurrentProgram() override { return 0; }
+        void setCurrentProgram (int) override {}
+        const juce::String getProgramName (int) override { return {}; }
+        void changeProgramName (int, const juce::String&) override {}
+        void getStateInformation (juce::MemoryBlock&) override {}
+        void setStateInformation (const void*, int) override {}
+    };
+
+    void testParameterLayout()
+    {
+        section ("Parameter layout");
+        juce::ScopedJuceInitialiser_GUI juce;
+        LayoutProbe probe;
+
+        // Knob-style parameters are read raw by the DSP as 0-1.
+        for (const char* id : { ParameterIDs::gain, ParameterIDs::tubeGain, ParameterIDs::bass,
+                                ParameterIDs::midrange, ParameterIDs::treble, ParameterIDs::master,
+                                ParameterIDs::dryWet })
+        {
+            const auto range = probe.apvts.getParameterRange (id);
+            check (range.start == 0.0f && range.end == 1.0f, std::string (id) + " range is 0-1",
+                   fmt ("%.1f to %.1f", range.start, range.end));
+        }
+
+        // Master gain (knob^2) must rise monotonically across the knob's travel.
+        auto* master = probe.apvts.getParameter (ParameterIDs::master);
+        float prev = -1.0f;
+        bool monotonic = true;
+        for (int i = 0; i <= 20; ++i)
+        {
+            const float raw = master->convertFrom0to1 (i / 20.0f);
+            const float g = raw * raw;
+            monotonic = monotonic && g >= prev;
+            prev = g;
+        }
+        check (monotonic, "master gain rises with the knob", fmt ("gain at full travel %.2f", prev));
+    }
+}
+
 int main()
 {
+    testParameterLayout();
     testInputGain();
     testPreFilters();
     testTubePreamp();
