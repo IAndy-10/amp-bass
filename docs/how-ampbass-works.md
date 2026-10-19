@@ -122,6 +122,9 @@ Gain = knob² (an audio-taper approximation). Default 0.5 → ×0.25 = **−12 d
 1. **Symmetric soft clip** above 0.8 (linear below; tanh-shaped between 0.8 and 1.0).
 2. **2:1 compressor** with an envelope follower (1 ms attack, 50 ms release),
    threshold 0.8.
+3. **Output low-pass**: fixed 2nd-order low-pass at 12.06 kHz, Q 0.5 (−4 dB at
+   10 kHz, −23 dB at 20 kHz at 48 kHz), fitted to the reference plugin with its
+   cabinet bypassed. Its roll-off doesn't change with level or Master.
 
 Combined with the numbers above: the preamp ceiling (≈ 0.39 at defaults) times
 the Master gain (0.25) is ≈ 0.1, far below 0.8. **At default settings the power

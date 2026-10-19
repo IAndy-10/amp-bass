@@ -2,6 +2,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
+#include "Primitives/Biquad.h"
 
 class PowerSection
 {
@@ -12,14 +13,24 @@ public:
         attackCoeff  = std::exp (-1.0f / static_cast<float> (sampleRate * 0.001));  // 1ms
         releaseCoeff = std::exp (-1.0f / static_cast<float> (sampleRate * 0.050));  // 50ms
 
+        // Fixed output low-pass, fitted to the reference with the cabinet bypassed
+        // (about -4 dB at 10 kHz, -23 dB at 20 kHz at 48 kHz). Kept below Nyquist at low rates.
+        const float lpHz = std::min (kOutputLowPassHz, 0.45f * static_cast<float> (sampleRate));
         for (int ch = 0; ch < 2; ++ch)
+        {
             envelope[ch] = 0.0f;
+            outputLowPass[ch].prepare (sampleRate);
+            outputLowPass[ch].setParams (Biquad::Type::LowPass, lpHz, kOutputLowPassQ);
+        }
     }
 
     void reset()
     {
         for (int ch = 0; ch < 2; ++ch)
+        {
             envelope[ch] = 0.0f;
+            outputLowPass[ch].reset();
+        }
     }
 
     void process (juce::AudioBuffer<float>& buffer)
@@ -59,7 +70,7 @@ public:
                 if (envelope[ch] > kThreshold)
                     y *= std::sqrt (kThreshold / envelope[ch]);
 
-                buffer.getWritePointer (ch)[s] = y;
+                buffer.getWritePointer (ch)[s] = outputLowPass[ch].processSample (y);
             }
         }
     }
@@ -67,10 +78,13 @@ public:
 private:
     static constexpr float kThreshold        = 0.8f;
     static constexpr float kOneMinusThreshold = 0.2f;
+    static constexpr float kOutputLowPassHz   = 12056.0f;
+    static constexpr float kOutputLowPassQ    = 0.5f;
 
     float attackCoeff  = 0.0f;
     float releaseCoeff = 0.0f;
     float envelope[2]  = {};
+    Biquad outputLowPass[2];
 
     static float tanhApprox (float x)
     {

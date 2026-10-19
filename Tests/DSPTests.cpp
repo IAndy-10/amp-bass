@@ -316,6 +316,13 @@ namespace
         }
         check (monotonic, "louder input never gives quieter output",
                monotonic ? "ok" : where + " — compressor gain is T/sqrt(env/T)/env, i.e. slope -1, not 2:1");
+
+        // Output low-pass (fitted to the reference): flat in the bass, rolls off above ~8 kHz.
+        const auto lp = [] (double f) { return stageGainDb<PowerSection> (f, [] (auto&) {}); };
+        const double at1k = lp (1000), at10k = lp (10000), at20k = lp (20000);
+        check (std::abs (at1k) < 0.2, "output low-pass flat at 1 kHz", fmt ("%.2f dB", at1k));
+        check (std::abs (at10k + 4.0) < 0.5, "output low-pass -4 dB at 10 kHz", fmt ("%.2f dB", at10k));
+        check (std::abs (at20k + 23.4) < 1.5, "output low-pass -23 dB at 20 kHz", fmt ("%.2f dB", at20k));
     }
 
     void testOutputSwitch()
