@@ -111,7 +111,9 @@ def main() -> None:
         if not plugin_path.exists():
             raise SystemExit(f"{src_name}: plugin not found at {plugin_path}")
         for case in cases:
-            case_args = to_args(plugin, case.settings)
+            # A case can override a plugin's baseline, e.g. reference FX Rack settings.
+            override = case.baseline.get(src_name, {})
+            case_args = to_args({**plugin, "baseline": {**plugin.get("baseline", {}), **override}}, case.settings)
             for sig in case.signals:
                 if sig not in available:
                     continue

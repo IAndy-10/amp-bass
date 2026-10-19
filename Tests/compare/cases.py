@@ -24,6 +24,15 @@ CLEAN = {"gain": 1, "tubeGain": 10}
 LINEAR_SIGNALS = ["sweep_30"]
 DRIVE_SIGNALS = ["sweep_12", "tones_41", "tones_100", "tones_400", "ramp", "bursts", "silence", "di"]
 
+# Reference FX Rack defaults as normalised values (from AmpBassHostRender --list), minus the cabinet.
+REF_FX_DEFAULTS: dict[str, float | str] = {
+    "PowerSoak": 0.9,         # -4 dB
+    "Tight": 1.0,             # Post
+    "TightFrequency": 0.111,  # 50 Hz
+    "Smooth": 1.0,            # Post
+    "SmoothFrequency": 0.792, # 21 kHz
+}
+
 GEQ_BANDS = ["geq33", "geq80", "geq150", "geq300", "geq600", "geq900", "geq2k", "geq5k", "geq9k"]
 
 
@@ -32,6 +41,9 @@ class Case:
     name: str
     settings: dict[str, float | bool]
     signals: list[str] = field(default_factory=list)
+    # Per-plugin baseline overrides, merged over plugins.json's baseline:
+    # {"reference": {"Tight": 1.0}} (numbers = normalised values, strings = display text).
+    baseline: dict[str, dict[str, float | str]] = field(default_factory=dict)
 
 
 def linear(name: str, **overrides: float | bool) -> Case:
@@ -64,6 +76,11 @@ def all_cases() -> list[Case]:
             "geq80": 5, "geq150": 4, "geq2k": 1.5, "geq5k": 3.5,
         }, LINEAR_SIGNALS + DRIVE_SIGNALS),
     ]
+    # Same settings with the reference's FX Rack at its defaults (cabinet still bypassed): what the
+    # screenshots sound like if the FX Rack was untouched. AmpBass has no Tight / Power Soak yet (step 9).
+    shot = cases[-1]
+    cases.append(Case("screenshot_preset_fxdefault", shot.settings, shot.signals,
+                      {"reference": REF_FX_DEFAULTS}))
     names = [c.name for c in cases]
     assert len(names) == len(set(names)), "duplicate case names"
     return cases
