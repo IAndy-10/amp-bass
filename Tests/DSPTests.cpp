@@ -170,11 +170,14 @@ namespace
         double maxDev = 0.0;
         for (auto g : off) maxDev = std::max (maxDev, std::abs (g));
         check (maxDev < 0.1,              "all off is flat",            fmt ("max dev %.2f dB", maxDev));
-        check (br[5] - br[1] > 4.0,       "bright lifts highs",         fmt ("10k-100Hz = %.2f dB", br[5] - br[1]));
-        check (uh[5] - uh[1] > 4.0,       "ultraHi lifts highs",        fmt ("10k-100Hz = %.2f dB", uh[5] - uh[1]));
-        check (std::abs (ul[2] + 10.0) < 1.0, "ultraLo -10 dB at 500 Hz",  fmt ("%.2f dB", ul[2]));
-        check (std::abs (ul[0] - 2.0) < 0.5,  "ultraLo +2 dB at 40 Hz",    fmt ("%.2f dB", ul[0]));
-        check (std::abs (ul[4]) < 0.5,        "ultraLo leaves 5 kHz flat", fmt ("%.2f dB", ul[4]));
+        // Values measured on the reference plugin (switch on minus off).
+        check (std::abs (br[3] - 5.1) < 0.5 && std::abs (br[5] - 3.3) < 0.5, "bright matches the reference (+5.1 dB 2 kHz, +3.3 dB 10 kHz)",
+               fmt ("%.2f / %.2f dB", br[3], br[5]));
+        check (std::abs (uh[4] - 6.0) < 0.5 && std::abs (uh[5] - 5.3) < 0.5, "ultraHi matches the reference (+6.0 dB 5 kHz, +5.3 dB 10 kHz)",
+               fmt ("%.2f / %.2f dB", uh[4], uh[5]));
+        check (std::abs (ul[2] + 12.2) < 0.5, "ultraLo -12 dB at 500 Hz",  fmt ("%.2f dB", ul[2]));
+        check (std::abs (ul[0]) < 0.5,        "ultraLo leaves 40 Hz flat (no +2 dB in the reference)", fmt ("%.2f dB", ul[0]));
+        check (std::abs (ul[4] + 0.4) < 0.5,  "ultraLo leaves 5 kHz flat", fmt ("%.2f dB", ul[4]));
     }
 
     void testToneStack()

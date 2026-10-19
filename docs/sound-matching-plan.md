@@ -220,7 +220,12 @@ Do these in order. Each one uses a single knob's cases.
   additive): `mid0_bass10_treble10` is −3.6 dB deeper at 400 Hz than the sum of its knobs, `bass0_treble10` +1.5 dB. At
   realistic settings (`tone_shot` = Bass 7, Mid 6.75, Treble 7) AmpBass is within ±0.7 dB, so the interaction is **not
   modelled**. Known limitation: up to 3.6 dB at extreme combinations. Revisit if a preset uses them.
-- [ ] **2.6 Bright** (+6 dB at 5 kHz per the manual), **Ultra Hi**, **Ultra Lo**, **−15 dB pad**: one case each.
+- [x] **2.6 Bright** (+6 dB at 5 kHz per the manual), **Ultra Hi**, **Ultra Lo**, **−15 dB pad**: one case each.
+  **Done:** the pad already matched (−15.0 dB). Bright and Ultra Hi are broad peaks that ease off at the top, not shelves:
+  Bright = peak 2991 Hz Q 0.269 +5.31 dB + high shelf 10.9 kHz +1.17 dB; Ultra Hi = peak 5602 Hz Q 0.369 +5.32 dB + high shelf
+  9.0 kHz +2.36 dB. Ultra Lo = one peak 530 Hz Q 0.713 −12.36 dB; the manual's +2 dB at 40 Hz isn't in the reference. All within
+  ±0.3 dB, 0 regressions. **Open:** on the real amp Bright usually depends on Gain (bright cap); only measured at Gain 1.
+  Re-check with drive cases after step 6.
 
 ## Step 3 — Graphic EQ
 
@@ -336,3 +341,4 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 2.2 | 2026-10-19 | bass shelf per knob position | +7.1 / −5.5 / 5.4 vs 6.5 % / −10.2 | bass cases ±0.6 dB; 19 better, 8 worse (drive levels) | yes |
 | 2.3 | 2026-10-19 | treble shelf + 19 kHz peak per knob position | +7.7 / −3.6 / 5.9 vs 6.5 % / −12.3 | treble ±0.9 dB; 24 better, 7 worse (drive/level/mid) | yes |
 | 2.4 | 2026-10-19 | mid peak per selector × knob position | +7.5 / −4.0 / 6.0 vs 6.5 % / −12.3 | mid cases ±0.3 dB; 27 better, 1 worse (fxdefault FR, Tight missing) | yes |
+| 2.6 | 2026-10-19 | bright / ultra hi / ultra lo refit | +7.5 / −3.6 / 6.1 vs 6.5 % / −14.2 | switch cases ±0.3 dB; 12 better, 0 worse | yes |

@@ -50,12 +50,13 @@ The three voicing switches, all RBJ biquads, always in the path (0 dB when off):
 
 | Switch | Filter(s) |
 |---|---|
-| Bright | High shelf +6 dB @ 2 kHz |
-| Ultra Hi | High shelf +6 dB @ 5 kHz |
-| Ultra Lo | Low shelf (80 Hz corner) giving +2 dB at 40 Hz, **peak −10 dB @ 500 Hz (Q 1.5)** — values from the reference manual |
+| Bright | Peak +5.3 dB @ 3 kHz (Q 0.27) + high shelf +1.2 dB @ 10.9 kHz |
+| Ultra Hi | Peak +5.3 dB @ 5.6 kHz (Q 0.37) + high shelf +2.4 dB @ 9 kHz |
+| Ultra Lo | **Peak −12.4 dB @ 530 Hz (Q 0.71)** |
 
-Ultra Lo is the classic "scooped" SVT voicing — the mid cut is far bigger than
-the boosts. Because these sit *before* the preamp, they also change what
+All three are fitted to the reference plugin (within 0.3 dB). Its Ultra Lo has no
++2 dB at 40 Hz, although the manual says so. Ultra Lo is the classic "scooped"
+SVT voicing. Because these sit *before* the preamp, they also change what
 distorts: Bright makes the highs clip earlier; Ultra Lo makes the mids clip later.
 
 ### Stage 3 — TubePreamp · `Source/DSP/TubePreamp.h`
