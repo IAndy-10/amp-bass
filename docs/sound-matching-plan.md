@@ -208,9 +208,18 @@ Do these in order. Each one uses a single knob's cases.
   (`kTrebleCurve`, 282–2929 Hz, −30 … +16.5 dB) plus a peak at 19 kHz, Q 1.2 with per-position gain (`kTrebleTopDb`), fitted
   together (≤ 1.1 dB, 200 Hz–20 kHz). Treble cases ±0.9 dB; bass/treble interaction ±1.4 dB. Regressions for later:
   `topo_treble*` (step 6), screenshot level +0.6 dB (step 4), `mid0_bass10_treble10` (Mid, 2.4).
-- [ ] **2.4 Midrange**: `mid_0_f3`, `mid_10_f1…f5`. Centre frequencies already match (220/450/800/1.6k/3k).
+- [x] **2.4 Midrange**: `mid_0_f3`, `mid_10_f1…f5`. Centre frequencies already match (220/450/800/1.6k/3k).
   Fit the Q and depth (±15 dB).
-- [ ] **2.5** The interaction cases from 0.8 must be ≤ 1.5 dB. If not, step 2.1 chose the wrong model.
+  **Done:** the reference's mid is wide (Q 0.15–0.9) and asymmetric (−18 to −20 dB cut, +11 to +13 dB boost), with a knob
+  that barely acts near the centre (−3.6 / +1.6 dB at 2.5 / 7.5). Measured centres: 249 / 543 / 895 / 1773 / 2884 Hz. Added
+  `mid_0_f1/f2/f4/f5` cases. Tables `kMidGainDb` / `kMidQ` [selector][knob]; knob 2.5/7.5 scaled from position 3. The
+  selector is smoothed as a position with log-Hz interpolation (also fixes the BACKLOG item about linear Hz smoothing).
+  All 13 mid cases are within ±0.3 dB.
+- [x] **2.5** The interaction cases from 0.8 must be ≤ 1.5 dB. If not, step 2.1 chose the wrong model.
+  **Result:** `bass10_treble0` / `bass0_treble10` ±1.4 dB. The reference's controls interact a little (AmpBass's are exactly
+  additive): `mid0_bass10_treble10` is −3.6 dB deeper at 400 Hz than the sum of its knobs, `bass0_treble10` +1.5 dB. At
+  realistic settings (`tone_shot` = Bass 7, Mid 6.75, Treble 7) AmpBass is within ±0.7 dB, so the interaction is **not
+  modelled**. Known limitation: up to 3.6 dB at extreme combinations. Revisit if a preset uses them.
 - [ ] **2.6 Bright** (+6 dB at 5 kHz per the manual), **Ultra Hi**, **Ultra Lo**, **−15 dB pad**: one case each.
 
 ## Step 3 — Graphic EQ
@@ -326,3 +335,4 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 2.1 | 2026-10-19 | fixed noon voicing + LP refit | +6.9 / −5.2 / 5.2 vs 6.5 % / −11.1 | 197 better, 36 worse (explained in 2.1) | yes |
 | 2.2 | 2026-10-19 | bass shelf per knob position | +7.1 / −5.5 / 5.4 vs 6.5 % / −10.2 | bass cases ±0.6 dB; 19 better, 8 worse (drive levels) | yes |
 | 2.3 | 2026-10-19 | treble shelf + 19 kHz peak per knob position | +7.7 / −3.6 / 5.9 vs 6.5 % / −12.3 | treble ±0.9 dB; 24 better, 7 worse (drive/level/mid) | yes |
+| 2.4 | 2026-10-19 | mid peak per selector × knob position | +7.5 / −4.0 / 6.0 vs 6.5 % / −12.3 | mid cases ±0.3 dB; 27 better, 1 worse (fxdefault FR, Tight missing) | yes |

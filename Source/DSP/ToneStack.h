@@ -57,14 +57,14 @@ public:
         }
 
         smoothBass.reset (sampleRate, 0.02);
-        smoothMidDb.reset (sampleRate, 0.02);
+        smoothMid.reset (sampleRate, 0.02);
         smoothTreble.reset (sampleRate, 0.02);
-        smoothMidFreq.reset (sampleRate, 0.05);
+        smoothMidPos.reset (sampleRate, 0.05);
 
         smoothBass.setCurrentAndTargetValue (0.5f);
-        smoothMidDb.setCurrentAndTargetValue (0.0f);
+        smoothMid.setCurrentAndTargetValue (0.5f);
         smoothTreble.setCurrentAndTargetValue (0.5f);
-        smoothMidFreq.setCurrentAndTargetValue (800.0f);
+        smoothMidPos.setCurrentAndTargetValue (2.0f);
     }
 
     void reset()
@@ -85,13 +85,10 @@ public:
         // Bass: shelf shape and depth follow the reference per knob position (kBassCurve)
         smoothBass.setTargetValue (bassKnob);
 
-        // Mid: knob 0-1 -> -15 to +15 dB
-        smoothMidDb.setTargetValue ((midKnob - 0.5f) * 30.0f);
-
-        // Mid freq: 5-position selector
-        static constexpr float midFreqs[5] = { 220.0f, 450.0f, 800.0f, 1600.0f, 3000.0f };
-        int idx = juce::jlimit (0, 4, midFreqSelect - 1);
-        smoothMidFreq.setTargetValue (midFreqs[idx]);
+        // Mid: peak per frequency position and knob position (kMid*). The selector is smoothed as a
+        // position (0-4) so a switch glides between neighbouring settings, with Hz moving on a log scale.
+        smoothMid.setTargetValue (midKnob);
+        smoothMidPos.setTargetValue (static_cast<float> (juce::jlimit (0, 4, midFreqSelect - 1)));
 
         // Treble: shelf plus a fixed-frequency top-end peak, both per knob position (kTreble*)
         smoothTreble.setTargetValue (trebleKnob);
@@ -107,9 +104,9 @@ public:
         for (int s = 0; s < numSamples; ++s)
         {
             const float bassKnob = smoothBass.getNextValue();
-            const float midDb    = smoothMidDb.getNextValue();
+            const float midKnob  = smoothMid.getNextValue();
             const float trebleKnob = smoothTreble.getNextValue();
-            const float midFreq  = smoothMidFreq.getNextValue();
+            const float midPos   = smoothMidPos.getNextValue();
 
             // Update coefficients at block-rate (every 32 samples)
             if (s % kCoeffUpdateInterval == 0)
@@ -119,11 +116,18 @@ public:
                 kTrebleCurve.at (trebleKnob, trebleDb, trebleHz, trebleQ);
                 const float topDb = atKnob (kTrebleTopDb, trebleKnob);
 
+                const int mi = juce::jlimit (0, 3, static_cast<int> (midPos));
+                const float mt = juce::jlimit (0.0f, 1.0f, midPos - static_cast<float> (mi));
+                const float midDb = atKnob (kMidGainDb[mi], midKnob)
+                                  + mt * (atKnob (kMidGainDb[mi + 1], midKnob) - atKnob (kMidGainDb[mi], midKnob));
+                const float midQ = atKnob (kMidQ[mi], midKnob)
+                                 + mt * (atKnob (kMidQ[mi + 1], midKnob) - atKnob (kMidQ[mi], midKnob));
+                const float midHz = kMidHz[mi] * std::pow (kMidHz[mi + 1] / kMidHz[mi], mt);
+
                 for (int ch = 0; ch < numChannels; ++ch)
                 {
                     lowShelf[ch].setParams (Biquad::Type::LowShelf, bassHz, bassQ, bassDb);
-                    midPeak[ch].setGainDb (midDb);
-                    midPeak[ch].setFrequency (midFreq);
+                    midPeak[ch].setParams (Biquad::Type::Peak, midHz, midQ, midDb);
                     highShelf[ch].setParams (Biquad::Type::HighShelf, trebleHz, trebleQ, trebleDb);
                     trebleTop[ch].setGainDb (topDb);
                 }
@@ -166,6 +170,25 @@ private:
     };
     static constexpr float kTrebleTopDb[5] = { 1.97f, 4.42f, 0.0f, -3.82f, -2.56f };
     static constexpr float kTrebleTopHz = 19000.0f, kTrebleTopQ = 1.2f;
+
+    // Mid peak fitted to the reference (within 0.3 dB, 1.3 dB at position 5 cut). Centres per selector
+    // position (manual: 220 / 450 / 800 / 1.6k / 3k); gain and Q per [selector][knob 0, 2.5, 5, 7.5, 10].
+    // Knob 0 and 10 are measured at every position, 2.5 and 7.5 at position 3 and scaled.
+    static constexpr float kMidHz[5] = { 249.1f, 542.9f, 894.9f, 1772.7f, 2883.9f };
+    static constexpr float kMidGainDb[5][5] = {
+        { -18.380f, -3.310f, 0.000f, 1.740f, 13.190f },
+        { -18.330f, -3.300f, 0.000f, 1.660f, 12.630f },
+        { -19.920f, -3.590f, 0.000f, 1.580f, 11.990f },
+        { -19.800f, -3.570f, 0.000f, 1.420f, 10.770f },
+        { -18.980f, -3.420f, 0.000f, 1.490f, 11.290f }
+    };
+    static constexpr float kMidQ[5][5] = {
+        { 0.245f, 0.070f, 0.102f, 0.133f, 0.214f },
+        { 0.689f, 0.197f, 0.234f, 0.272f, 0.436f },
+        { 0.511f, 0.146f, 0.166f, 0.187f, 0.300f },
+        { 0.880f, 0.251f, 0.298f, 0.345f, 0.554f },
+        { 0.429f, 0.123f, 0.179f, 0.236f, 0.379f }
+    };
     float trebleTopHz = kTrebleTopHz;
 
     double sr = 44100.0;
@@ -178,7 +201,7 @@ private:
     Biquad trebleTop[2];
 
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothBass;
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMidDb;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMid;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothTreble;
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMidFreq;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMidPos;
 };

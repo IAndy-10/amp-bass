@@ -73,10 +73,13 @@ def all_cases() -> list[Case]:
         *[linear(f"bass_{v}", bass=v) for v in (2.5, 7.5)],
         *[linear(f"treble_{v}", treble=v) for v in (2.5, 7.5)],
         *[linear(f"mid_{v}_f3", midrange=v) for v in (2.5, 7.5)],
+        *[linear(f"mid_0_f{f}", midrange=0, midFreq=f) for f in (1, 2, 4, 5)],
         # Tone-stack interaction
         linear("bass10_treble0", bass=10, treble=0),
         linear("bass0_treble10", bass=0, treble=10),
         linear("mid0_bass10_treble10", midrange=0, bass=10, treble=10),
+        linear("tone_shot", bass=7, midrange=6.75, treble=7),  # screenshot preset's tone knobs, clean
+        linear("tone_shot_mid_f3", bass=7, midrange=6.75),     # same without treble, to split the interaction
         # Topology: if the reference's harmonics change with a control, it sits before the distortion
         *[drive(f"topo_bass{v}", gain=7.5, bass=v) for v in (0, 10)],
         *[drive(f"topo_treble{v}", gain=7.5, treble=v) for v in (0, 10)],

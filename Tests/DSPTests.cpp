@@ -222,12 +222,17 @@ namespace
         check (trebSwing2k > 6.0, "treble knob swing @2 kHz (bass DI has little energy above 5k)",
                fmt ("%.2f dB", trebSwing2k));
 
-        const double midHz[] = { 220, 450, 800, 1600, 3000 };
+        // Mid at 0 and 10 vs noon at each position's centre, as measured on the reference.
+        const double midHz[]    = { 249, 543, 895, 1773, 2884 };
+        const double midCut[]   = { -18.4, -18.3, -19.9, -19.8, -19.0 };
+        const double midBoost[] = { 13.2, 12.6, 12.0, 10.8, 11.3 };
         for (int pos = 1; pos <= 5; ++pos)
         {
-            const double peakDb = g (midHz[pos - 1], .5f, 1, pos, .5f) - g (midHz[pos - 1], .5f, .5f, pos, .5f);
-            check (std::abs (peakDb - 15.0) < 1.0, "mid +15 dB at position " + std::to_string (pos),
-                   fmt ("%.0f Hz → %.2f dB", midHz[pos - 1], peakDb));
+            const double f = midHz[pos - 1], noon = g (f, .5f, .5f, pos, .5f);
+            const double cut = g (f, .5f, 0, pos, .5f) - noon, boost = g (f, .5f, 1, pos, .5f) - noon;
+            check (std::abs (cut - midCut[pos - 1]) < 0.7 && std::abs (boost - midBoost[pos - 1]) < 0.7,
+                   "mid 0 / 10 match the reference at position " + std::to_string (pos),
+                   fmt ("%.0f Hz → %.1f / %+.1f dB", f, cut, boost));
         }
     }
 

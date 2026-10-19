@@ -24,7 +24,6 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 
 ## DSP
 - [ ] **P2** Start-up thump: preamp bias offset settles through the DC blocker in the first ~0.2 s (≈ −31 dBFS). Start the DC blocker in steady state.
-- [ ] **P2** Mid Frequency is smoothed linearly in Hz (CLAUDE.md asks for logarithmic).
 - [ ] **P3** No oversampling around the preamp — aliasing at high GAIN.
 
 ## Sanity check (2026-10-17)
