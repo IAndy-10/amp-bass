@@ -38,11 +38,11 @@ export const LABELS: Record<NumericKey | FlagKey, string> = {
 };
 
 export const MID_FREQ_HZ = ['220 Hz', '450 Hz', '800 Hz', '1.6 kHz', '3 kHz'] as const;
-export const MID_FREQ_DEFAULT_POS = 3;
+export const MID_FREQ_DEFAULT_POS = 1; // reference default (ParameterLayout.h)
 
-/** Double-click / "Set to default" values in display units (spec §8). */
+/** Double-click / "Set to default" values in display units (spec §8). Must match ParameterLayout.h. */
 export const DEFAULTS: Record<NumericKey, number> = {
-    gain: 5, bass: 5, midrange: 5, treble: 5, master: 5, tubeGain: 5,
+    gain: 3.4, bass: 5, midrange: 5, treble: 5, master: 5, tubeGain: 5,
     geq33: 0, geq80: 0, geq150: 0, geq300: 0, geq600: 0,
     geq900: 0, geq2k: 0, geq5k: 0, geq8k: 0, geqLevel: 0,
 };
@@ -67,7 +67,14 @@ export function rangeOf(key: NumericKey): Range {
     return { start: props.start, end: props.end, skew: props.skew || 1 };
 }
 
+// GEQ Level is piecewise like the reference (ParameterText::geqLevelRange in ParameterLayout.h):
+// -10 dB at 0, 0 dB at the centre, +8 dB at 1, linear on each side. The relay only sends start/end/skew,
+// so this mapping is mirrored here.
+const levelToDisplay = (n: number): number => (n < 0.5 ? -10 + 20 * n : 16 * (n - 0.5));
+const levelToNormalised = (v: number): number => (v < 0 ? (v + 10) / 20 : 0.5 + v / 16);
+
 export function toDisplay(key: NumericKey, normalised: number): number {
+    if (key === 'geqLevel') return levelToDisplay(normalised);
     const r = rangeOf(key);
     return r.start + Math.pow(normalised, 1 / r.skew) * (r.end - r.start);
 }
@@ -75,6 +82,7 @@ export function toDisplay(key: NumericKey, normalised: number): number {
 export function toNormalised(key: NumericKey, display: number): number {
     const r = rangeOf(key);
     const clamped = Math.min(r.end, Math.max(r.start, display));
+    if (key === 'geqLevel') return levelToNormalised(clamped);
     return Math.pow((clamped - r.start) / (r.end - r.start), r.skew);
 }
 

@@ -62,6 +62,11 @@ size given to `prepareToPlay`. `docs/how-ampbass-works.md` explains every stage 
 - `geq8k` is labelled 9k on the faceplate. `inputHiLo`, `dryWet` and `presetSelect` exist but aren't on the
   faceplate. `bypass` is also the host's bypass parameter.
 - Every float parameter is smoothed on the audio thread with `juce::SmoothedValue` (10 ms minimum).
+- Scales, display text and defaults match the reference plugin (same 0–1 value = same setting): knobs show 0.0–10.0,
+  GEQ Level is piecewise (0 dB at the centre, mirrored in `WebUI/src/lib/stores/amp.ts`), defaults Gain 3.4 / Mid Freq 1.
+  The UI's reset values in `amp.ts` must match `ParameterLayout.h`.
+- Saved state carries `stateVersion` (`PluginProcessor.cpp`). Bump it when a range or meaning changes and convert older
+  states in `setStateInformation`.
 
 ### DSP primitives (`Source/DSP/Primitives/`)
 

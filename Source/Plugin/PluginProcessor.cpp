@@ -207,16 +207,30 @@ juce::AudioProcessorEditor* AmpBassAudioProcessor::createEditor() {
     return new AmpBassAudioProcessorEditor(*this);
 }
 
+// Saved-state format. Bump it when a parameter's range or meaning changes, and convert older
+// states in setStateInformation so existing sessions keep sounding the same.
+// 1 = no version attribute (before the reference-matched ranges), 2 = reference-matched ranges.
+static constexpr int kStateVersion = 2;
+static const juce::Identifier kStateVersionId { "stateVersion" };
+
 void AmpBassAudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto state = apvts.copyState();
+    state.setProperty(kStateVersionId, kStateVersion, nullptr);
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
     copyXmlToBinary(*xml, destData);
 }
 
 void AmpBassAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
-    if (xmlState && xmlState->hasTagName(apvts.state.getType()))
-        apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
+    if (! xmlState || ! xmlState->hasTagName(apvts.state.getType()))
+        return;
+
+    auto state = juce::ValueTree::fromXml(*xmlState);
+    const int version = state.getProperty(kStateVersionId, 1);
+    // Version 1 states came from unreleased builds only; they load as-is (the user re-saves them).
+    // Future range changes add their conversion here, keyed on `version`.
+    juce::ignoreUnused(version);
+    apvts.replaceState(state);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {

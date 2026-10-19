@@ -276,9 +276,17 @@ The goal is that the same normalised value (automation, presets, `.vstpreset`) m
   Mid Freq 1–5. Also make AmpBass's `getValueForText` work, so the harness can use `text` for both plugins.
 - [ ] **5.3 Defaults** match a fresh reference: Gain 3.4, Mid Freq 1, others as listed in Context. Changing ranges and
   defaults keeps the IDs but changes what old sessions load. That's acceptable before release, and should be noted in CHANGELOG.
-- [ ] **5.4** AmpBass-only parameters (`inputHiLo`, `dryWet`) stay neutral by default (Hi, 100 % wet) and stay off the
+- [x] **5.4** AmpBass-only parameters (`inputHiLo`, `dryWet`) stay neutral by default (Hi, 100 % wet) and stay off the
   faceplate. Confirm with the user whether to keep them at all.
-- [ ] **5.5** Update `WebUI/src/types/parameters.ts`, the `amp.ts` display view and the parameter count in `CLAUDE.md`.
+- [x] **5.5** Update `WebUI/src/types/parameters.ts`, the `amp.ts` display view and the parameter count in `CLAUDE.md`.
+
+Step 5 result (2026-10-19): no sound change (gate 0 / 0). IDs and order unchanged. Knobs keep their raw 0–1 range (the DSP
+reads it) but show and accept 0.0–10.0; GEQ bands and Level show one decimal; GEQ Level uses the reference's piecewise
+scale (−10 / 0 / +8 dB at 0 / 0.5 / 1, probe identical to the reference); defaults Gain 3.4 and Mid Freq 1. `amp.ts`
+mirrors the Level mapping and the new reset values (`npm run build` and `svelte-check` clean). Saved state carries
+`stateVersion` 2 with a place for future conversions. `inputHiLo` / `dryWet` unchanged (neutral defaults, pinned in the
+comparison). `parameters.ts` and the parameter count needed no change. Session save/load is on the BACKLOG
+manual-verification list (not covered by an automated test).
 
 ## Step 6 — Distortion and dynamics (preamp, then power amp)
 
@@ -368,3 +376,4 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | A | 2026-10-19 | **Milestone A passed**: user listened to `clean_flat`, `tone_shot`, `screenshot_preset gain=1 tubeGain=10` pairs (`probe.py listen`): "very close" | nulls −27.9 / −24.0 / −24.4 dB | — | — |
 | 4.4 | 2026-10-19 | Master linear taper (0.5 × knob) | +9.5 / −0.7 / 6.2 vs 6.5 % / −21.5 | `law_master*` ±0.1 dB; 12 better, 13 worse (Gain 5 levels, 4.2) | yes |
 | 4.2 | 2026-10-19 | Gain linear level law (19 × knob small-signal) | +3.8 / −0.7 / 7.6 vs 6.5 % / −21.5 | `law_gain*` ±0.1 dB; 77 better, 18 worse (noise = bias DC, step 7) | yes |
+| 5 | 2026-10-19 | parameter contract: display 0–10, GEQ Level piecewise, defaults, stateVersion | unchanged | 0 / 0 | yes |

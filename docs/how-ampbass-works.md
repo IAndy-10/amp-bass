@@ -162,6 +162,9 @@ output. Default 100 % wet.
 
 ## 3. Level map at default settings
 
+> These numbers predate the sound-matching work (docs/sound-matching-plan.md) and are refreshed after its
+> step 6 (distortion), which changes the preamp and power section.
+
 | Point in chain | Quiet note (−30 dBFS in) | Loud note (−6 dBFS in) |
 |---|---|---|
 | After preamp | ≈ −19.5 dBFS (+10.5 dB, clean) | ≈ −8 dBFS (clipped at ceiling) |

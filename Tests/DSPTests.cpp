@@ -660,6 +660,28 @@ namespace
             prev = g;
         }
         check (monotonic, "master gain rises with the knob", fmt ("gain at full travel %.2f", prev));
+
+        // Same normalised value = same setting as the reference (step 5 of docs/sound-matching-plan.md)
+        auto* level = probe.apvts.getParameter (ParameterIDs::geqLevel);
+        const float l0 = level->convertFrom0to1 (0.0f), lHalf = level->convertFrom0to1 (0.5f), l1 = level->convertFrom0to1 (1.0f);
+        check (std::abs (l0 + 10.0f) < 1e-4f && std::abs (lHalf) < 1e-4f && std::abs (l1 - 8.0f) < 1e-4f
+                   && std::abs (level->convertFrom0to1 (0.25f) + 5.0f) < 1e-4f,
+               "GEQ Level: -10 / 0 / +8 dB at 0 / 0.5 / 1 like the reference",
+               fmt ("%.2f / %.2f / %.2f dB", l0, lHalf, l1));
+
+        auto* gainParam = probe.apvts.getParameter (ParameterIDs::gain);
+        const auto shown = gainParam->getText (gainParam->getDefaultValue(), 16);
+        const float typed = gainParam->getValueForText ("7.5");
+        check (shown == "3.4" && std::abs (typed - 0.75f) < 1e-6f, "knobs show and accept 0-10 (default Gain 3.4)",
+               "default shows '" + shown.toStdString() + "', '7.5' -> " + fmt ("%.3f", typed));
+
+        auto* midFreq = probe.apvts.getParameter (ParameterIDs::midFreq);
+        check (midFreq->getText (midFreq->getDefaultValue(), 8) == "1", "Mid Frequency defaults to 1 like the reference",
+               midFreq->getText (midFreq->getDefaultValue(), 8).toStdString());
+
+        auto* band = probe.apvts.getParameter (ParameterIDs::geq300);
+        check (band->getText (band->getValueForText ("-4.5"), 16) == "-4.5", "GEQ bands show and accept dB",
+               band->getText (band->getValueForText ("-4.5"), 16).toStdString());
     }
 }
 

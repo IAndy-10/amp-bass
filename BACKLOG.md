@@ -9,6 +9,7 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 - [ ] **P1** New faceplate fills the plugin window; resizing keeps the 2562:558 aspect.
 - [ ] **P1** Knobs, GEQ sliders, toggles and FREQUENCY change the sound; DAW automation and session recall move them.
 - [ ] **P1** Undo: one wheel step / click is undoable; one whole drag is one undo step.
+- [ ] **P1** Session save/load keeps every value and writes `stateVersion` 2; a session saved before 2026-10-19 loads (re-save it). Double-click resets Gain to 3.4 and FREQUENCY to 1; EQ LEVEL shows 0.0 dB at the slider's centre.
 - [ ] **P1** POWER rocker and toolbar icon switch together and pass the dry signal; MUTE silences.
 - [ ] **P2** PEAK LED lights on hard playing with high GAIN/BASS, holds ~300 ms, stays off while bypassed.
 - [ ] **P2** Layout within 4 ref px of spec §2.4 at 1280, 1600 and 1800 px wide (spec §13).
