@@ -68,7 +68,9 @@ The heart of the sound. Per sample:
 3. **Drive**: `x · drive / headroom`
 4. **Asymmetric soft clip**: `tanh` (Padé approximation); the negative half is
    squashed by up to 25 % more than the positive half.
-5. **Level compensation**: `× headroom / max(1, 0.3·drive)`
+5. **Output level**: `× level · headroom / drive`, with `level = 19 × Gain`, so the
+   small-signal gain is `19 × Gain` (linear taper like the reference: +6 dB per
+   doubling, +20 dB from Gain 1 to 10, silent at 0).
 6. **10 Hz DC blocker** — removes the offset the bias introduced.
 
 Parameter mapping:
@@ -80,18 +82,15 @@ Parameter mapping:
 
 **What that means in practice** (worked out from the formulas above):
 
-- **Small-signal gain is constant at ≈ +10.5 dB (×3.33) once Gain ≥ ~0.26.**
-  Drive and compensation cancel (`drive/headroom × headroom/(0.3·drive) = 1/0.3`).
-  So above a quarter turn, *Gain only changes how early and how hard it
-  distorts*, not how loud quiet notes are. Below 0.26 it's a normal volume knob
-  (0 dB at Gain = 0).
+- **Small-signal gain is `19 × Gain`**: Gain is a volume control for quiet notes
+  (matched to the reference within 0.1 dB), while the drive sets how early and
+  how hard the shaper distorts.
 - **Clipping starts** when the input reaches about `headroom / drive`.
   At defaults (Gain 0.5, Tube Gain 0.5) that's ≈ 0.12, i.e. **≈ −18.5 dBFS**.
   A typical bass DI peaks around −12…−6 dBFS, so **the default setting is already
   driving the shaper** (this is the ~10 % THD the test suite reports).
-- **Output ceiling** = the compensation factor `headroom / max(1, 0.3·drive)`.
-  At defaults ≈ 0.39 (−8 dBFS). Turning Gain up *lowers* the ceiling, which is
-  why higher Gain sounds more compressed but not much louder.
+- **Output ceiling** = `level · headroom / drive` = `19·Gain·headroom / (1 + 9·Gain)`,
+  which rises with Gain toward ≈ 2.1 × headroom.
 - **Tube Gain down** = less headroom *and* more bias → earlier clipping, more
   even harmonics, lower ceiling.
 

@@ -20,9 +20,11 @@ public:
 
         smoothDrive.reset (sampleRate, 0.01);    // 10ms
         smoothHeadroom.reset (sampleRate, 0.05);  // 50ms
+        smoothLevel.reset (sampleRate, 0.01);    // 10ms
 
         smoothDrive.setCurrentAndTargetValue (1.0f);
         smoothHeadroom.setCurrentAndTargetValue (1.0f);
+        smoothLevel.setCurrentAndTargetValue (0.0f);
 
         for (int ch = 0; ch < 2; ++ch)
         {
@@ -51,6 +53,9 @@ public:
 
         // tube_gain_knob 0-1 -> headroom 0.3-1.0
         smoothHeadroom.setTargetValue (0.3f + tubeGainKnob * 0.7f);
+
+        // Small-signal level follows GAIN linearly like the reference (+6 dB per doubling, silent at 0)
+        smoothLevel.setTargetValue (kLevelAtFullGain * gainKnob);
     }
 
     void process (juce::AudioBuffer<float>& buffer)
@@ -62,9 +67,10 @@ public:
         {
             const float drive    = smoothDrive.getNextValue();
             const float headroom = smoothHeadroom.getNextValue();
-            // Partial level compensation: GAIN mostly changes distortion,
-            // not loudness (~6dB rise across the full range).
-            const float normGain = headroom / std::max (1.0f, drive * 0.3f);
+            const float level    = smoothLevel.getNextValue();
+            // Output scaled so the small-signal gain is `level`, whatever the drive: GAIN sets
+            // loudness like the reference's linear pot, and the drive sets how hard the shaper works.
+            const float normGain = level * headroom / drive;
 
             for (int ch = 0; ch < numChannels; ++ch)
             {
@@ -119,6 +125,9 @@ public:
     }
 
 private:
+    // Small-signal gain at full GAIN (x1.9 at GAIN 1, where AmpBass already matched the reference)
+    static constexpr float kLevelAtFullGain = 19.0f;
+
     float peakDrive = 0.0f;
     double sr = 44100.0;
     float preEmphCoeff = 0.0f;
@@ -132,6 +141,7 @@ private:
 
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothDrive;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothHeadroom;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothLevel;
 
     // Pade approximant: tanh(x) ~ x*(27+x*x)/(27+9*x*x), <0.1% error for |x|<3
     static float tanhApprox (float x)

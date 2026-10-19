@@ -243,12 +243,22 @@ Do these in order. Each one uses a single knob's cases.
 
 ## Step 4 — Level and gain staging
 
-- [ ] **4.1** Overall output level: `clean_flat` level error to ±0.5 dB (one output trim).
-- [ ] **4.2** Gain knob: output level and harmonics vs Gain at fixed Tube Gain. The reference is silent at Gain 0 and
+- [x] **4.1** Overall output level: `clean_flat` level error to ±0.5 dB (one output trim).
+  **Done without a change:** `clean_flat` is −0.1 dB after steps 1–3 and 4.4.
+- [x] **4.2** Gain knob: output level and harmonics vs Gain at fixed Tube Gain. The reference is silent at Gain 0 and
   its loudness rises with Gain (AmpBass compensates level, the reference seems not to). Gain may be a pot in front of
   the preamp rather than a drive multiplier. Copy the reference's behaviour, including silence at 0.
-- [ ] **4.3** Tube Gain: in the reference it changes compression and character and interacts with power-amp drive
+  **Done:** the reference's Gain is a **linear-taper level** (+6.0 dB per doubling, +20 dB from 1 to 10, silent at 0).
+  `TubePreamp` keeps its drive curve, so the harmonics in dBc don't change, but its output is normalised to a small-signal gain
+  of `19 × knob` (unchanged at Gain 1). `law_gain*` within 0.1 dB at every position. Drive-case level gaps shrank from
+  +12…+24 dB to +1…+8 dB; the rest is AmpBass's preamp compressing early (step 6). The 18 regressions are the "noise" metric:
+  the bias DC residual, now amplified with Gain (step 7). Step 6 must keep this small-signal law (DSP test).
+- [x] **4.3** Tube Gain: in the reference it changes compression and character and interacts with power-amp drive
   (manual §5). Check level and harmonics at Gain 2.5/7.5 × Tube 0/5/10.
+  **Measured, moved to step 6:** small-signal level is −1.0 / −1.0 / −1.2 / −2.6 / −4.1 dB at Tube Gain 0 / 2.5 / 5 / 7.5 / 10
+  (lower Tube Gain is about 3 dB *louder*; AmpBass does the opposite, −5.5 dB at 0). Tube Gain also sets the even harmonics
+  (H2 −37 dBc at −32 dBFS with Tube 0, −80 with Tube 5, −102 with Tube 10). Level and harmonics come from the same
+  stage, so both are fitted together when the Tube Gain stage is rebuilt in 6.2.
 - [x] **4.4** Master scale vs `master*` and the knob-scale cases, now that 0.1 is fixed. Target the reference's taper (about 12 dB from 2.5 to 10), not knob².
   **Done (before 4.2, because Master is a pure level after the preamp):** `law_*` cases measure small-signal level per
   knob from the −40 dBFS step. The reference's Master is a **linear taper** (+6.0 dB per doubling, silent at 0). AmpBass now
@@ -357,3 +367,4 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 3 | 2026-10-19 | graphic EQ: proportional-Q law, measured centres, on-hump | +8.0 / −0.7 / 6.2 vs 6.5 % / −21.5 | EQ cases ±0.5 dB; 35 better, 4 worse (screenshot ramp/bursts, step 4/6) | yes |
 | A | 2026-10-19 | **Milestone A passed**: user listened to `clean_flat`, `tone_shot`, `screenshot_preset gain=1 tubeGain=10` pairs (`probe.py listen`): "very close" | nulls −27.9 / −24.0 / −24.4 dB | — | — |
 | 4.4 | 2026-10-19 | Master linear taper (0.5 × knob) | +9.5 / −0.7 / 6.2 vs 6.5 % / −21.5 | `law_master*` ±0.1 dB; 12 better, 13 worse (Gain 5 levels, 4.2) | yes |
+| 4.2 | 2026-10-19 | Gain linear level law (19 × knob small-signal) | +3.8 / −0.7 / 7.6 vs 6.5 % / −21.5 | `law_gain*` ±0.1 dB; 77 better, 18 worse (noise = bias DC, step 7) | yes |

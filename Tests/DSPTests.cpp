@@ -301,7 +301,7 @@ namespace
         std::printf ("%-6s %18s %18s %18s\n", "", "tube 0.0", "tube 0.5", "tube 1.0");
 
         double thdAtGain[5] = {}, lvlAtGain[5] = {};
-        const float gains[] = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
+        const float gains[] = { 0.1f, 0.25f, 0.5f, 0.75f, 1.0f };
         for (int gi = 0; gi < 5; ++gi)
         {
             std::printf ("%-6.2f", gains[gi]);
@@ -323,8 +323,20 @@ namespace
                fmt ("THD %.1f%% → %.1f%%", thdAtGain[0], thdAtGain[4]));
         check (thdAtGain[2] < 10.0, "default GAIN (0.5) is not already heavily clipped",
                fmt ("THD %.1f%% at defaults with a -18 dBFS DI", thdAtGain[2]), true);
-        check (lvlAtGain[4] - lvlAtGain[0] < 12.0, "level jump across GAIN range",
-               fmt ("%.1f dB", lvlAtGain[4] - lvlAtGain[0]));
+        // Small-signal level vs GAIN, like the reference's linear pot: +20 dB from 1 to 10, silent at 0
+        auto smallSignalDb = [] (float gain)
+        {
+            const auto quiet = sine (kSr, 100.0, 0.001f, 1.0);
+            const int len = static_cast<int> (quiet.size());
+            TubePreamp tp;
+            tp.prepare (kSr, kBlock);
+            tp.setParams (gain, 1.0f);
+            const auto out = render (quiet, kBlock, [&] (auto& b) { tp.process (b); });
+            return toDb (rms (out.getReadPointer (0), len / 2, len) / rms (quiet.data(), len / 2, len));
+        };
+        const double g1 = smallSignalDb (0.1f), g10 = smallSignalDb (1.0f), g0 = smallSignalDb (0.0f);
+        check (std::abs (g10 - g1 - 20.0) < 0.5 && g0 < -100.0, "GAIN is a linear level control (+20 dB 1→10, silent at 0)",
+               fmt ("%+.1f dB, gain 0: %.0f dB", g10 - g1, g0));
 
         // Small-signal low-frequency response (80 Hz pre-emphasis HPF).
         auto lf = [] (double f)
