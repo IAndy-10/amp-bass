@@ -88,6 +88,12 @@ def all_cases() -> list[Case]:
         *[drive(f"topo_bass{v}", gain=7.5, bass=v) for v in (0, 10)],
         *[drive(f"topo_treble{v}", gain=7.5, treble=v) for v in (0, 10)],
         *[drive(f"topo_geq80_{v:+d}", gain=7.5, geqOn=True, geq80=v) for v in (-12, 12)],
+        # Level laws (step 4): small-signal level per knob from the -40 dBFS step of the 100 Hz tones
+        *[Case(f"law_gain{g}", {**DEFAULTS, "gain": g, "tubeGain": 10}, ["tones_100"])
+          for g in (0, 0.5, 1, 2, 3, 3.4, 4, 5, 6, 7, 8, 9, 10)],
+        *[Case(f"law_tube{t}", {**DEFAULTS, **CLEAN, "tubeGain": t}, ["tones_100"]) for t in (0, 2.5, 5, 7.5, 10)],
+        *[Case(f"law_master{m}", {**DEFAULTS, **CLEAN, "master": m}, ["tones_100"])
+          for m in (0, 0.5, 1, 2, 2.5, 3, 4, 5, 6, 7, 7.5, 8, 9, 10)],
         # Power-stage knee: clean preamp, Master varied
         *[Case(f"clean_master{m}", {**DEFAULTS, **CLEAN, "master": m}, DRIVE_SIGNALS) for m in (2.5, 5, 7.5, 10)],
         # Aliasing and channel handling

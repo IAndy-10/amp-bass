@@ -123,7 +123,8 @@ When **EQ is off** the stage crossfades (~64 samples) to the unprocessed signal,
 so the sliders and Level have no effect — the UI dims them to show this.
 
 ### Stage 6 — MasterVolume · `Source/DSP/MasterVolume.h`
-Gain = knob² (an audio-taper approximation). Default 0.5 → ×0.25 = **−12 dB**.
+Gain = 0.5 × knob, a linear taper like the reference (+6 dB per doubling, silent at 0).
+Default 0.5 → ×0.25 = **−12 dB**; full → ×0.5 = −6 dB.
 0 = silence.
 
 ### Stage 7 — PowerSection · `Source/DSP/PowerSection.h`
@@ -190,7 +191,7 @@ Changing them doesn't break saved sessions (parameter IDs are untouched).
 | Tone-stack corners / widths | 100 Hz, 2.5 kHz, Q 0.5 / mid Q 1.5 | `ToneStack.h` `prepare` |
 | Voicing switches | shelf freqs/gains, Ultra Lo +2 dB @ 40 / −10 dB @ 500 | `PreFilters.h` |
 | GEQ band width | Q 2.0 | `GraphicEQ.h` `prepare` |
-| Master taper | knob² | `MasterVolume.h` |
+| Master taper | 0.5 × knob (linear, measured on the reference) | `MasterVolume.h` |
 | Power amp onset / squash | threshold 0.8, 2:1, 1 ms / 50 ms | `PowerSection.h` |
 
 Known gaps worth considering while tuning:

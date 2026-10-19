@@ -280,10 +280,13 @@ namespace
     void testMasterVolume()
     {
         section ("Stage 6 — MasterVolume");
-        const double half = stageGainDb<MasterVolume> (200, [] (auto& s) { s.setParams (0.5f); });
-        const double full = stageGainDb<MasterVolume> (200, [] (auto& s) { s.setParams (1.0f); });
-        check (std::abs (half + 12.04) < 0.2, "knob 0.5 → -12 dB (quadratic taper)", fmt ("%.2f dB", half));
-        check (std::abs (full) < 0.1,         "knob 1.0 → unity",                    fmt ("%.2f dB", full));
+        // Linear taper like the reference: +6 dB per doubling of the knob
+        const double tenth = stageGainDb<MasterVolume> (200, [] (auto& s) { s.setParams (0.1f); });
+        const double half  = stageGainDb<MasterVolume> (200, [] (auto& s) { s.setParams (0.5f); });
+        const double full  = stageGainDb<MasterVolume> (200, [] (auto& s) { s.setParams (1.0f); });
+        check (std::abs (half + 12.04) < 0.2, "knob 0.5 → -12 dB", fmt ("%.2f dB", half));
+        check (std::abs (full - half - 6.02) < 0.1 && std::abs (half - tenth - 13.98) < 0.1,
+               "linear taper (+6 dB from 5 to 10, +14 dB from 1 to 5)", fmt ("%.2f / %.2f dB", full - half, half - tenth));
     }
 
     void testTubePreamp()
@@ -633,14 +636,14 @@ namespace
                    fmt ("%.1f to %.1f", range.start, range.end));
         }
 
-        // Master gain (knob^2) must rise monotonically across the knob's travel.
+        // Master gain (proportional to the raw value) must rise monotonically across the knob's travel.
         auto* master = probe.apvts.getParameter (ParameterIDs::master);
         float prev = -1.0f;
         bool monotonic = true;
         for (int i = 0; i <= 20; ++i)
         {
             const float raw = master->convertFrom0to1 (i / 20.0f);
-            const float g = raw * raw;
+            const float g = raw;
             monotonic = monotonic && g >= prev;
             prev = g;
         }

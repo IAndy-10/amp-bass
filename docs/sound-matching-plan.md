@@ -249,7 +249,12 @@ Do these in order. Each one uses a single knob's cases.
   the preamp rather than a drive multiplier. Copy the reference's behaviour, including silence at 0.
 - [ ] **4.3** Tube Gain: in the reference it changes compression and character and interacts with power-amp drive
   (manual §5). Check level and harmonics at Gain 2.5/7.5 × Tube 0/5/10.
-- [ ] **4.4** Master scale vs `master*` and the knob-scale cases, now that 0.1 is fixed. Target the reference's taper (about 12 dB from 2.5 to 10), not knob².
+- [x] **4.4** Master scale vs `master*` and the knob-scale cases, now that 0.1 is fixed. Target the reference's taper (about 12 dB from 2.5 to 10), not knob².
+  **Done (before 4.2, because Master is a pure level after the preamp):** `law_*` cases measure small-signal level per
+  knob from the −40 dBFS step. The reference's Master is a **linear taper** (+6.0 dB per doubling, silent at 0). AmpBass now
+  uses `0.5 × knob` (unchanged at 5): `law_master*` within 0.1 dB at every position. Regressions for 4.2: the Gain 5 drive
+  cases (`master7.5/10`, screenshot levels), because AmpBass is still ~12 dB too quiet at Gain 5 and the old steep Master
+  partly hid that.
 
 ## Step 5 — Parameter contract (ranges, scales, defaults, display)
 
@@ -350,3 +355,5 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 2.4 | 2026-10-19 | mid peak per selector × knob position | +7.5 / −4.0 / 6.0 vs 6.5 % / −12.3 | mid cases ±0.3 dB; 27 better, 1 worse (fxdefault FR, Tight missing) | yes |
 | 2.6 | 2026-10-19 | bright / ultra hi / ultra lo refit | +7.5 / −3.6 / 6.1 vs 6.5 % / −14.2 | switch cases ±0.3 dB; 12 better, 0 worse | yes |
 | 3 | 2026-10-19 | graphic EQ: proportional-Q law, measured centres, on-hump | +8.0 / −0.7 / 6.2 vs 6.5 % / −21.5 | EQ cases ±0.5 dB; 35 better, 4 worse (screenshot ramp/bursts, step 4/6) | yes |
+| A | 2026-10-19 | **Milestone A passed**: user listened to `clean_flat`, `tone_shot`, `screenshot_preset gain=1 tubeGain=10` pairs (`probe.py listen`): "very close" | nulls −27.9 / −24.0 / −24.4 dB | — | — |
+| 4.4 | 2026-10-19 | Master linear taper (0.5 × knob) | +9.5 / −0.7 / 6.2 vs 6.5 % / −21.5 | `law_master*` ±0.1 dB; 12 better, 13 worse (Gain 5 levels, 4.2) | yes |
