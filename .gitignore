@@ -4,6 +4,7 @@ building-process/
 # Documentation (generated during research phase)
 docs/*
 !docs/how-ampbass-works.md
+!docs/sound-matching-plan.md
 
 # macOS
 .DS_Store

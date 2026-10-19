@@ -1,0 +1,322 @@
+# Sound-matching plan: AmpBass → Ampeg SVT-3 PRO (cabinet bypassed)
+
+Guide for future sessions. Work **one step at a time**: change one thing, measure, and keep it only if the
+targets improve and nothing else gets worse. Tick the step and fill in the log at the bottom.
+
+Goal for this scenario: with the reference's cabinet bypassed, AmpBass matches it in **parameters** (same
+controls, ranges, scales, defaults), **sound** (frequency response, level, distortion, dynamics, noise) and
+**behaviour** (bypass, mute, PEAK, sample rate, block size, stereo, latency).
+
+## Context (as of 2026-10-19)
+
+- Reference: Plugin Alliance VST3 1.6.0, `/Library/Audio/Plug-Ins/VST3/Ampeg SVT3Pro.vst3` (2 in / 2 out,
+  3 samples latency). The user's screenshots are of the UAD build, which is assumed to be the same engine.
+- The reference's text→value parsing is broken (`getValueForText` returns the typed number unchanged), so
+  `Tests/compare/plugins.json` sets it with normalised values (`knob10`, `norm`, `points`). Its fixed settings are
+  Rec Chain = last entry (`27 EMPTY PLAY REAL CAB` = Cabinet Bypass), Horn off, gate bypassed, Tight/Smooth off,
+  Input 0 dB, **Power Soak 0 dB**.
+- Reference defaults (fresh instance): Gain 3.4, Bass/Mid/Treble/Master/Tube Gain 5, Mid Freq 1, EQ off,
+  Input 0 dB, Power Soak −4 dB, Rec Chain `20 4x10 DYN600+RIBBON`, Horn on, gate bypass On / threshold −88 dB /
+  range 50, Tight Post 50 Hz, Smooth Post 21 (kHz).
+- `screenshot_preset` case in `Tests/compare/cases.py`: settings read off the 4 PNGs in `building-process/references/`,
+  which all show the same settings (±0.5 knob, ±1.5 dB slider): Gain 3.4, Bass 7, Mid 6.75, Freq 3, Treble 7,
+  Master 6, Tube Gain 3.5, BRT on, EQ on with 80 +5, 150 +4, 2k +1.5, 5k +3.5 dB. The FX Rack is not visible.
+  If it was left at its defaults, the user heard Tight Post 50 Hz and Power Soak −4 dB too.
+- The 4 real presets (R&B, Rock, Synth, Upright) are still unknown. Get their exact values (ideally as
+  `.vstpreset` files from the installed reference) before step 9.
+
+### Baseline: `screenshot_preset` (2026-10-19). **Partly invalid, see step 0.1**
+
+| Metric | Value | Target |
+|---|---:|---:|
+| Level (ref − AmpBass) | +1.3 dB | ±0.5 dB |
+| FR shape worst, 40 Hz–8 kHz | 4.9 dB | ≤ 1 dB (20 Hz–20 kHz after step 1) |
+| THD 100 Hz @ −16 dBFS (AmpBass / ref) | 8.2 / 6.5 % | see THD rule below |
+| DI null | −15.3 dB | ≤ −20 dB (stretch −25) |
+| Noise floor (AmpBass / ref) | −104 / −240 dBFS | ≤ −140 dBFS |
+
+Observed differences, before the step-0.1 fix:
+1. Above about 7 kHz the reference rolls off (−25 dB at 20 kHz). AmpBass is flat there.
+2. The reference has a broad bump of about +18 dB at 50–60 Hz. AmpBass peaks narrower, at 80 Hz, and is about 7 dB short at 50 Hz.
+3. From 100 Hz to 3 kHz AmpBass is 2–5 dB low, with dips at about 300 Hz and 1.2 kHz that the reference doesn't have.
+4. At low and mid input levels the preamp distorts too much (12 % vs 5 % THD at −20 dBFS, 100 Hz). At 400 Hz it is too dirty at every level.
+5. The loud ceiling is about 4.5 dB too low (ramp tops out at −6.5 vs −2 dBFS), so AmpBass over-compresses. *(Probably the Master bug.)*
+6. AmpBass has a "noise floor" on silent input. The reference is digitally silent. *(It's DC, not noise, see step 7.)*
+
+Earlier generic cases: with all knobs at 5 and the preamp clean, AmpBass is flat where the reference scoops about 8 dB at 1 kHz, and AmpBass is about 12 dB louder.
+Master 2.5: AmpBass 39 % THD vs reference 0.5 %. Gain 0: the reference outputs silence. *(Level and Master numbers are invalid, see step 0.1.)*
+
+### Findings from step 0 (2026-10-19)
+
+- **0.1 fixed:** Master/Dry-Wet ranges (`2eb287f`). Clean cases now match in level (−0.4 dB); drive cases are 8–23 dB
+  quieter in AmpBass because the reference gets louder with Gain (step 4.2).
+- **0.3:** Horn has no effect with the cabinet bypassed (exact null). `NgByPass` On = gate **active**; the baseline is now Off.
+- **0.4:** Power Soak is a pure output gain in this build (level-matched null −149 dB). The 0 dB baseline is fine and step 9.2 is an output trim.
+- **0.5:** `CLEAN` is clean on the reference (H2/H3 ≤ −55 dBc up to −12 dBFS; FR shape stable to 0.04 dB).
+- **Harmonics (clean setting, 100 Hz):**
+  - **Reference:** no distortion until a knee, then mostly H3. H2 is a constant −102 dBc, inaudible and not worth modelling.
+  - **AmpBass:** H2 and H3 rise from the lowest level (−59 / −68 dBc at −40 dBFS). The cause is the `x·|x|` term in the
+    asymmetric negative half of the `TubePreamp` shaper, not the bias (which is 0 at Tube Gain 10).
+- **Master test:** the reference's H3 knee sits at a fixed **output** level of about −30 dBFS (fundamental peak) for
+  Master 2.5–10, so it's in the **power stage** and the preamp is clean at these Gain settings. Above the knee H3 rises
+  about 1.5–2 dB per dB. AmpBass's H3 doesn't change with Master at all (only its preamp distorts).
+- **Topology (0.8):** in the reference, Bass, Treble and the GEQ all sit **before** the main distortion. A boost shrinks
+  at high input (bass 41 Hz: +25 dB at −40 dBFS → +1.7 dB at 0 dBFS; GEQ 80 Hz: +14.5 → +1.3; treble 400 Hz: +4.8 → +0.2)
+  and raises H3. In AmpBass the change is constant (+20.4 / +13.1 / +0.9 dB), because its distortion is in the preamp,
+  before the tone stack. AmpBass's order (preamp → tone → GEQ → Master → power) already puts tone and GEQ before the
+  power stage, so **no reorder is needed** once the main distortion moves to `PowerSection` (6.4). Re-run `topo_*` then.
+  Bass swing at 41 Hz: reference 25 dB, AmpBass 20.4 dB.
+- **Aliasing (0.8):** AmpBass −92 dB vs reference −125 dB (non-harmonic energy of a 3 kHz −6 dBFS tone). AmpBass aliases
+  more, but it's probably inaudible. Re-check after 6.4.
+- **Channels (0.8):** both plugins keep L/R independent. AmpBass's −96 dB on a silent right channel is the DC residual (step 7).
+- **Master taper:** the reference rises about 12 dB from 2.5 to 10 (+6, +3.5, +3.5 per step). AmpBass rises 24 dB (knob²).
+
+## Decisions (user, 2026-10-19). These bind every session
+
+1. **Distortion lives where the reference has it:** the main distortion is in the power stage, after Master; the preamp
+   is clean at low and moderate Gain. The preamp's own break-up at high Gain (reference 35–44 % THD at Gain 7.5–10) is
+   measured and placed separately (step 6).
+2. **Gain 0 = silence**, as in the reference (step 4.2).
+3. **Parameters behave like a professional plugin** (step 5): keep every ID and the parameter order; match the
+   reference's scales (same 0–1 value = same setting), display text (0.0–10.0, On/Off, typed values work) and defaults
+   (Gain 3.4, Mid Freq 1). Add a state-version attribute to the saved state so later range changes can be migrated on
+   load. No migration code now (unreleased). The user re-saves existing sessions after step 5.
+4. **`inputHiLo` and `dryWet` stay** in the plugin and UI, neutral by default (HI = unity, 100 % wet). They are pinned
+   to neutral in `plugins.json`'s AmpBass baseline, so they never affect the comparison.
+5. **Presets are deferred** to a session the user runs (step 10).
+6. **The user does the listening checks** at milestones A, B and C.
+7. **Regression rule exception** (see Rules): a regression in a case owned by a later step is allowed if the log names it.
+
+## Tools
+
+- `Tests/compare/probe.py`: the measuring and fitting methods used in this plan (`fr --minus clean_flat` for a knob's
+  own curve, `fit-shelf`, `fit-peaks --refit-lp`, `harmonics`, `topo`, `refnull`). See its docstring.
+- The reference renders headless in `AmpBassHostRender` without the editor's license prompt. A 90 s render had no
+  dropouts or drift. The license itself is the user's to keep valid.
+
+## The loop for every step
+
+```bash
+# 1. build + install the plugin (CLAUDE.md), then:
+cp build-tests/compare/report/summary.json build-tests/compare/summary-prev.json   # keep the last kept step
+python3 Tests/compare/render.py --plugins ampbass --force          # all cases, AmpBass only
+python3 Tests/compare/analyze.py --compare-to build-tests/compare/summary-prev.json  # report + regression gate
+build-tests/Tests/AmpBassDSPTests_artefacts/Release/AmpBassDSPTests # must stay 0 FAIL
+```
+Faster while iterating: `render.py --plugins ampbass --force --cases <the step's cases>`, but run **all** cases
+before deciding to keep a step.
+
+Rules:
+- **One change per step**, one commit per kept step (`fix:`/`perf:`/`test:` …, on `feat/sound-matching`).
+- **Tune against the exact-setting cases** (one control at a time, values known exactly). `screenshot_preset` is a
+  **validation** case only: its settings are read off screenshots (±0.5 knob), so don't tune to close its last 1–2 dB.
+- Keep the step only if its own metric improves **and** the regression gate (step 0.6) shows no case worse by more
+  than 0.5 dB level/FR or the THD tolerance. Otherwise revert and write down why in the log.
+  Exception: a regression in a case that depends on a control a **later** step will fix (for example a knob case that
+  gets worse once a missing fixed curve stops hiding the knob's own error) is acceptable if the log names it and
+  that step re-checks it.
+- **THD rule:** compare harmonics in dB relative to the fundamental (H2 and H3 separately), within ±3 dB wherever the
+  harmonic is above −60 dBc. Below that, both only need to be below −60 dBc. A relative-% rule is meaningless at 0.3 %.
+- **Stop rule:** if a step misses its target after 3 attempts, log the best attempt and the reason and move on.
+  Come back after later steps, because they can interact.
+- Don't render the reference again unless the baseline or the cases change. Its renders are the fixed target.
+- Each stage stays real-time safe (CLAUDE.md). Parameter IDs are frozen. New parameters get new IDs.
+- If `AmpBassDSPTests` checks encode the *old* behaviour, update the expected values in the same commit
+  and say so in the message.
+- **Milestones** (A, B, C below): the user listens to level-matched DI renders of both plugins (A/B) before moving on.
+  Numbers can pass while it still sounds different.
+
+---
+
+## Step 0 — Fix the blocker, then make the test trustworthy
+
+- [x] **0.1 BLOCKER: Master and Dry/Wet parameter ranges.** Commit `83544da` ("match graphic EQ ranges") also
+  changed `master` and `dryWet` in `Source/Parameters/ParameterLayout.h` from `0…1` to `-10…8` (the GEQ Level range).
+  The processor passes the raw value to the DSP, and `MasterVolume` squares it. So the Master knob is **not
+  monotonic**: knob 0 → ×100 (+40 dB), knob 5 → ×1, knob 10 → ×64 (+36 dB). The designed default is ×0.25.
+  In the comparisons, Master 5 ran +12 dB hotter into `PowerSection` than designed, Master 2.5 +29.6 dB, and the
+  screenshot preset (6) +5 dB. Dry/Wet is outside `0…1` for any value except the default, so its cos/sin mix breaks.
+  Fix: restore both to `NormalisableRange (0, 1)`, add a DSP test that checks Master is monotonic, re-render AmpBass and
+  **record a new baseline row**. Re-check findings 1–6 above before trusting any of them.
+- [x] **0.2 Commit the test harness changes**: `plugins.json` reference map, `render.py` (`points` map,
+  numeric baseline), `screenshot_preset` case. Self-test must still null:
+  `render.py --self-test --out build-tests/compare/selftest` then `analyze.py --self-test --renders build-tests/compare/selftest`.
+- [x] **0.3 Check the cabinet-bypass baseline does nothing.** Render the reference with Horn on vs off and gate
+  bypass On vs Off. The output must null (< −90 dB). If the gate turns out *active* with `NgByPass` On, flip it.
+- [x] **0.4 Characterise Power Soak.** Render the reference with Power Soak 0 / −4 / −10 dB on a drive case.
+  If −10 nulls against 0 after a −10 dB level match, it's a pure post-gain and the 0 dB baseline is fine. If not,
+  it changes power-amp drive and must be modelled with Master in step 6. **Decide the baseline with the user.**
+- [x] **0.5 Check the clean cases are clean on the reference.** The sweep at −40 and −30 dBFS with `CLEAN` must give the
+  same FR shape (±0.3 dB) and H2/H3 below −50 dBc. If not, lower `CLEAN` gain for both plugins.
+- [x] **0.6 Analyzer upgrades** (test-only commit):
+  - Write `summary.json` with numeric metrics per case: level, FR max error over 20 Hz–20 kHz and 40 Hz–8 kHz,
+    H2/H3 error per tone level at 41/100/400 Hz, max ramp-curve error, burst levels and settle times, DI null,
+    noise, and L−R difference.
+  - Add `analyze.py --compare-to <previous summary.json>` to print which cases got better or worse. That's the regression gate.
+  - Read **both channels** (it only reads channel 0 today) and report L/R mismatch.
+- [x] **0.7 Per-case reference settings.** Allow a case to override the reference baseline, for example
+  `screenshot_preset_fxdefault` with Tight Post 50 Hz and Power Soak −4. Today the baseline is global. Steps 8 and 9 and the cabinet need this.
+- [x] **0.8 Add cases** (render both plugins once):
+  - Knob scales: Bass/Treble/Mid/Gain/Tube Gain/Master at 0, 2.5, 5, 7.5, 10 (linear cases for tone knobs, drive cases for gain knobs).
+  - Tone-stack interaction: Bass 10 + Treble 0, Bass 0 + Treble 10, Mid 0 + Bass 10 + Treble 10.
+  - **Topology probes** (drive): Gain 7.5 with Bass 0 vs 10, with Treble 0 vs 10, and with GEQ 80 Hz ±12.
+    If the reference's harmonics change with a control, that control sits **before** the distortion.
+    AmpBass's order is Pre-filters → Preamp → Tone stack → GEQ → Master → Power. If the reference differs,
+    reorder before tuning, because no amount of tuning fixes a wrong order.
+  - Power-stage knee: `clean_master2.5/5/7.5/10`, the `CLEAN` setting with the drive signals.
+  - Aliasing: a 3 kHz tone at −6 dBFS with Gain 10. Measure the energy that isn't at a harmonic.
+  - Stereo: a left-only input. Does each plugin treat the channels independently, or sum to mono?
+- [x] **0.9 Re-baseline** after 0.1–0.8 and fill in the log. From here on, every step compares against this row.
+
+## Step 1 — Output stage: high-frequency roll-off
+
+- [x] **1.1** First check that the roll-off is the same in clean, drive, `treble_*` and `master*` cases (ref minus
+  AmpBass, 5–20 kHz). If it moves with level or Master, it belongs in the power stage, not a fixed filter.
+- [x] **1.2** Fit corner and slope from `clean_flat` (2nd-order Butterworth first, then 2× 2nd-order if needed).
+- [x] **1.3** Add the low-pass at the end of `PowerSection` (existing `Biquad`), with coefficients computed from the
+  sample rate. Target: FR error above 5 kHz ≤ 1 dB in `clean_flat`.
+- [x] **1.4** Low end below 40 Hz: **moved to 2.2.** The reference's bass bump is much larger and broader (Bass 0→10 swing
+  at 50 Hz: 23.6 dB vs 18.6 dB), and below 30 Hz it falls more steeply (about −10 dB at 20 Hz below its plateau vs AmpBass −4.4,
+  close to a 2nd-order high-pass near 30 Hz). Fit both together in 2.2.
+
+Step 1 result (2026-10-19): the reference's roll-off is fixed (`clean_flat` = `clean_master2.5` = `clean_master10` within 0.2 dB).
+Fitted a 2nd-order low-pass at 12.06 kHz, Q 0.5, at the end of `PowerSection`. `clean_flat` above 10 kHz is now within
+−0.5 to +1.3 dB, wide-band FR 11.4 → 5.6 dB. What's left at 5–8 kHz (+3 dB) is the reference's treble bump (step 2.1).
+`treble_10` above 10 kHz is −3.2 dB (AmpBass's treble boost reaches too high, step 2.3). Open: at heavy drive with Tube Gain 0
+the reference has more HF (harmonics) than AmpBass, so its low-pass may sit *before* the power-stage clipping. Decide in 6.4.
+
+## Step 2 — Tone stack shape (clean, linear cases)
+
+Do these in order. Each one uses a single knob's cases.
+
+- [x] **2.1 Noon curve.** With all tone knobs at 5 the reference scoops about 8 dB at 1 kHz, with bumps near 60 Hz
+  and 6 kHz. AmpBass is flat. Target: `clean_flat` ≤ 1 dB.
+  **Done (2026-10-19):** the manual says Bass, Mid and Treble are active and **flat at centre**, so the noon curve is a
+  fixed voicing, not knob interaction. Added to `ToneStack` (before the knobs): peak 57.5 Hz Q 0.44 +8.36 dB, peak 5906 Hz
+  Q 0.69 +6.08 dB, gain −3.76 dB. Fitted jointly with the output low-pass, which moved to **14.6 kHz Q 0.382**. The fit is
+  within 0.5 dB from 30 Hz to 20 kHz (`clean_flat` shape +0.2 dB). `defaults` DI null −8.7 → −23.5 dB. A 3-peak fit was
+  overfitted (±20 dB peaks) and rejected. Regressions exposed for later steps: mid/treble knob cases (2.2–2.4),
+  `screenshot_preset` null −15.4 → −11.1 (knob curves), `clean_master7.5/10` ramp (Master taper, 4.4), `topo_*` (step 6).
+- [x] **2.2 Bass**: depth, corner and knob scale vs `bass_0`, `bass_10` and the knob-scale cases (manual: ±12 dB at 50 Hz).
+  **Done:** the reference's shelf changes frequency and Q with the knob (77–152 Hz, Q 0.42–0.69, −16.3 … +14.1 dB), and one
+  shared shape misses by 1.7 dB. Added `ToneStack::KnobCurve` (gain/Hz/Q at 0/2.5/5/7.5/10, interpolated). All `bass_*` cases
+  are within ±0.6 dB. The low end below 30 Hz (from 1.4) is within 1 dB after the voicing, so no high-pass change.
+  Regressions for later: `topo_bass*` (step 6), screenshot ramp/bursts +1 dB louder (steps 4/6).
+- [ ] **2.3 Treble**: `treble_0`, `treble_10`, knob scale (manual: +14 / −19 dB at 5 kHz).
+- [ ] **2.4 Midrange**: `mid_0_f3`, `mid_10_f1…f5`. Centre frequencies already match (220/450/800/1.6k/3k).
+  Fit the Q and depth (±15 dB).
+- [ ] **2.5** The interaction cases from 0.8 must be ≤ 1.5 dB. If not, step 2.1 chose the wrong model.
+- [ ] **2.6 Bright** (+6 dB at 5 kHz per the manual), **Ultra Hi**, **Ultra Lo**, **−15 dB pad**: one case each.
+
+## Step 3 — Graphic EQ
+
+- [ ] **3.1** Band gain scale and Q per band from `geq*_+12` (reference ±12 dB). One commit for Q, one for scale if both change.
+- [ ] **3.2** `geq_on_flat`: the EQ switched on but flat must match (any fixed colouring or level offset).
+- [ ] **3.3** EQ Level: `geqLevel_+8`, plus a −10 dB case.
+- [ ] **3.4** `screenshot_preset` FR ≤ 1.5 dB (validation). **Milestone A: tone matches when clean.** (listen)
+
+## Step 4 — Level and gain staging
+
+- [ ] **4.1** Overall output level: `clean_flat` level error to ±0.5 dB (one output trim).
+- [ ] **4.2** Gain knob: output level and harmonics vs Gain at fixed Tube Gain. The reference is silent at Gain 0 and
+  its loudness rises with Gain (AmpBass compensates level, the reference seems not to). Gain may be a pot in front of
+  the preamp rather than a drive multiplier. Copy the reference's behaviour, including silence at 0.
+- [ ] **4.3** Tube Gain: in the reference it changes compression and character and interacts with power-amp drive
+  (manual §5). Check level and harmonics at Gain 2.5/7.5 × Tube 0/5/10.
+- [ ] **4.4** Master scale vs `master*` and the knob-scale cases, now that 0.1 is fixed. Target the reference's taper (about 12 dB from 2.5 to 10), not knob².
+
+## Step 5 — Parameter contract (ranges, scales, defaults, display)
+
+The goal is that the same normalised value (automation, presets, `.vstpreset`) means the same setting in both plugins.
+
+- [ ] **5.1 Normalised ↔ value scales** match the reference: knobs linear 0–10, Mid Freq 5 steps, GEQ ±12 linear,
+  **GEQ Level −10…0…+8 piecewise** (the reference puts 0 dB at 0.5; AmpBass's linear range puts −1 dB there).
+- [ ] **5.2 Display text**: knobs shown as 0.0–10.0 (AmpBass shows 0–1), dB values with one decimal, switches On/Off,
+  Mid Freq 1–5. Also make AmpBass's `getValueForText` work, so the harness can use `text` for both plugins.
+- [ ] **5.3 Defaults** match a fresh reference: Gain 3.4, Mid Freq 1, others as listed in Context. Changing ranges and
+  defaults keeps the IDs but changes what old sessions load. That's acceptable before release, and should be noted in CHANGELOG.
+- [ ] **5.4** AmpBass-only parameters (`inputHiLo`, `dryWet`) stay neutral by default (Hi, 100 % wet) and stay off the
+  faceplate. Confirm with the user whether to keep them at all.
+- [ ] **5.5** Update `WebUI/src/types/parameters.ts`, the `amp.ts` display view and the parameter count in `CLAUDE.md`.
+
+## Step 6 — Distortion and dynamics (preamp, then power amp)
+
+- [ ] **6.1 Preamp onset.** The reference's preamp is clean at low and moderate Gain. Remove the low-level `x·|x|` term
+  (asymmetry only above a knee) and change the `TubePreamp` drive map or curve knee only.
+  Target: H2/H3 vs level at 41/100/400 Hz within the THD rule.
+- [ ] **6.2 Harmonic balance**: even/odd per level. Adjust the bias/asymmetry.
+- [ ] **6.3 Frequency dependence**: AmpBass is too dirty at 400 Hz at every level. Look at the filtering before and after the shaper.
+- [ ] **6.4 Power section = main distortion stage.** A linear zone, then a knee at the output level where the reference's
+  H3 appears (about −30 dBFS fundamental peak, independent of Master), rising about 1.5–2 dB per dB above it. Check with
+  the `clean_master*` cases (0.8) and `probe.py harmonics master=…`, then the ceiling and Master distortion. Target: ramp curve
+  ±1 dB, burst levels ±1 dB.
+- [ ] **6.5 Dynamics**: attack/release of the `PowerSection` compressor from the burst envelopes (settle times ±20 %).
+- [ ] **6.6 Aliasing**: add oversampling around the shapers only if AmpBass aliases more than the reference. If added,
+  report the latency (`setLatencySamples`) and re-check the null alignment.
+- [ ] **6.7** DI null ≤ −20 dB on the exact-setting drive cases, and `screenshot_preset` ≤ −20 dB.
+  **Milestone B: sound matches when driven.** (listen)
+
+## Step 7 — Silence and DC
+
+- [ ] **7.1** The "noise" is DC from the preamp bias, not hiss. `TubePreamp` adds `0.1 * (1 - headroom)` before the
+  shaper, so at silence the shaper outputs a constant that the 10 Hz DC blocker only removes slowly. That's why every
+  Tube Gain 10 case reads −240 dBFS and the others read −104 to −111 (louder at high Master). It also means a thump
+  and DC settling when Tube Gain moves. Subtract the shaper's at-rest output (bias through the shaper) so silence in gives
+  exactly silence out. Target: ≤ −140 dBFS, and no step when Tube Gain is automated.
+
+## Step 8 — Behaviour
+
+- [ ] **8.1 Sample rate**: `screenshot_preset` and `clean_flat` at 44.1 and 96 kHz, within 0.5 dB of the 48 kHz
+  result in both plugins.
+- [ ] **8.2 Block size**: render with `--block 32`, `512` and `4096`. AmpBass output must null between them (< −100 dB).
+  The 32-sample coefficient updates must not depend on the host block.
+- [ ] **8.3 Stereo**: same channel handling as the reference (from 0.8).
+- [ ] **8.4 Bypass and Mute**: render each plugin with each switched on. Compare the output (dry, silent, latency-
+  compensated?) and whether the switch ramps or hard-cuts.
+- [ ] **8.5 PEAK/MUTE LED** (in a DAW, not measurable offline): per the manual it lights on input overload, high Gain,
+  **or too much tone boost**, and **whenever Mute is on**. Check that AmpBass's LED logic (`PluginProcessor.cpp`, PEAK block)
+  also lights on Mute.
+- [ ] **8.6 Knob moves** (in a DAW): sweep every control during playback in both plugins. No zipper noise or clicks.
+  Mid Freq and switches change without clicks.
+- **Milestone C: behaviour matches.**
+
+## Step 9 — Reference parameters AmpBass lacks (new IDs only)
+
+One parameter per step: DSP + `ParameterIDs.h`/`ParameterLayout.h` + TS mirror + `plugins.json` map + a case that
+uses the per-case reference settings (0.7). No faceplate UI unless the user asks.
+
+- [ ] **9.1** Input gain (±20 dB, linear in dB like the reference).
+- [ ] **9.2** Power Soak (−40 … 0 dB). Its model depends on 0.4. Re-check the `master*` cases.
+- [ ] **9.3** Tight (Off/Pre/Post + frequency). Probe the reference's frequency range and slope first.
+- [ ] **9.4** Smooth (Off/Pre/Post + frequency). Same.
+- [ ] **9.5** Noise gate (on/off, Threshold, Range), plus a gate case with a decaying note.
+- [ ] **9.6** `screenshot_preset_fxdefault` (Tight Post 50 Hz, Power Soak −4) passes the Milestone B targets.
+- Horn and Rec Chain wait for the cabinet phase.
+
+## Step 10 — Presets
+
+- [ ] **10.1** Get exact values for the 4 presets (R&B, Rock, Synth, Upright), including the FX Rack / Rec Chain.
+- [ ] **10.2** Add one compare case per preset (cabinet bypassed, with the preset's own FX settings via 0.7).
+  Each must pass the Milestone B targets.
+- [ ] **10.3** Preset table in C++ applied via the existing `presetSelect` parameter (frozen ID), setting all parameters
+  in one go. Note that the reference's A/B/C/D are settings *slots*, not factory presets, so behaviour differs on purpose.
+- [ ] **10.4** Prominent preset selector in the UI as its own component (so it moves to the later minimal UI).
+
+## Later — Cabinet
+
+User will compare with the cabinet next. Only the Rec Chains used by the 4 presets (+ Horn) need modelling.
+Use per-case reference settings (0.7) instead of the global baseline.
+
+---
+
+## Log
+
+| Step | Date | Change | screenshot_preset (level / FR / THD / null) | Other cases | Kept? |
+|---|---|---|---|---|---|
+| baseline | 2026-10-19 | — (Master range bug present) | +1.3 / 4.9 / 8.2 vs 6.5 % / −15.3 | see report | — |
+| 0.1 | 2026-10-19 | Master/Dry-Wet range 0–1 (`2eb287f`) | +6.3 / 4.9 / 8.2 vs 6.5 % / −15.3 | clean levels −0.4 dB; drive 8–23 dB quiet | yes |
+| 0.3 | 2026-10-19 | reference gate off in baseline (`be4c3c6`), reference re-rendered | unchanged | — | yes |
+| 0.9 | 2026-10-19 | step-0 baseline (`f792fc0`); `build-tests/compare/summary-baseline.json` | +6.3 / 4.9 / 8.2 vs 6.5 % / −15.3 | clean_flat level −0.4, FR full 11.3 | — |
+| 1 | 2026-10-19 | output low-pass 12.06 kHz Q 0.5 | +7.8 / 4.9 / 8.2 vs 6.5 % / −15.3 | FR full better in 69 metrics; levels +0.7 dB (HF energy removed, step 4.1) | yes |
+| 2.1 | 2026-10-19 | fixed noon voicing + LP refit | +6.9 / −5.2 / 5.2 vs 6.5 % / −11.1 | 197 better, 36 worse (explained in 2.1) | yes |
+| 2.2 | 2026-10-19 | bass shelf per knob position | +7.1 / −5.5 / 5.4 vs 6.5 % / −10.2 | bass cases ±0.6 dB; 19 better, 8 worse (drive levels) | yes |
