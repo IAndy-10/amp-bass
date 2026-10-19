@@ -267,6 +267,7 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
     sr, pre = manifest["sample_rate"], manifest["pre_samples"]
     res = CaseResult(name)
     data: dict[str, dict[str, dict]] = {}
+    silent: dict[str, bool] = {}
 
     for sig, info in manifest["signals"].items():
         files = {p: renders / p / name / f"{sig}.wav" for p in ("ampbass", "reference")}
@@ -285,6 +286,7 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
         kind = info["kind"]
         d: dict[str, dict] = {}
         if kind == "sweep":
+            silent[sig] = min(db(rms(y)) for y in ys.values()) < LEVEL_FLOOR_DB
             inv = inverse_sweep(info, sr)
             x = load(signals / f"{sig}.wav")
             ix = int(np.argmax(np.abs(impulse_response(x, inv))))
@@ -319,6 +321,8 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
 
     for sig in ("sweep_30", "sweep_12"):
         if sig in data:
+            if silent.get(sig):
+                break  # one plugin outputs nothing: there is no response to compare
             a, r = np.array(data[sig]["ampbass"]["fr_db"]), np.array(data[sig]["reference"]["fr_db"])
             band = (FREQS >= FR_BAND[0]) & (FREQS <= FR_BAND[1])
             offset = np.nanmedian((r - a)[band])  # shape only; level is reported separately
