@@ -9,6 +9,7 @@ Works on the renders made by render.py (build-tests/compare/renders) unless a co
     python3 Tests/compare/probe.py harmonics master=10                    # CLEAN + overrides: FR change with level, H2/H3
     python3 Tests/compare/probe.py topo topo_bass0 topo_bass10 tones_41   # is a control before the distortion?
     python3 Tests/compare/probe.py refnull defaults di PowerSoak=0.75 --vs PowerSoak=1.0
+    python3 Tests/compare/probe.py listen screenshot_preset gain=1 tubeGain=10   # level-matched DI pair to A/B
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+from scipy.io import wavfile
 from scipy.optimize import minimize
 from scipy.signal import freqz
 
@@ -249,6 +251,29 @@ def cmd_refnull(args: argparse.Namespace) -> None:
           f"level-matched null {A.db(A.rms(a - g * b) / max(A.rms(a), A.EPS)):.1f} dB")
 
 
+def cmd_listen(args: argparse.Namespace) -> None:
+    """Render the DI through both plugins with a case's settings (+ overrides) and write a level-matched pair."""
+    case = next((c for c in all_cases() if c.name == args.case), None)
+    if case is None:
+        raise SystemExit(f"unknown case {args.case}")
+    settings = {**case.settings, **parse_kv(args.overrides)}
+    outs = {p: render_settings(p, settings, args.signal, case.baseline.get(p)) for p in PLUGINS}
+    gain = A.rms(outs["reference"]) / max(A.rms(outs["ampbass"]), A.EPS)
+    outs["ampbass"] = outs["ampbass"] * gain
+    peak = max(np.max(np.abs(y)) for y in outs.values())
+    norm = min(1.0, 0.89 / max(peak, A.EPS))  # both scaled alike to peak at -1 dBFS at most
+    tag = "_".join([args.case] + [o.replace("=", "") for o in args.overrides])
+    args.out.mkdir(parents=True, exist_ok=True)
+    for p, y in outs.items():
+        dst = args.out / f"{tag}_{p}.wav"
+        try:
+            wavfile.write(dst, manifest()["sample_rate"], (y * norm).astype(np.float32))
+        except OSError as e:
+            raise SystemExit(f"cannot write {dst}: {e}")
+        print(dst)
+    print(f"AmpBass was {A.db(gain):+.1f} dB from the reference before level matching")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -293,6 +318,13 @@ def main() -> None:
     s.add_argument("overrides", nargs="*", help="reference parameter=normalised value")
     s.add_argument("--vs", nargs="*", default=[])
     s.set_defaults(func=cmd_refnull)
+
+    s = sub.add_parser("listen", help="write a level-matched DI pair (reference / AmpBass) for listening")
+    s.add_argument("case")
+    s.add_argument("overrides", nargs="*", help="faceplate key=value on top of the case, e.g. gain=1")
+    s.add_argument("--signal", default="di")
+    s.add_argument("--out", type=Path, default=ROOT / "build-tests/compare/listen")
+    s.set_defaults(func=cmd_listen)
 
     args = ap.parse_args()
     args.func(args)
