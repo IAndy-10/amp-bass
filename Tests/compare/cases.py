@@ -57,6 +57,12 @@ def all_cases() -> list[Case]:
         drive("defaults"),
         *[drive(f"gain{g}_tube{t}", gain=g, tubeGain=t) for g in (0, 2.5, 7.5, 10) for t in (0, 5, 10)],
         *[drive(f"master{m}", master=m) for m in (2.5, 7.5, 10)],
+        # Read off the reference screenshots in building-process/references (approximate).
+        Case("screenshot_preset", {
+            **DEFAULTS, "gain": 3.4, "bass": 7, "midrange": 6.75, "midFreq": 3, "treble": 7,
+            "master": 6, "tubeGain": 3.5, "bright": True, "geqOn": True,
+            "geq80": 5, "geq150": 4, "geq2k": 1.5, "geq5k": 3.5,
+        }, LINEAR_SIGNALS + DRIVE_SIGNALS),
     ]
     names = [c.name for c in cases]
     assert len(names) == len(set(names)), "duplicate case names"

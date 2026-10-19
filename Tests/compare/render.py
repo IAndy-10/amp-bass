@@ -26,10 +26,22 @@ DEFAULT_HOST = ROOT / "build-tests/Tests/AmpBassHostRender_artefacts/Release/Amp
 log = logging.getLogger("render")
 
 
+def interp(points: list[list[float]], x: float) -> float:
+    """Piecewise-linear map from faceplate units to a normalised value."""
+    for (x0, y0), (x1, y1) in zip(points, points[1:]):
+        if x <= x1:
+            return y0 + (y1 - y0) * (min(max(x, x0), x1) - x0) / (x1 - x0)
+    return points[-1][1]
+
+
 def to_args(plugin: dict, settings: dict[str, float | bool]) -> list[str]:
     args: list[str] = []
-    for name, text in plugin.get("baseline", {}).items():
-        args += ["--set-text", f"{name}={text}"]
+    for name, value in plugin.get("baseline", {}).items():
+        # Numbers are normalised values; strings are display text.
+        if isinstance(value, str):
+            args += ["--set-text", f"{name}={value}"]
+        else:
+            args += ["--set", f"{name}={float(value):.6f}"]
     for key, value in settings.items():
         m = plugin["map"].get(key)
         if m is None:
@@ -38,6 +50,8 @@ def to_args(plugin: dict, settings: dict[str, float | bool]) -> list[str]:
             args += ["--set", f"{m['param']}={float(value) / 10.0:.6f}"]
         elif m["as"] == "norm":
             args += ["--set", f"{m['param']}={float(value):.6f}"]
+        elif m["as"] == "points":
+            args += ["--set", f"{m['param']}={interp(m['points'], float(value)):.6f}"]
         else:
             text = ("On" if value else "Off") if isinstance(value, bool) else f"{value:g}"
             args += ["--set-text", f"{m['param']}={text}"]
