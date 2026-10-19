@@ -7,6 +7,23 @@
 class ToneStack
 {
 public:
+    /// A knob's filter as gain / frequency / Q measured at knob 0, 2.5, 5, 7.5 and 10,
+    /// interpolated linearly in between. Gain at 5 is 0 dB (the knobs are flat at noon).
+    struct KnobCurve
+    {
+        float gainDb[5], hz[5], q[5];
+
+        void at (float knob, float& g, float& f, float& qOut) const
+        {
+            const float x = juce::jlimit (0.0f, 1.0f, knob) * 4.0f;
+            const int i = juce::jmin (3, static_cast<int> (x));
+            const float t = x - static_cast<float> (i);
+            g    = gainDb[i] + t * (gainDb[i + 1] - gainDb[i]);
+            f    = hz[i]     + t * (hz[i + 1]     - hz[i]);
+            qOut = q[i]      + t * (q[i + 1]      - q[i]);
+        }
+    };
+
     void prepare (double sampleRate, int /*maxBlockSize*/)
     {
         sr = sampleRate;
@@ -30,12 +47,12 @@ public:
             highShelf[ch].setParams (Biquad::Type::HighShelf, 2500.0f, 0.5f, 0.0f);
         }
 
-        smoothBassDb.reset (sampleRate, 0.02);
+        smoothBass.reset (sampleRate, 0.02);
         smoothMidDb.reset (sampleRate, 0.02);
         smoothTrebleDb.reset (sampleRate, 0.02);
         smoothMidFreq.reset (sampleRate, 0.05);
 
-        smoothBassDb.setCurrentAndTargetValue (0.0f);
+        smoothBass.setCurrentAndTargetValue (0.5f);
         smoothMidDb.setCurrentAndTargetValue (0.0f);
         smoothTrebleDb.setCurrentAndTargetValue (0.0f);
         smoothMidFreq.setCurrentAndTargetValue (800.0f);
@@ -55,8 +72,8 @@ public:
 
     void setParams (float bassKnob, float midKnob, int midFreqSelect, float trebleKnob)
     {
-        // Bass: knob 0-1 -> -12 to +12 dB
-        smoothBassDb.setTargetValue ((bassKnob - 0.5f) * 24.0f);
+        // Bass: shelf shape and depth follow the reference per knob position (kBassCurve)
+        smoothBass.setTargetValue (bassKnob);
 
         // Mid: knob 0-1 -> -15 to +15 dB
         smoothMidDb.setTargetValue ((midKnob - 0.5f) * 30.0f);
@@ -85,7 +102,7 @@ public:
 
         for (int s = 0; s < numSamples; ++s)
         {
-            const float bassDb   = smoothBassDb.getNextValue();
+            const float bassKnob = smoothBass.getNextValue();
             const float midDb    = smoothMidDb.getNextValue();
             const float trebleDb = smoothTrebleDb.getNextValue();
             const float midFreq  = smoothMidFreq.getNextValue();
@@ -93,9 +110,12 @@ public:
             // Update coefficients at block-rate (every 32 samples)
             if (s % kCoeffUpdateInterval == 0)
             {
+                float bassDb, bassHz, bassQ;
+                kBassCurve.at (bassKnob, bassDb, bassHz, bassQ);
+
                 for (int ch = 0; ch < numChannels; ++ch)
                 {
-                    lowShelf[ch].setGainDb (bassDb);
+                    lowShelf[ch].setParams (Biquad::Type::LowShelf, bassHz, bassQ, bassDb);
                     midPeak[ch].setGainDb (midDb);
                     midPeak[ch].setFrequency (midFreq);
                     highShelf[ch].setGainDb (trebleDb);
@@ -122,6 +142,13 @@ private:
     static constexpr float kVoicingHighHz = 5906.0f, kVoicingHighQ = 0.69f, kVoicingHighDb = 6.08f;
     static constexpr float kVoicingGain   = 0.6485f;  // -3.76 dB
 
+    // Bass low shelf fitted to the reference per knob position (within 0.6 dB, 20 Hz-2 kHz).
+    static constexpr KnobCurve kBassCurve {
+        { -16.25f, -6.84f,  0.0f,  5.53f, 14.08f },   // gain dB
+        {  77.1f,  84.0f,  82.0f, 79.7f, 152.3f },    // Hz
+        {  0.42f,  0.589f, 0.64f, 0.688f, 0.589f }    // Q
+    };
+
     double sr = 44100.0;
 
     Biquad voicingLow[2];
@@ -130,7 +157,7 @@ private:
     Biquad midPeak[2];
     Biquad highShelf[2];
 
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothBassDb;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothBass;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMidDb;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothTrebleDb;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMidFreq;

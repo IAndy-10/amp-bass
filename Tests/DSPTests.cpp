@@ -198,6 +198,15 @@ namespace
         check (bassSwing100 > 10.0, "bass knob swing @100 Hz (where a bass DI has most energy)",
                fmt ("%.2f dB  (@200 Hz: %.2f dB)", bassSwing100, bassSwing200));
 
+        // Bass extremes vs noon, as measured on the reference: -11.9 / +13.6 dB at 40 Hz, -6.4 / +10.2 dB at 100 Hz.
+        const double noon40 = g (40, .5f, .5f, 3, .5f), noon100 = g (100, .5f, .5f, 3, .5f);
+        const double cut40 = g (40, 0, .5f, 3, .5f) - noon40, boost40 = g (40, 1, .5f, 3, .5f) - noon40;
+        const double cut100 = g (100, 0, .5f, 3, .5f) - noon100, boost100 = g (100, 1, .5f, 3, .5f) - noon100;
+        check (std::abs (cut40 + 11.9) < 0.7 && std::abs (boost40 - 13.6) < 0.7
+                   && std::abs (cut100 + 6.4) < 0.7 && std::abs (boost100 - 10.2) < 0.7,
+               "bass 0 / 10 match the reference",
+               fmt ("40 Hz %.1f / %+.1f, 100 Hz %.1f", cut40, boost40, cut100) + fmt (" / %+.1f dB", boost100));
+
         const double trebSwing8k = g (8000, .5f, .5f, 3, 1) - g (8000, .5f, .5f, 3, 0);
         const double trebSwing2k = g (2000, .5f, .5f, 3, 1) - g (2000, .5f, .5f, 3, 0);
         check (trebSwing8k > 20.0, "treble knob swing @8 kHz", fmt ("%.2f dB", trebSwing8k));
