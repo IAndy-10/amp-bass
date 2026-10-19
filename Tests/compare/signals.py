@@ -1,6 +1,6 @@
 """Generate the test-signal pack used to compare AmpBass with the reference plugin.
 
-Every file is 48 kHz, stereo (identical channels), 32-bit float, with 0.5 s of
+Every file is 48 kHz, stereo (identical channels, except left_only), 32-bit float, with 0.5 s of
 silence before the signal (lets parameter smoothing settle) and 1 s after it
 (keeps the tail of a plugin with latency). manifest.json records how each file
 was built so analyze.py can find the steps, tones and levels again.
@@ -29,6 +29,8 @@ TONE_STEP_S = 0.5
 RAMP_FREQ, RAMP_FROM_DB, RAMP_TO_DB, RAMP_S = 100.0, -50.0, 0.0, 10.0
 BURST_FREQ, BURST_LOW_DB, BURST_HIGH_DB, BURST_S, BURST_PAIRS = 100.0, -30.0, -6.0, 0.5, 4
 SILENCE_S = 3.0
+ALIAS_FREQ, ALIAS_DB, ALIAS_S = 3_000.0, -6.0, 1.0  # loud HF tone: harmonics above Nyquist fold back
+LEFT_FREQ, LEFT_DB, LEFT_S = 100.0, -20.0, 1.0      # left channel only: does a plugin mix channels?
 FADE_S = 0.005
 
 log = logging.getLogger("signals")
@@ -82,8 +84,13 @@ def bursts() -> np.ndarray:
     return fade(np.concatenate(parts))
 
 
-def write(path: Path, mono: np.ndarray) -> None:
-    stereo = np.stack([mono, mono], axis=1).astype(np.float32)
+def tone(freq: float, level_db: float, seconds: float) -> np.ndarray:
+    t = np.arange(int(seconds * SR)) / SR
+    return fade(db_to_amp(level_db) * np.sin(2 * np.pi * freq * t))
+
+
+def write(path: Path, mono: np.ndarray, right: np.ndarray | None = None) -> None:
+    stereo = np.stack([mono, mono if right is None else right], axis=1).astype(np.float32)
     wavfile.write(path, SR, stereo)
     log.info("wrote %s (%.1f s)", path.name, len(mono) / SR)
 
@@ -109,6 +116,8 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     args.out.mkdir(parents=True, exist_ok=True)
+    old_manifest = args.out / "manifest.json"
+    old_di = json.loads(old_manifest.read_text())["signals"].get("di") if old_manifest.exists() else None
     pre = int(PRE_S * SR)
     manifest: dict[str, dict] = {"sample_rate": SR, "pre_samples": pre, "signals": {}}
 
@@ -135,9 +144,21 @@ def main() -> None:
     write(args.out / "silence.wav", np.zeros(int(SILENCE_S * SR)))
     manifest["signals"]["silence"] = {"kind": "silence"}
 
+    write(args.out / "alias_3k.wav", pad(tone(ALIAS_FREQ, ALIAS_DB, ALIAS_S)))
+    manifest["signals"]["alias_3k"] = {"kind": "alias", "freq": ALIAS_FREQ, "level_db": ALIAS_DB,
+                                       "seconds": ALIAS_S}
+
+    left = pad(tone(LEFT_FREQ, LEFT_DB, LEFT_S))
+    write(args.out / "left_only.wav", left, np.zeros_like(left))
+    manifest["signals"]["left_only"] = {"kind": "stereo", "freq": LEFT_FREQ, "level_db": LEFT_DB,
+                                        "seconds": LEFT_S}
+
     if args.di:
         write(args.out / "di.wav", pad(load_di(args.di)))
         manifest["signals"]["di"] = {"kind": "di", "source": args.di.name}
+    elif old_di and (args.out / "di.wav").exists():
+        manifest["signals"]["di"] = old_di  # keep the DI from an earlier run
+        log.info("kept di.wav (%s)", old_di.get("source"))
 
     (args.out / "manifest.json").write_text(json.dumps(manifest, indent=2))
     log.info("manifest: %s", args.out / "manifest.json")

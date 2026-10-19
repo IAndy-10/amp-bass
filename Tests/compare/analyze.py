@@ -13,6 +13,8 @@ Measurements (each plugin's latency is found from its clean_flat sweep and remov
   bursts   level envelope over time (attack / release)
   silence  output noise floor
   di       null test after time and level alignment, 1/3-octave level difference
+  alias    energy away from the harmonics of a loud 3 kHz tone (aliasing), dB rel. total
+  stereo   left-only input: right-channel output rel. left (channel crosstalk / mono sum)
 Every signal: left/right difference of each plugin (both inputs are identical stereo).
 """
 
@@ -197,6 +199,28 @@ def third_octave_db(y: np.ndarray, sr: int) -> tuple[np.ndarray, np.ndarray]:
     return centres, lv
 
 
+def alias_db(y: np.ndarray, info: dict, sr: int, start: int) -> float:
+    """Energy not at a harmonic of the tone (aliasing), dB relative to the total, over the steady part."""
+    n = int(info["seconds"] * sr)
+    seg = y[start + n // 4: start + n - n // 8]
+    spec = np.abs(np.fft.rfft(seg * np.hanning(len(seg)))) ** 2
+    f = np.fft.rfftfreq(len(seg), 1 / sr)
+    harmonic = np.zeros_like(f, dtype=bool)
+    for k in range(1, int((sr / 2) // info["freq"]) + 1):
+        harmonic |= np.abs(f - k * info["freq"]) <= 20.0
+    keep = f >= 20.0
+    return float(10 * np.log10((np.sum(spec[keep & ~harmonic]) + EPS) / (np.sum(spec[keep]) + EPS)))
+
+
+def crosstalk_db(path: Path, info: dict, sr: int, start: int, lat: Latency) -> float:
+    """Right-channel output relative to left for a left-only input tone."""
+    x = load_stereo(path)
+    x = x[lat.samples:] if lat.samples > 0 else x
+    n = int(info["seconds"] * sr)
+    seg = x[start + n // 4: start + n - n // 8]
+    return float(db(rms(seg[:, 1]) / max(rms(seg[:, 0]), EPS)))
+
+
 def null_db(a: np.ndarray, b: np.ndarray) -> tuple[float, float]:
     """Residual of a vs b after the best gain on a. Returns (null dB rel. b, gain dB applied)."""
     n = min(len(a), len(b))
@@ -227,6 +251,10 @@ class CaseResult:
     settle_err_s: float | None = None      # worst settle-time difference (s) after a level jump
     lr_amp_db: float | None = None         # worst L-R difference over all signals
     lr_ref_db: float | None = None
+    alias_amp_db: float | None = None      # non-harmonic energy of the 3 kHz tone, dB rel. total
+    alias_ref_db: float | None = None
+    xtalk_amp_db: float | None = None      # right output rel. left for a left-only input
+    xtalk_ref_db: float | None = None
     plots: dict = field(default_factory=dict)
 
 
@@ -245,6 +273,10 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
         if not all(f.exists() for f in files.values()):
             continue
         ys = {p: shifted(load(f), lat[p]) for p, f in files.items()}
+        if info["kind"] == "stereo":  # L/R differ on purpose
+            res.xtalk_amp_db = crosstalk_db(files["ampbass"], info, sr, pre, lat["ampbass"])
+            res.xtalk_ref_db = crosstalk_db(files["reference"], info, sr, pre, lat["reference"])
+            continue
         for p, f in files.items():
             lr = lr_diff_db(f)
             attr = "lr_amp_db" if p == "ampbass" else "lr_ref_db"
@@ -265,6 +297,9 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
             d = {p: analyze_ramp(y, info, sr, pre) for p, y in ys.items()}
         elif kind == "bursts":
             d = {p: analyze_bursts(y, info, sr, pre) for p, y in ys.items()}
+        elif kind == "alias":
+            res.alias_amp_db, res.alias_ref_db = (alias_db(ys[p], info, sr, pre) for p in ("ampbass", "reference"))
+            continue
         elif kind == "silence":
             # skip the lead-in: start-up transients are not noise
             d = {p: {"noise_db": float(db(rms(y[pre:])))} for p, y in ys.items()}
@@ -279,7 +314,7 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
         if res.level_diff_db is None and kind in ("sweep", "di"):
             res.level_diff_db = float(db(rms(ys["reference"]) / max(rms(ys["ampbass"]), EPS)))
 
-    if not data:
+    if not data and res.alias_amp_db is None and res.xtalk_amp_db is None:
         return None
 
     for sig in ("sweep_30", "sweep_12"):
@@ -328,8 +363,9 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
         res.noise_amp_db = data["silence"]["ampbass"]["noise_db"]
         res.noise_ref_db = data["silence"]["reference"]["noise_db"]
 
-    plot_case(name, data, out / f"{name}.png")
-    res.plots["png"] = f"{name}.png"
+    if data:
+        plot_case(name, data, out / f"{name}.png")
+        res.plots["png"] = f"{name}.png"
     return res
 
 
@@ -477,6 +513,15 @@ def write_report(results: list[CaseResult], lat: dict[str, Latency], out: Path, 
         lr = "—" if r.lr_amp_db is None else f"{r.lr_amp_db:.0f} / {fmt(r.lr_ref_db, '.0f')}"
         lines.append(f"| {r.name} | {fmt(r.fr_full_max_db, '.1f')} | {fmt(r.harm_err_db, '.1f')} | {r.harm_worst or '—'} | "
                      f"{fmt(r.ramp_err_db, '.1f')} | {burst} | {fmt(r.settle_err_s, '.2f')} | {lr} |")
+    extra = [r for r in results if r.alias_amp_db is not None or r.xtalk_amp_db is not None]
+    if extra:
+        lines += ["", "Aliasing = energy away from the harmonics of a 3 kHz, −6 dBFS tone (lower is cleaner). "
+                  "Crosstalk = right output for a left-only input (−240 = channels independent).", "",
+                  "| Case | Aliasing AmpBass / ref dB | Crosstalk AmpBass / ref dB |", "|---|---|---|"]
+        for r in extra:
+            al = "—" if r.alias_amp_db is None else f"{r.alias_amp_db:.1f} / {r.alias_ref_db:.1f}"
+            xt = "—" if r.xtalk_amp_db is None else f"{r.xtalk_amp_db:.0f} / {r.xtalk_ref_db:.0f}"
+            lines.append(f"| {r.name} | {al} | {xt} |")
     if gate:
         lines += ["", "## Regression gate", ""] + gate
     if self_test:

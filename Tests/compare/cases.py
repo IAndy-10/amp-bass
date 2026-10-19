@@ -69,6 +69,24 @@ def all_cases() -> list[Case]:
         drive("defaults"),
         *[drive(f"gain{g}_tube{t}", gain=g, tubeGain=t) for g in (0, 2.5, 7.5, 10) for t in (0, 5, 10)],
         *[drive(f"master{m}", master=m) for m in (2.5, 7.5, 10)],
+        # Knob scales (0, 5 and 10 are covered above)
+        *[linear(f"bass_{v}", bass=v) for v in (2.5, 7.5)],
+        *[linear(f"treble_{v}", treble=v) for v in (2.5, 7.5)],
+        *[linear(f"mid_{v}_f3", midrange=v) for v in (2.5, 7.5)],
+        # Tone-stack interaction
+        linear("bass10_treble0", bass=10, treble=0),
+        linear("bass0_treble10", bass=0, treble=10),
+        linear("mid0_bass10_treble10", midrange=0, bass=10, treble=10),
+        # Topology: if the reference's harmonics change with a control, it sits before the distortion
+        *[drive(f"topo_bass{v}", gain=7.5, bass=v) for v in (0, 10)],
+        *[drive(f"topo_treble{v}", gain=7.5, treble=v) for v in (0, 10)],
+        *[drive(f"topo_geq80_{v:+d}", gain=7.5, geqOn=True, geq80=v) for v in (-12, 12)],
+        # Power-stage knee: clean preamp, Master varied
+        *[Case(f"clean_master{m}", {**DEFAULTS, **CLEAN, "master": m}, DRIVE_SIGNALS) for m in (2.5, 5, 7.5, 10)],
+        # Aliasing and channel handling
+        Case("alias_gain10", {**DEFAULTS, "gain": 10}, ["alias_3k"]),
+        Case("alias_defaults", dict(DEFAULTS), ["alias_3k"]),
+        Case("stereo_defaults", dict(DEFAULTS), ["left_only"]),
         # Read off the reference screenshots in building-process/references (approximate).
         Case("screenshot_preset", {
             **DEFAULTS, "gain": 3.4, "bass": 7, "midrange": 6.75, "midFreq": 3, "treble": 7,
