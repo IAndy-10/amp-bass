@@ -229,10 +229,17 @@ Do these in order. Each one uses a single knob's cases.
 
 ## Step 3 — Graphic EQ
 
-- [ ] **3.1** Band gain scale and Q per band from `geq*_+12` (reference ±12 dB). One commit for Q, one for scale if both change.
-- [ ] **3.2** `geq_on_flat`: the EQ switched on but flat must match (any fixed colouring or level offset).
-- [ ] **3.3** EQ Level: `geqLevel_+8`, plus a −10 dB case.
-- [ ] **3.4** `screenshot_preset` FR ≤ 1.5 dB (validation). **Milestone A: tone matches when clean.** (listen)
+- [x] **3.1** Band gain scale and Q per band from `geq*_+12` (reference ±12 dB). One commit for Q, one for scale if both change.
+- [x] **3.2** `geq_on_flat`: the EQ switched on but flat must match (any fixed colouring or level offset).
+- [x] **3.3** EQ Level: `geqLevel_+8`, plus a −10 dB case.
+- [x] **3.4** `screenshot_preset` FR ≤ 1.5 dB (validation). **Milestone A: tone matches when clean.** (listen)
+  **Done (one commit, the parts depend on each other):** the reference's EQ behaves like an analog proportional-Q design.
+  Boost and cut are symmetric; the slider is strongly non-linear (±3 → ±0.6 dB, ±6 → ±1.5, ±9 → ±3.1, ±10.5 → ±5.0,
+  ±11.25 → ±6.5, ±12 → ±9.6 dB) and Q rises with it (0.34 → 1.33). Measured centres 33 / 79 / 141 / 306 / 537 / 860 Hz /
+  2.24 / 5.05 / 7.69 kHz; ±12 gain is ±9.4–9.8 dB except 33 Hz (±14.6) and 9k (±11.6). Switching the EQ on adds a +0.46 dB
+  hump at 496 Hz (Q 0.1). EQ Level is already exact in dB (only its 0–1 scale differs, step 5). Added `geq*_-12`,
+  `geq300_±3…±11.25` and `geqLevel_-10/+4` cases. Assumption: every band follows the 300 Hz law scaled to its ±12 values
+  (checked only at ±12). All 33 EQ cases are within ±0.5 dB. `screenshot_preset`: FR shape −0.7 dB, DI null −21.5 dB.
 
 ## Step 4 — Level and gain staging
 
@@ -342,3 +349,4 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 2.3 | 2026-10-19 | treble shelf + 19 kHz peak per knob position | +7.7 / −3.6 / 5.9 vs 6.5 % / −12.3 | treble ±0.9 dB; 24 better, 7 worse (drive/level/mid) | yes |
 | 2.4 | 2026-10-19 | mid peak per selector × knob position | +7.5 / −4.0 / 6.0 vs 6.5 % / −12.3 | mid cases ±0.3 dB; 27 better, 1 worse (fxdefault FR, Tight missing) | yes |
 | 2.6 | 2026-10-19 | bright / ultra hi / ultra lo refit | +7.5 / −3.6 / 6.1 vs 6.5 % / −14.2 | switch cases ±0.3 dB; 12 better, 0 worse | yes |
+| 3 | 2026-10-19 | graphic EQ: proportional-Q law, measured centres, on-hump | +8.0 / −0.7 / 6.2 vs 6.5 % / −21.5 | EQ cases ±0.5 dB; 35 better, 4 worse (screenshot ramp/bursts, step 4/6) | yes |

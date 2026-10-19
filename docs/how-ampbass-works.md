@@ -113,8 +113,12 @@ manual describes its Bass, Mid and Treble as active controls that are flat at
 centre, so independent filters are the right model.
 
 ### Stage 5 — GraphicEQ · `Source/DSP/GraphicEQ.h`
-Nine peaking biquads (Q 2.0) at 33, 80, 150, 300, 600, 900 Hz, 2, 5, 8 kHz with
-per-band ranges from the manual (decision D7), plus a ±10 dB Level.
+Nine peaking biquads fitted to the reference plugin, centred at 33, 79, 141, 306,
+537, 860 Hz, 2.24, 5.05 and 7.69 kHz (the faceplate labels say 33 … 9k), plus a
+−10 … +8 dB Level. It behaves like an analog proportional-Q EQ: the slider is
+strongly non-linear (+6 is only +1.5 dB, +12 is about +9.8 dB) and a band gets
+narrower as it moves away from 0. Switching the EQ on adds a broad +0.46 dB hump
+around 500 Hz, as in the reference.
 When **EQ is off** the stage crossfades (~64 samples) to the unprocessed signal,
 so the sliders and Level have no effect — the UI dims them to show this.
 

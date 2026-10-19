@@ -242,8 +242,11 @@ namespace
     void testGraphicEQ()
     {
         section ("Stage 5 — GraphicEQ");
-        const double centres[GraphicEQ::kNumBands] = { 33, 80, 150, 300, 600, 900, 2000, 5000, 8000 };
-        const float  maxDb[GraphicEQ::kNumBands]   = { 15, 8, 8, 8, 8, 8, 8, 9, 10 };
+        // Measured on the reference: band centre and peak gain with the slider at +12 (EQ-on hump removed).
+        const double centres[GraphicEQ::kNumBands] = { 33.1, 78.6, 141.4, 305.9, 537.4, 859.7, 2240, 5046, 7690 };
+        const float  maxDb[GraphicEQ::kNumBands]   = { 14.9f, 9.8f, 9.8f, 9.8f, 9.8f, 9.8f, 9.8f, 9.7f, 11.9f };
+        float noBands[GraphicEQ::kNumBands] = {};
+        const auto hump = [&] (double f) { return stageGainDb<GraphicEQ> (f, [&] (auto& s) { s.setParams (true, noBands, 0.0f); }); };
 
         float allUp[GraphicEQ::kNumBands];
         for (int b = 0; b < GraphicEQ::kNumBands; ++b) allUp[b] = maxDb[b];
@@ -255,15 +258,23 @@ namespace
         for (int b = 0; b < GraphicEQ::kNumBands; ++b)
         {
             float bands[GraphicEQ::kNumBands] = {};
-            bands[b] = maxDb[b];
-            const double measured = stageGainDb<GraphicEQ> (centres[b], [&] (auto& s) { s.setParams (true, bands, 0.0f); });
-            check (std::abs (measured - maxDb[b]) < 1.5, fmt ("band %.0f Hz at max", centres[b]),
+            bands[b] = 12.0f;
+            const double measured = stageGainDb<GraphicEQ> (centres[b], [&] (auto& s) { s.setParams (true, bands, 0.0f); })
+                                  - hump (centres[b]);
+            check (std::abs (measured - maxDb[b]) < 0.5, fmt ("band %.0f Hz at max matches the reference", centres[b]),
                    fmt ("expected %.1f, got %.2f dB", maxDb[b], measured));
         }
 
-        float flat[GraphicEQ::kNumBands] = {};
-        const double lvl = stageGainDb<GraphicEQ> (600, [&] (auto& s) { s.setParams (true, flat, 10.0f); });
-        check (std::abs (lvl - 10.0) < 0.2, "LEVEL +10 dB (EQ on)", fmt ("%.2f dB", lvl));
+        const double on = hump (500);
+        check (std::abs (on - 0.46) < 0.1, "EQ on, all flat: +0.46 dB hump at 500 Hz like the reference", fmt ("%.2f dB", on));
+        const double lvl = stageGainDb<GraphicEQ> (500, [&] (auto& s) { s.setParams (true, noBands, 8.0f); }) - on;
+        check (std::abs (lvl - 8.0) < 0.2, "LEVEL +8 dB (EQ on)", fmt ("%.2f dB", lvl));
+
+        // Slider law (300 Hz band): +6 on the slider is only +1.5 dB, like the reference
+        float half[GraphicEQ::kNumBands] = {};
+        half[3] = 6.0f;
+        const double halfDb = stageGainDb<GraphicEQ> (305.9, [&] (auto& s) { s.setParams (true, half, 0.0f); }) - hump (305.9);
+        check (std::abs (halfDb - 1.5) < 0.3, "slider +6 gives +1.5 dB (reference law)", fmt ("%.2f dB", halfDb));
     }
 
     void testMasterVolume()
