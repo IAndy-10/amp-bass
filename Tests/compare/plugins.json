@@ -10,7 +10,10 @@
   ],
   "ampbass": {
     "path": "~/Library/Audio/Plug-Ins/VST3/AmpBass.vst3",
-    "baseline": {},
+    "baseline": {
+      "Input Select": 1.0,
+      "Dry/Wet": 1.0
+    },
     "map": {
       "gain":     {"param": "Gain",          "as": "knob10"},
       "tubeGain": {"param": "Tube Gain",     "as": "knob10"},
