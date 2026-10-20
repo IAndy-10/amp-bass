@@ -515,9 +515,14 @@ Treble network and an LC (800 mH) mid, not the active, independent controls assu
   10. Added one peak per [bass][treble] position (`fitpeak.py`, residual ≤ 0.35 dB, 0.72 at Bass 10 + Treble 10).
 - [x] **11.2 Mid at 2.5 / 7.5, every position.** They were scaled from position 3: up to 3.1 dB off (2.5 at position 5).
   Refit gain + Q from the grid (`fitmid.py`, ≤ 0.5 dB).
-- [ ] **11.3 Knob tapers between grid positions.** Off-grid single knobs are off by up to 5 dB: Treble 1.25 −5.0 dB
+- [x] **11.3 Knob tapers between grid positions.** Off-grid single knobs were off by up to 5 dB: Treble 1.25 −5.0 dB
   and 8.75–9 +3.6–3.9 dB at 8 kHz, Bass 8.75–9 +2.4 dB at 70 Hz, Mid 1.25 (position 1) −3.4 dB, Mid 8.75 −1.4 dB
-  (`offgrid.py`). Needs denser knob measurements (and the interaction table between 7.5 and 10).
+  (`offgrid.py`). Each knob measured every 0.25 (`render_taper.py`), its filter fitted at every step (`fittaper.py`,
+  warm-started from the neighbour so the parameters move smoothly) and tabulated every 0.5 (bass, mid) or 0.25 (treble,
+  whose shelf moves fastest near 0 and 10). Interaction table refined to 1.25 steps (9 × 9, `fitpeak9.py`): it rises
+  steeply above 7.5. Checked at points between the table entries (`render_mid8.py`, `checktable.py`): single knobs
+  ≤ 1.33 dB (Mid ≤ 0.5), off-grid combinations ≤ 1.37 dB (were 2.2–6.0). New cases `treble_1.25`, `treble_8.75`,
+  `bass_8.75`, `mid_1.25_f1`, `bass8.75_treble8.75`: 0.2–1.2 dB.
 
 ## Later — Cabinet
 
@@ -556,4 +561,5 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 7.1 | 2026-10-19 | Tube Gain glide 50 → 200 ms; parameters set before prepare | unchanged | jump bump −31 → −48 dB rel. tone; silence exact; gate 0 / 0 | yes |
 | 8.1 | 2026-10-19 | output low-pass per rate family | unchanged at 48 kHz | 44.1 / 96 / 192 kHz top end within 0.6 / 1.1 / 1.3 dB of the reference's change (was 1.3 / 6.5 / 7.0); gate 0 / 0 | yes |
 | 11.1–11.2 | 2026-10-20 | Bass × Treble interaction peak (5 × 5 table); mid 2.5 / 7.5 refit at every position | unchanged | 625-point grid: worst 4.74 → 1.29 dB, > 2 dB 75 → 0; `mid0_bass10_treble10` 3.98 → 1.29; gate 0 worse / 2 better | yes |
+| 11.3 | 2026-10-20 | knob tables every 0.5 / 0.25 (log Hz), interaction 9 × 9 | unchanged | single knobs anywhere ≤ 1.33 dB (were up to 5.0); off-grid combos ≤ 1.37 (were up to 6.0); gate 0 / 0; 5 new cases | yes |
 | 8.2–8.4 | 2026-10-19 | `behaviour.py` + host `--set-at`; Bypass/Mute fades 10 → 50 ms, bit-exact bypass | unchanged | block sizes bit-exact; stereo dual mono like the reference; fades 40 vs 43 ms; gate 0 / 0 | yes |
