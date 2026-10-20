@@ -33,6 +33,12 @@ REF_FX_DEFAULTS: dict[str, float | str] = {
     "SmoothFrequency": 0.792, # 21 kHz
 }
 
+# Cabinet on in both plugins (step 12): the reference's default Rec Chain "20 4x10 DYN600+RIBBON", horn off / on.
+CAB_ON: dict[str, dict[str, float | str]] = {"reference": {"RecChain": 19 / 26, "Horn": 0.0},
+                                             "ampbass": {"Cabinet": 1.0, "Horn": 0.0}}
+CAB_HORN: dict[str, dict[str, float | str]] = {"reference": {"RecChain": 19 / 26, "Horn": 1.0},
+                                               "ampbass": {"Cabinet": 1.0, "Horn": 1.0}}
+
 GEQ_BANDS = ["geq33", "geq80", "geq150", "geq300", "geq600", "geq900", "geq2k", "geq5k", "geq9k"]
 
 
@@ -117,6 +123,13 @@ def all_cases() -> list[Case]:
     shot = cases[-1]
     cases.append(Case("screenshot_preset_fxdefault", shot.settings, shot.signals,
                       {"reference": REF_FX_DEFAULTS}))
+    cases += [
+        Case("cab_clean_flat", {**DEFAULTS, **CLEAN}, LINEAR_SIGNALS, CAB_ON),
+        Case("cab_horn_clean_flat", {**DEFAULTS, **CLEAN}, LINEAR_SIGNALS, CAB_HORN),
+        Case("cab_horn_tone_shot", {**DEFAULTS, **CLEAN, "bass": 7, "midrange": 6.75, "treble": 7}, LINEAR_SIGNALS, CAB_HORN),
+        Case("cab_horn_defaults", dict(DEFAULTS), DRIVE_SIGNALS, CAB_HORN),
+        Case("cab_horn_screenshot_preset", shot.settings, shot.signals, CAB_HORN),
+    ]
     names = [c.name for c in cases]
     assert len(names) == len(set(names)), "duplicate case names"
     return cases

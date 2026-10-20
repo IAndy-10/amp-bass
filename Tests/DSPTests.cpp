@@ -17,6 +17,7 @@
 #include "GraphicEQ.h"
 #include "MasterVolume.h"
 #include "PowerSection.h"
+#include "Cabinet.h"
 #include "OutputSwitch.h"
 #include "Primitives/DryWetMixer.h"
 
@@ -80,12 +81,13 @@ namespace
         float geqLevel = 0.0f;
         float master = 0.5f;
         float dryWet = 1.0f;
+        bool  cabinet = false, horn = true;   // the plugin defaults to the cabinet on; the amp tests measure without it
     };
 
     struct Chain
     {
         InputGain inputGain; PreFilters preFilters; TubePreamp tubePreamp; ToneStack toneStack;
-        GraphicEQ graphicEQ; MasterVolume masterVolume; PowerSection powerSection; DryWetMixer dryWet;
+        GraphicEQ graphicEQ; MasterVolume masterVolume; PowerSection powerSection; Cabinet cabinet; DryWetMixer dryWet;
 
         int preparedBlock = kBlock;
 
@@ -94,7 +96,7 @@ namespace
             preparedBlock = block;
             inputGain.prepare (sr, block);  preFilters.prepare (sr, block); tubePreamp.prepare (sr, block);
             toneStack.prepare (sr, block);  graphicEQ.prepare (sr, block);  masterVolume.prepare (sr, block);
-            powerSection.prepare (sr, block); dryWet.prepare (2, block);
+            powerSection.prepare (sr, block); cabinet.prepare (sr, block); dryWet.prepare (2, block);
         }
 
         void process (juce::AudioBuffer<float>& b, const Params& p)
@@ -106,6 +108,7 @@ namespace
             graphicEQ.setParams (p.geqOn, p.geq, p.geqLevel);
             masterVolume.setParams (p.master);
             powerSection.setParams (p.tubeGain);
+            cabinet.setParams (p.cabinet, p.horn);
             dryWet.setMix (p.dryWet);
 
             // Sub-block chunking, as in the processor
@@ -115,7 +118,7 @@ namespace
                 juce::AudioBuffer<float> sub (b.getArrayOfWritePointers(), b.getNumChannels(), start, n);
                 dryWet.saveDry (sub);
                 inputGain.process (sub); preFilters.process (sub); tubePreamp.process (sub); toneStack.process (sub);
-                graphicEQ.process (sub); masterVolume.process (sub); powerSection.process (sub);
+                graphicEQ.process (sub); masterVolume.process (sub); powerSection.process (sub); cabinet.process (sub);
                 dryWet.mixToOutput (sub);
             }
         }
@@ -452,6 +455,46 @@ namespace
         check (std::abs (at10k96 + 7.4) < 0.5, "output low-pass at 96 kHz: -7.4 dB at 10 kHz", fmt ("%.2f dB", at10k96));
     }
 
+    void testCabinet()
+    {
+        section ("Stage 8 — Cabinet");
+
+        // Reference's Rec Chain 20 (cabinet minus bypass) and its horn (horn on minus off), 1/24 octave, 48 kHz
+        const auto gain = [] (double f, bool cab, bool horn, double sr = kSr)
+        {
+            return stageGainDb<Cabinet> (f, [&] (auto& c) { c.setParams (cab, horn); c.prepare (sr, kBlock); }, sr);
+        };
+        struct Point { double hz, cabDb, hornDb; };
+        const Point points[] = { { 120, 7.2, -0.9 }, { 500, -4.1, -2.2 }, { 1250, 2.8, 0.3 }, { 5000, 3.7, 5.6 }, { 12000, -5.7, 2.3 } };
+        double worstCab = 0.0, worstHorn = 0.0;
+        for (const auto& p : points)
+        {
+            const double c = gain (p.hz, true, false), h = gain (p.hz, true, true) - c;
+            worstCab = std::max (worstCab, std::abs (c - p.cabDb));
+            worstHorn = std::max (worstHorn, std::abs (h - p.hornDb));
+        }
+        check (worstCab < 1.5 && worstHorn < 1.5, "cabinet and horn follow the reference at 120 Hz-12 kHz",
+               fmt ("worst %.2f dB (cabinet), %.2f dB (horn)", worstCab, worstHorn));
+
+        // The reference's cabinet cuts less treble at 96 kHz (-10.8 vs -25.5 dB at 16 kHz)
+        const double at16k48 = gain (16000, true, false), at16k96 = gain (16000, true, false, 96000.0);
+        check (at16k48 < -20.0 && at16k96 > -15.0 && at16k96 < -6.0, "cabinet at 16 kHz: per-rate fit (48 / 96 kHz)",
+               fmt ("%.1f / %.1f dB", at16k48, at16k96));
+
+        // Off passes the signal through untouched
+        {
+            Cabinet c;
+            c.setParams (false, true);
+            c.prepare (kSr, kBlock);
+            const auto in = sine (kSr, 3000.0, 0.3f, 0.2);
+            const auto out = render (in, kBlock, [&] (auto& b) { c.process (b); });
+            bool exact = true;
+            for (int i = 0; i < out.getNumSamples(); ++i)
+                exact = exact && out.getSample (0, i) == in[static_cast<size_t> (i)];
+            check (exact, "cabinet off is bit-exact", exact ? "identical" : "differs");
+        }
+    }
+
     void testOutputSwitch()
     {
         section ("Output — bypass / mute");
@@ -777,6 +820,7 @@ int main()
     testGraphicEQ();
     testMasterVolume();
     testPowerSection();
+    testCabinet();
     testOutputSwitch();
     testChainSensitivity();
     testDefaultsAndSafety();

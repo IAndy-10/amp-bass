@@ -48,5 +48,7 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 ## Later (decided, not started)
 - [ ] Presets A–D with Copy/Paste/Reset, persisted in plugin state.
 - [ ] Power Soak as an output trim (sound-matching plan 9.2).
-- [ ] Cabinet: built-in cab EQ and/or user-loaded IR, with bypass.
+- [ ] Cabinet: more Rec Chains (the presets' ones, sound-matching plan 10.1) and/or a user-loaded IR. Today: the
+  reference's default Rec Chain 20 + Horn only (plan step 12).
+- [ ] UI: Cabinet and Horn switches (parameters `cabinet` / `horn` and their relays exist; no faceplate control yet).
 - [ ] Missing reference controls: Input Gain (dB), Tight/Smooth filters (pre/post), Noise Gate.

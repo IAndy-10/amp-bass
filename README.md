@@ -25,6 +25,7 @@ Input → InputGain (−15 dB pad)
       → GraphicEQ (9 bands 33 Hz–9k, ±12 dB, Level −10…+8 dB, switchable)
       → MasterVolume
       → PowerSection (Tube Gain stage + soft power-amp curve, output low-pass)
+      → Cabinet (4x10 + horn, fitted to the reference's default Rec Chain; switchable)
       → Dry/Wet → Bypass / Mute
 ```
 
@@ -88,7 +89,7 @@ amp-bass/
 
 ## Parameters
 
-27 parameters. IDs are frozen — changing one breaks saved sessions.
+29 parameters. IDs are frozen — changing one breaks saved sessions.
 
 | Group | Parameters |
 |---|---|
@@ -98,6 +99,7 @@ amp-bass/
 | Tone | Bass, Midrange, Mid Frequency (220/450/800/1.6k/3k), Treble |
 | Graphic EQ | On, 9 bands (ID `geq8k` = 9k band), Level |
 | Output | Master Volume, Dry/Wet (not on faceplate), Bypass, Mute |
+| Cabinet | Cabinet, Horn (both on by default; not on the faceplate yet) |
 | Later | Preset (no function yet) |
 
 ## License

@@ -48,4 +48,8 @@ namespace ParameterIDs
     // Output switches (faceplate POWER / toolbar power icon = bypass)
     static constexpr const char* bypass        = "bypass";
     static constexpr const char* mute          = "mute";
+
+    // Stage 8 — Cabinet (after the power stage, like the reference's Rec Chain)
+    static constexpr const char* cabinet       = "cabinet";
+    static constexpr const char* horn          = "horn";
 }

@@ -12,7 +12,8 @@
     "path": "~/Library/Audio/Plug-Ins/VST3/AmpBass.vst3",
     "baseline": {
       "Input Select": 1.0,
-      "Dry/Wet": 1.0
+      "Dry/Wet": 1.0,
+      "Cabinet": 0.0
     },
     "map": {
       "gain":     {"param": "Gain",          "as": "knob10"},

@@ -8,6 +8,7 @@
 #include "../DSP/GraphicEQ.h"
 #include "../DSP/MasterVolume.h" 
 #include "../DSP/PowerSection.h"
+#include "../DSP/Cabinet.h"
 #include "../DSP/OutputSwitch.h"
 #include "../DSP/Primitives/DryWetMixer.h"
 
@@ -49,7 +50,7 @@ public:
     std::atomic<bool> peakFlag { false };
 
 private:
-    // ── DSP chain (7 stages) ──
+    // ── DSP chain (8 stages) ──
     InputGain     inputGain;
     PreFilters    preFilters;
     TubePreamp    tubePreamp;
@@ -57,6 +58,7 @@ private:
     GraphicEQ     graphicEQ;
     MasterVolume  masterVolume;
     PowerSection  powerSection;
+    Cabinet       cabinet;
     DryWetMixer   dryWetMixer;
     OutputSwitch  outputSwitch;
 
@@ -94,6 +96,8 @@ private:
     std::atomic<float>* paramDryWet     = nullptr;
     std::atomic<float>* paramBypass     = nullptr;
     std::atomic<float>* paramMute       = nullptr;
+    std::atomic<float>* paramCabinet    = nullptr;
+    std::atomic<float>* paramHorn       = nullptr;
 
     void updateDSPParameters();
 

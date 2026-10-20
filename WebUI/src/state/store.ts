@@ -88,6 +88,8 @@ export const toggles = {
     geqOn:     createToggleStore('geqOn'),
     bypass:    createToggleStore('bypass'),
     mute:      createToggleStore('mute'),
+    cabinet:   createToggleStore('cabinet'),
+    horn:      createToggleStore('horn'),
 } as const;
 
 // PEAK overload from the audio engine (read-only). The PEAK/MUTE LED is

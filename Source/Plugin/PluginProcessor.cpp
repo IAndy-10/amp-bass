@@ -44,6 +44,8 @@ AmpBassAudioProcessor::AmpBassAudioProcessor()
     paramDryWet    = apvts.getRawParameterValue (ParameterIDs::dryWet);
     paramBypass    = apvts.getRawParameterValue (ParameterIDs::bypass);
     paramMute      = apvts.getRawParameterValue (ParameterIDs::mute);
+    paramCabinet   = apvts.getRawParameterValue (ParameterIDs::cabinet);
+    paramHorn      = apvts.getRawParameterValue (ParameterIDs::horn);
 }
 
 AmpBassAudioProcessor::~AmpBassAudioProcessor() {}
@@ -89,6 +91,7 @@ void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     graphicEQ.prepare (sampleRate, samplesPerBlock);
     masterVolume.prepare (sampleRate, samplesPerBlock);
     powerSection.prepare (sampleRate, samplesPerBlock);
+    cabinet.prepare (sampleRate, samplesPerBlock);
     dryWetMixer.prepare (2, samplesPerBlock);
     outputSwitch.prepare (sampleRate, samplesPerBlock);
 
@@ -103,6 +106,7 @@ void AmpBassAudioProcessor::releaseResources() {
     graphicEQ.reset();
     masterVolume.reset();
     powerSection.reset();
+    cabinet.reset();
     outputSwitch.reset();
 }
 
@@ -145,6 +149,9 @@ void AmpBassAudioProcessor::updateDSPParameters() {
     // Stage 7: PowerSection (Tube Gain acts here, as in the reference)
     powerSection.setParams (paramTubeGain->load());
 
+    // Stage 8: Cabinet
+    cabinet.setParams (paramCabinet->load() >= 0.5f, paramHorn->load() >= 0.5f);
+
     // Global dry/wet
     dryWetMixer.setMix (paramDryWet->load());
 
@@ -179,7 +186,7 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         // ── Save dry signal for dry/wet mix ──
         dryWetMixer.saveDry (sub);
 
-        // ── Signal chain (7 stages) ──
+        // ── Signal chain (8 stages) ──
         inputGain.process (sub);      // Stage 1
         preFilters.process (sub);     // Stage 2
         tubePreamp.process (sub);     // Stage 3
@@ -199,6 +206,7 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
         masterVolume.process (sub);   // Stage 6
         powerSection.process (sub);   // Stage 7
+        cabinet.process (sub);        // Stage 8
 
         // ── Blend dry/wet (equal-power crossfade) ──
         dryWetMixer.mixToOutput (sub);
@@ -216,8 +224,9 @@ juce::AudioProcessorEditor* AmpBassAudioProcessor::createEditor() {
 
 // Saved-state format. Bump it when a parameter's range or meaning changes, and convert older
 // states in setStateInformation so existing sessions keep sounding the same.
-// 1 = no version attribute (before the reference-matched ranges), 2 = reference-matched ranges.
-static constexpr int kStateVersion = 2;
+// 1 = no version attribute (before the reference-matched ranges), 2 = reference-matched ranges,
+// 3 = cabinet added.
+static constexpr int kStateVersion = 3;
 static const juce::Identifier kStateVersionId { "stateVersion" };
 
 void AmpBassAudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
@@ -235,8 +244,18 @@ void AmpBassAudioProcessor::setStateInformation(const void* data, int sizeInByte
     auto state = juce::ValueTree::fromXml(*xmlState);
     const int version = state.getProperty(kStateVersionId, 1);
     // Version 1 states came from unreleased builds only; they load as-is (the user re-saves them).
-    // Future range changes add their conversion here, keyed on `version`.
-    juce::ignoreUnused(version);
+    // Sessions from before the cabinet existed keep sounding the same: the cabinet loads off.
+    if (version < 3)
+    {
+        auto cab = state.getChildWithProperty("id", ParameterIDs::cabinet);
+        if (! cab.isValid())
+        {
+            cab = juce::ValueTree("PARAM");
+            cab.setProperty("id", ParameterIDs::cabinet, nullptr);
+            state.appendChild(cab, nullptr);
+        }
+        cab.setProperty("value", 0.0f, nullptr);
+    }
     apvts.replaceState(state);
 }
 

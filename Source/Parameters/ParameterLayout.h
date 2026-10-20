@@ -199,5 +199,16 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::ParameterID { ParameterIDs::mute, 1 },
         "Mute", false));
 
+    // --- Stage 8: Cabinet (on by default, like the reference's default Rec Chain and Horn) ---
+    // Added last so the earlier parameters keep their indices.
+
+    params.push_back (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { ParameterIDs::cabinet, 1 },
+        "Cabinet", true));
+
+    params.push_back (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { ParameterIDs::horn, 1 },
+        "Horn", true));
+
     return { params.begin(), params.end() };
 }
