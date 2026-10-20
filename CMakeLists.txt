@@ -33,7 +33,8 @@ option(AMPBASS_COPY_PLUGIN "Copy built plugins to the system plugin folders" ON)
 # ============================================================
 
 juce_add_plugin(AmpBass
-    COMPANY_NAME "YourCompany"
+    COMPANY_NAME "Epica Audio"
+    BUNDLE_ID com.epicaaudio.AmpBass
     PLUGIN_MANUFACTURER_CODE AMPB
     PLUGIN_CODE AmpB
     FORMATS Standalone VST3 AU

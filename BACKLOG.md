@@ -36,7 +36,6 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 ### Build / platform
 - [ ] **P3** `BuildSvelteUI` runs `npm install` on every build (slow, needs network). Use `npm ci` only when `package-lock.json` changes, or run it at configure time.
 - [ ] **P3** Editor asks for the WebView2 backend, but `NEEDS_WEBVIEW2` isn't set in CMake: a Windows build would fall back or fail. Mac-only today.
-- [ ] **P3** `COMPANY_NAME "YourCompany"` placeholder in `CMakeLists.txt` (shows in hosts and bundle IDs). Set before any release; changing it later changes the AU/VST3 identity.
 
 ### Performance (CPU only, not audible)
 - [ ] **P3** ToneStack, PreFilters and GraphicEQ recompute every biquad's coefficients every 32 samples even when no parameter is moving (9 GEQ bands × 2 ch + 5 + 3 filters). Skip when the smoothed values aren't changing. `ToneStack` also recomputes the mid filter twice per update (`setGainDb` + `setFrequency`).

@@ -12,6 +12,7 @@ docs/*
 # CMake build output
 build/
 build-tests/
+build-release/
 cmake-build-*/
 
 # JUCE generated
