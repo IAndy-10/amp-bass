@@ -29,6 +29,20 @@ public:
         }
     };
 
+    /// Value at (bass, treble) from a table over knob positions 0 / 2.5 / 5 / 7.5 / 10 on both (bilinear).
+    /// With `logScale` the interpolation runs on log values (for frequencies).
+    static float atKnobs (const float (&v)[5][5], float bassKnob, float trebleKnob, bool logScale = false)
+    {
+        const float x = juce::jlimit (0.0f, 1.0f, bassKnob) * 4.0f, y = juce::jlimit (0.0f, 1.0f, trebleKnob) * 4.0f;
+        const int i = juce::jmin (3, static_cast<int> (x)), j = juce::jmin (3, static_cast<int> (y));
+        const float fx = x - static_cast<float> (i), fy = y - static_cast<float> (j);
+        auto at = [&] (int a, int b) { return logScale ? std::log (v[a][b]) : v[a][b]; };
+        const float lo = at (i, j) + fy * (at (i, j + 1) - at (i, j));
+        const float hi = at (i + 1, j) + fy * (at (i + 1, j + 1) - at (i + 1, j));
+        const float r = lo + fx * (hi - lo);
+        return logScale ? std::exp (r) : r;
+    }
+
     void prepare (double sampleRate, int /*maxBlockSize*/)
     {
         sr = sampleRate;
@@ -54,6 +68,9 @@ public:
 
             trebleTop[ch].prepare (sampleRate);
             trebleTop[ch].setParams (Biquad::Type::Peak, trebleTopHz, kTrebleTopQ, 0.0f);
+
+            interaction[ch].prepare (sampleRate);
+            interaction[ch].setParams (Biquad::Type::Peak, 400.0f, 0.7f, 0.0f);
         }
 
         smoothBass.reset (sampleRate, 0.02);
@@ -77,6 +94,7 @@ public:
             midPeak[ch].reset();
             highShelf[ch].reset();
             trebleTop[ch].reset();
+            interaction[ch].reset();
         }
     }
 
@@ -124,12 +142,18 @@ public:
                                  + mt * (atKnob (kMidQ[mi + 1], midKnob) - atKnob (kMidQ[mi], midKnob));
                 const float midHz = kMidHz[mi] * std::pow (kMidHz[mi + 1] / kMidHz[mi], mt);
 
+                // Bass/treble interaction (the reference's passive stack): Hz interpolated on a log scale
+                const float interDb = atKnobs (kInteractionDb, bassKnob, trebleKnob);
+                const float interHz = atKnobs (kInteractionHz, bassKnob, trebleKnob, true);
+                const float interQ  = atKnobs (kInteractionQ, bassKnob, trebleKnob);
+
                 for (int ch = 0; ch < numChannels; ++ch)
                 {
                     lowShelf[ch].setParams (Biquad::Type::LowShelf, bassHz, bassQ, bassDb);
                     midPeak[ch].setParams (Biquad::Type::Peak, midHz, midQ, midDb);
                     highShelf[ch].setParams (Biquad::Type::HighShelf, trebleHz, trebleQ, trebleDb);
                     trebleTop[ch].setGainDb (topDb);
+                    interaction[ch].setParams (Biquad::Type::Peak, interHz, interQ, interDb);
                 }
             }
 
@@ -142,6 +166,7 @@ public:
                 sample = midPeak[ch].processSample (sample);
                 sample = highShelf[ch].processSample (sample);
                 sample = trebleTop[ch].processSample (sample);
+                sample = interaction[ch].processSample (sample);
                 buffer.getWritePointer (ch)[s] = sample;
             }
         }
@@ -171,23 +196,49 @@ private:
     static constexpr float kTrebleTopDb[5] = { 1.97f, 4.42f, 0.0f, -3.82f, -2.56f };
     static constexpr float kTrebleTopHz = 19000.0f, kTrebleTopQ = 1.2f;
 
-    // Mid peak fitted to the reference (within 0.3 dB, 1.3 dB at position 5 cut). Centres per selector
-    // position (manual: 220 / 450 / 800 / 1.6k / 3k); gain and Q per [selector][knob 0, 2.5, 5, 7.5, 10].
-    // Knob 0 and 10 are measured at every position, 2.5 and 7.5 at position 3 and scaled.
+    // Mid peak fitted to the reference (within 0.5 dB; 1.3 dB at position 5 cut, 0.8 dB at position 5 boost). Centres per
+    // selector position (manual: 220 / 450 / 800 / 1.6k / 3k); gain and Q per [selector][knob 0, 2.5, 5, 7.5, 10], all
+    // measured (2.5 and 7.5 used to be scaled from position 3, up to 3 dB off).
     static constexpr float kMidHz[5] = { 249.1f, 542.9f, 894.9f, 1772.7f, 2883.9f };
     static constexpr float kMidGainDb[5][5] = {
-        { -18.380f, -3.310f, 0.000f, 1.740f, 13.190f },
-        { -18.330f, -3.300f, 0.000f, 1.660f, 12.630f },
-        { -19.920f, -3.590f, 0.000f, 1.580f, 11.990f },
-        { -19.800f, -3.570f, 0.000f, 1.420f, 10.770f },
-        { -18.980f, -3.420f, 0.000f, 1.490f, 11.290f }
+        { -18.380f, -2.850f, 0.000f, 3.520f, 13.190f },
+        { -18.330f, -2.847f, 0.000f, 3.163f, 12.630f },
+        { -19.920f, -3.593f, 0.000f, 1.578f, 11.990f },
+        { -19.800f, -5.322f, 0.000f, 2.401f, 10.770f },
+        { -18.980f, -6.318f, 0.000f, 1.128f, 11.290f }
     };
     static constexpr float kMidQ[5][5] = {
-        { 0.245f, 0.070f, 0.102f, 0.133f, 0.214f },
-        { 0.689f, 0.197f, 0.234f, 0.272f, 0.436f },
-        { 0.511f, 0.146f, 0.166f, 0.187f, 0.300f },
-        { 0.880f, 0.251f, 0.298f, 0.345f, 0.554f },
-        { 0.429f, 0.123f, 0.179f, 0.236f, 0.379f }
+        { 0.245f, 0.114f, 0.102f, 0.232f, 0.214f },
+        { 0.689f, 0.134f, 0.234f, 0.299f, 0.436f },
+        { 0.511f, 0.146f, 0.166f, 0.188f, 0.300f },
+        { 0.880f, 0.327f, 0.298f, 0.497f, 0.554f },
+        { 0.429f, 0.329f, 0.179f, 0.405f, 0.379f }
+    };
+    // Bass x treble interaction. The reference's tone stack is passive (schematic 07S534): bass and treble share
+    // components, so together they reshape the low mids. Measured as the combined response minus the sum of the single
+    // knobs on a 5 x 5 x 5 x 5 grid (it does not depend on Mid or Mid Freq, within 0.3 dB) and fitted with one peak per
+    // [bass][treble] knob position (residual <= 0.35 dB, 0.72 dB at bass 10 / treble 10). Largest at bass 10 + treble 10:
+    // -3.8 dB at 464 Hz, a deeper scoop than the knobs alone give.
+    static constexpr float kInteractionDb[5][5] = {
+        { 0.36f, 0.21f, 0.00f, 0.32f, 1.60f },
+        { 0.21f, 0.00f, 0.00f, 0.00f, 0.75f },
+        { 0.00f, 0.00f, 0.00f, 0.00f, 0.00f },
+        { 0.00f, 0.00f, 0.00f, -0.19f, -0.76f },
+        { 0.41f, 0.31f, 0.00f, -0.83f, -3.83f }
+    };
+    static constexpr float kInteractionHz[5][5] = {
+        { 332.7f, 261.9f, 400.0f, 547.8f, 507.5f },
+        { 208.6f, 400.0f, 400.0f, 400.0f, 337.9f },
+        { 400.0f, 400.0f, 400.0f, 400.0f, 400.0f },
+        { 400.0f, 400.0f, 400.0f, 276.0f, 269.0f },
+        { 437.9f, 431.8f, 400.0f, 425.4f, 464.1f }
+    };
+    static constexpr float kInteractionQ[5][5] = {
+        { 0.855f, 1.083f, 0.700f, 0.896f, 0.618f },
+        { 1.174f, 0.700f, 0.700f, 0.700f, 1.201f },
+        { 0.700f, 0.700f, 0.700f, 0.700f, 0.700f },
+        { 0.700f, 0.700f, 0.700f, 1.692f, 1.416f },
+        { 0.978f, 0.981f, 0.700f, 0.952f, 1.085f }
     };
     float trebleTopHz = kTrebleTopHz;
 
@@ -199,6 +250,7 @@ private:
     Biquad midPeak[2];
     Biquad highShelf[2];
     Biquad trebleTop[2];
+    Biquad interaction[2];
 
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothBass;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothMid;

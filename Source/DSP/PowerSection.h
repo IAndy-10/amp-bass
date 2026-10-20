@@ -9,8 +9,8 @@
 ///
 /// The reference's main odd-harmonic distortion sits after Master and depends only on how loud the
 /// signal would be there, not on how it got there. It is a soft static curve whose 3rd harmonic grows
-/// about 1.7 dB per dB, and it distorts more at higher frequencies (as a tube power amp with negative
-/// feedback does), most in the low mids. Modelled as: wide emphasis peak -> static curve -> inverse
+/// about 1.7 dB per dB, and it distorts more at higher frequencies, most in the low mids. (The hardware,
+/// schematic 07S426: a tube driver, 12AX7 + 12AU7, into a MOSFET output stage with global negative feedback.) Modelled as: wide emphasis peak -> static curve -> inverse
 /// peak, then the fixed output low-pass. Below about -30 dBFS it is linear and the two peaks cancel.
 ///
 /// Tube Gain acts inside the same stage (measured: Gain and Master trade 1:1, and the knee follows the

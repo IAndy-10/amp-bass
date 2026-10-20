@@ -86,8 +86,8 @@ for the input.
 ### Stage 4 — ToneStack · `Source/DSP/ToneStack.h`
 A fixed **voicing** first: −3.76 dB, then peaks at 57.5 Hz (Q 0.44, +8.36 dB) and
 5.9 kHz (Q 0.69, +6.08 dB), giving +4.6 dB at 57 Hz, −3.2 dB at 1 kHz and +2.3 dB at
-5.9 kHz. It's the reference's response with every tone knob at noon. Then three
-RBJ biquads in series for the knobs:
+5.9 kHz. It's the reference's response with every tone knob at noon. Then RBJ
+biquads in series for the knobs, and one for how Bass and Treble interact:
 
 | Control | Filter | Range |
 |---|---|---|
@@ -95,10 +95,20 @@ RBJ biquads in series for the knobs:
 | Midrange | Peak per selector × knob position (Q 0.07–0.9) | −18 … −20 / +11 … +13 dB (fitted to the reference) |
 | Mid Frequency | 249 / 543 / 895 / 1773 / 2884 Hz (measured; manual says 220 / 450 / 800 / 1.6k / 3k) | 5 steps, glides on a log scale |
 | Treble | High shelf per knob position (282–2929 Hz) + peak at 19 kHz, Q 1.2 | −30 … +16.5 dB shelf (fitted to the reference) |
+| Bass × Treble | Peak per [bass][treble] knob position (209–548 Hz) | −3.8 … +1.6 dB |
 
-All knobs centred = the knobs are flat (only the voicing remains). The SVT-3 PRO
-manual describes its Bass, Mid and Treble as active controls that are flat at
-centre, so independent filters are the right model.
+All knobs centred = the knobs are flat (only the voicing remains). The amp's tone
+stack is **passive** (schematic 07S534): Bass and Treble are 1 MΩ pots in one
+network, so together they reshape the low mids. Measured on a 5 × 5 × 5 × 5 grid
+(Bass × Treble × Mid × Mid Freq), the reference's combined response differs from the
+sum of its single knobs only through Bass × Treble, and only around 200–550 Hz:
+Bass 10 + Treble 10 scoops 3.8 dB deeper at 464 Hz, Bass 0 + Treble 10 leaves 1.6 dB
+more. Mid (an 800 mH inductor resonance) doesn't interact. The interaction filter adds
+exactly that, so the stack is independent filters plus one correction.
+
+Between the measured knob positions (0 / 2.5 / 5 / 7.5 / 10) values are interpolated
+linearly, but the reference's tapers are curved: off-grid settings are off by up to
+5 dB (Treble 1.25, −5 dB at 8 kHz). See the plan, step 11.3.
 
 ### Stage 5 — GraphicEQ · `Source/DSP/GraphicEQ.h`
 Nine peaking biquads fitted to the reference plugin, centred at 33, 79, 141, 306,
@@ -129,7 +139,9 @@ The power amp and the Tube Gain stage, fitted to the reference. Per sample:
 3. **Emphasis peak** +7.9 dB at 872 Hz (Q 0.33), then the **static curve**
    `u / (1 + |u / 1.6435|^1.778)^(1/1.778)`, then the inverse peak. The curve is a soft
    limiter with a ceiling of 1.64; its 3rd harmonic grows about 1.7 dB per dB. The peak
-   makes the low mids distort first, as in a tube power amp with negative feedback.
+   makes the low mids distort first. In the hardware (schematic 07S426) this is a tube
+   driver (12AX7 + 12AU7, whose plate voltage is Tube Gain) into a MOSFET output stage
+   with global negative feedback.
    Below about −30 dBFS at this point it is linear and the two peaks cancel.
 4. **Blocking bias**: the curve's operating point moves with the signal level,
    `bias + blocking · max(env − onset, 0)`, where `env` is |u| through a 5 Hz low-pass,
@@ -232,7 +244,7 @@ Known gaps (accepted at Milestone B, see the plan):
 - **No cabinet** (decision D9) and **no Power Soak** (plan 9.2). Compare with the
   reference's cabinet bypassed.
 - At 88.2 kHz and up, about 1 dB of top-end difference that depends on the tone settings.
-- **Independent tone controls** (see Stage 4).
+- **Tone knobs between their measured positions** (see Stage 4): up to 5 dB off.
 
 ---
 
