@@ -1,8 +1,9 @@
 # AmpBass
 
 Bass amplifier plugin (faceplate name **EPIC-AMP-1**) whose sound and layout follow the
-Ampeg SVT-3 PRO plugin by Brainworx / Plugin Alliance: tube-style preamp saturation, a
-3-band semi-parametric tone stack, a 9-band graphic EQ and a MOSFET-style power section.
+Ampeg SVT-3 PRO plugin by Brainworx / Plugin Alliance: a clean preamp, a 3-band
+semi-parametric tone stack, a 9-band graphic EQ and a tube-style power stage with Tube Gain,
+all fitted to measurements of the reference.
 
 ## Stack
 
@@ -19,11 +20,11 @@ Ampeg SVT-3 PRO plugin by Brainworx / Plugin Alliance: tube-style preamp saturat
 ```
 Input → InputGain (−15 dB pad)
       → PreFilters (Bright, Hi, Lo)
-      → TubePreamp (asymmetric waveshaper, Gain + Tube Gain "starved plate")
+      → TubePreamp (linear: 25 Hz high-pass + Gain level)
       → ToneStack (Bass, Midrange + 5-position Frequency, Treble)
       → GraphicEQ (9 bands 33 Hz–9k, ±12 dB, Level −10…+8 dB, switchable)
       → MasterVolume
-      → PowerSection (soft clip + 2:1 compression)
+      → PowerSection (Tube Gain stage + soft power-amp curve, output low-pass)
       → Dry/Wet → Bypass / Mute
 ```
 
@@ -59,7 +60,9 @@ cmake --build build-tests
 - `AmpBassDSPTests` — per-stage checks (gain, frequency response, THD, bypass/mute, block sizes).
 - `AmpBassHostRender` — loads any VST3 offline: list/probe parameters, render WAV files.
 - `Tests/compare/` — renders the same signals through AmpBass and the reference plugin and
-  writes a comparison report ([README](Tests/compare/README.md)).
+  writes a comparison report with a regression gate; `behaviour.py` checks sample rates, block
+  sizes, stereo and Bypass/Mute ([README](Tests/compare/README.md)).
+- `docs/sound-matching-plan.md` — how AmpBass is matched to the reference, step by step, with a log.
 
 ## Project structure
 
@@ -91,7 +94,7 @@ amp-bass/
 |---|---|
 | Input | −15 dB Pad, Input Select (HI/LO, not on faceplate) |
 | Pre-filters | Bright, Ultra Hi, Ultra Lo |
-| Preamp | Gain, Tube Gain |
+| Gain | Gain (preamp level), Tube Gain (in the power stage) |
 | Tone | Bass, Midrange, Mid Frequency (220/450/800/1.6k/3k), Treble |
 | Graphic EQ | On, 9 bands (ID `geq8k` = 9k band), Level |
 | Output | Master Volume, Dry/Wet (not on faceplate), Bypass, Mute |

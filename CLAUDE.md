@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What This Is
 
 Bass amplifier plugin (shown as **EPIC-AMP-1**) whose sound and layout follow the Brainworx / Plugin Alliance
-**Ampeg SVT-3 PRO** plugin. Tube-style preamp saturation plus a MOSFET-style power section. JUCE 8 + Svelte 5.
+**Ampeg SVT-3 PRO** plugin. A linear preamp; the distortion is a fitted tube-style power stage that also holds
+Tube Gain (where the reference has it). JUCE 8 + Svelte 5.
 
 ## Build Commands
 
@@ -86,8 +87,9 @@ size given to `prepareToPlay`. `docs/how-ampbass-works.md` explains every stage 
 
 - `BACKLOG.md` — open bugs, cleanup and planned work (P1–P3). Add findings here.
 - `CHANGELOG.md` — one line per merge to `dev`.
-- `Tests/compare/` — AmpBass vs reference comparison (see its README).
-- `docs/` is gitignored except `how-ampbass-works.md`; the UI spec and reference material are local only.
+- `Tests/compare/` — AmpBass vs reference comparison (see its README); `behaviour.py` for rates, blocks, stereo, switches.
+- `docs/sound-matching-plan.md` — the matching plan: steps, the user's decisions, log. Read it before any DSP change.
+- `docs/` is gitignored except `how-ampbass-works.md` and `sound-matching-plan.md`; the UI spec and reference material are local only.
 
 ## Building Process Toolkit
 

@@ -21,14 +21,23 @@ Host audio ─┬─► InputGain ► PreFilters ► TubePreamp ► ToneStack �
   (`updateDSPParameters()`), then runs the chain in sub-blocks no larger than the
   size announced in `prepareToPlay` (some hosts send bigger blocks).
 - Parameter changes are never applied instantly: every stage ramps toward the new
-  value with a `juce::SmoothedValue` (10–50 ms) to avoid clicks. Filter
-  coefficients are recomputed every 32 samples, not every sample (decision D5).
-- Everything runs at the host sample rate. **There is no oversampling**, which
-  matters for the distortion stages (see §5).
+  value with a `juce::SmoothedValue` (10–50 ms; Tube Gain 200 ms, see Stage 7) to
+  avoid clicks. Filter coefficients are recomputed every 32 samples, not every
+  sample (decision D5). The output doesn't depend on the host's block size (bit-exact
+  from 32 to 4096 samples).
+- Everything runs at the host sample rate. **There is no oversampling**, and none is
+  needed: AmpBass aliases no more than the reference (−126 vs −125 dB, plan 6.6).
+  Filters run in double precision, because float low-frequency biquads fell into
+  limit cycles that looked like aliasing.
+- Left and right are processed independently (dual mono), like the reference.
 
-Only two stages are non-linear: **TubePreamp** (where the character comes from)
-and **PowerSection** (a safety clipper + gentle compressor). Everything else is
-gain or EQ, so it's linear and order-independent within its own group.
+Only one stage is non-linear: **PowerSection**, which holds the power amp and the
+Tube Gain stage. That is where the reference has its distortion. Everything before it
+is gain or EQ, so it is linear: the preamp, tone stack and EQ only shape the level and
+spectrum that reach the power stage.
+
+Most constants are fitted to the reference with `Tests/compare/` (its cabinet bypassed);
+`docs/sound-matching-plan.md` records how each was found.
 
 ---
 
@@ -42,8 +51,8 @@ Emulates the amp's input jacks.
 | Input Pad | −15 dB (×0.178) |
 | Input Select LO | −6 dB (×0.501); HI = unity |
 
-Why it matters: it sets **how hard the preamp is hit**. Pad/LO don't make the
-plugin quieter so much as *cleaner*, because less level reaches the waveshaper.
+Why it matters: everything up to the power stage is linear, so Pad/LO lower the level
+the power stage sees. The plugin gets quieter *and* cleaner.
 
 ### Stage 2 — PreFilters · `Source/DSP/PreFilters.h`
 The three voicing switches, all RBJ biquads, always in the path (0 dB when off):
@@ -56,43 +65,23 @@ The three voicing switches, all RBJ biquads, always in the path (0 dB when off):
 
 All three are fitted to the reference plugin (within 0.3 dB). Its Ultra Lo has no
 +2 dB at 40 Hz, although the manual says so. Ultra Lo is the classic "scooped"
-SVT voicing. Because these sit *before* the preamp, they also change what
-distorts: Bright makes the highs clip earlier; Ultra Lo makes the mids clip later.
+SVT voicing. Because these sit *before* the power stage, they also change what
+distorts: Bright makes the highs distort earlier; Ultra Lo makes the mids distort later.
 
 ### Stage 3 — TubePreamp · `Source/DSP/TubePreamp.h`
-The heart of the sound. Per sample:
+**Linear.** Measured on the reference, the preamp is clean at every Gain setting (with
+Tube Gain at 10); its distortion comes from the power stage. The class keeps its old
+name. Per sample:
 
-1. **25 Hz high-pass** (one-pole) — removes subsonics so they don't eat headroom.
-2. **Bias**: `x + 0.1·(1 − headroom)` — shifts the signal off-centre so the
-   shaper clips the two halves differently → **even harmonics** (tube warmth).
-3. **Drive**: `x · drive / headroom`
-4. **Asymmetric soft clip**: `tanh` (Padé approximation); the negative half is
-   squashed by up to 25 % more than the positive half.
-5. **Output level**: `× level · headroom / drive`, with `level = 19 × Gain`, so the
-   small-signal gain is `19 × Gain` (linear taper like the reference: +6 dB per
-   doubling, +20 dB from Gain 1 to 10, silent at 0).
-6. **10 Hz DC blocker** — removes the offset the bias introduced.
+1. **25 Hz high-pass** (one-pole): removes subsonics; the low E (41 Hz) loses about 1.3 dB.
+2. **Level `19 × Gain`** (smoothed over 10 ms): a linear taper like the reference's,
+   +6 dB per doubling, +20 dB from Gain 1 to 10, silent at 0. The default Gain 3.4 is
+   ×6.5 (+16.2 dB).
 
-Parameter mapping:
-
-| Knob (0–1) | Internal value |
-|---|---|
-| Gain | drive = 1 → 10 |
-| Tube Gain | headroom = 0.3 → 1.0 (lower = "starved plate", decision D2) |
-
-**What that means in practice** (worked out from the formulas above):
-
-- **Small-signal gain is `19 × Gain`**: Gain is a volume control for quiet notes
-  (matched to the reference within 0.1 dB), while the drive sets how early and
-  how hard the shaper distorts.
-- **Clipping starts** when the input reaches about `headroom / drive`.
-  At defaults (Gain 0.5, Tube Gain 0.5) that's ≈ 0.12, i.e. **≈ −18.5 dBFS**.
-  A typical bass DI peaks around −12…−6 dBFS, so **the default setting is already
-  driving the shaper** (this is the ~10 % THD the test suite reports).
-- **Output ceiling** = `level · headroom / drive` = `19·Gain·headroom / (1 + 9·Gain)`,
-  which rises with Gain toward ≈ 2.1 × headroom.
-- **Tube Gain down** = less headroom *and* more bias → earlier clipping, more
-  even harmonics, lower ceiling.
+So Gain is a level control. It changes the distortion only by changing how loud the
+signal reaches the power stage, and **Gain and Master trade 1:1** (true of the reference
+too). The preamp's output peak feeds the PEAK LED: at 1.0 (full scale) Gain is too high
+for the input.
 
 ### Stage 4 — ToneStack · `Source/DSP/ToneStack.h`
 A fixed **voicing** first: −3.76 dB, then peaks at 57.5 Hz (Q 0.44, +8.36 dB) and
@@ -127,24 +116,44 @@ Default 0.5 → ×0.25 = **−12 dB**; full → ×0.5 = −6 dB.
 0 = silence.
 
 ### Stage 7 — PowerSection · `Source/DSP/PowerSection.h`
-1. **Symmetric soft clip** above 0.8 (linear below; tanh-shaped between 0.8 and 1.0).
-2. **2:1 compressor** with an envelope follower (1 ms attack, 50 ms release),
-   threshold 0.8.
-3. **Output low-pass**: fixed 2nd-order low-pass at 14.6 kHz, Q 0.382 (−4 dB at
+The power amp and the Tube Gain stage, fitted to the reference. Per sample:
+
+1. **Tube Gain level**: +3.1 / +3.1 / +2.9 / +1.5 / 0 dB at Tube Gain 0 / 2.5 / 5 / 7.5 / 10.
+   All Tube Gain constants are tables over these five positions, interpolated linearly.
+2. **Kink**: a rectified copy of the signal (low-passed at 703 Hz before the rectifier,
+   through a low shelf with a 20 Hz pole after it, then DC-blocked at 10 Hz) is added to
+   the signal. The two half-waves get slightly different gain, which gives a 2nd
+   harmonic that doesn't depend on level and is strongest in the bass: at Tube Gain 0,
+   −26 dBc at 41 Hz, −38 at 100 Hz, −48 at 400 Hz. About −50 dB at Tube Gain 5–7.5,
+   off at 10.
+3. **Emphasis peak** +7.9 dB at 872 Hz (Q 0.33), then the **static curve**
+   `u / (1 + |u / 1.6435|^1.778)^(1/1.778)`, then the inverse peak. The curve is a soft
+   limiter with a ceiling of 1.64; its 3rd harmonic grows about 1.7 dB per dB. The peak
+   makes the low mids distort first, as in a tube power amp with negative feedback.
+   Below about −30 dBFS at this point it is linear and the two peaks cancel.
+4. **Blocking bias**: the curve's operating point moves with the signal level,
+   `bias + blocking · max(env − onset, 0)`, where `env` is |u| through a 5 Hz low-pass,
+   and the curve's input is scaled by a per-position drive. At Tube Gain 0–2.5 this
+   gives the extra compression and the 2nd harmonic that rise at high level (~1.7 dB
+   per dB), while the 3rd harmonic stays put. The output is normalised so the
+   small-signal level stays at step 1's value. Tube Gain glides over 200 ms, because the
+   bias moves the operating point and faster glides thump.
+5. **Output low-pass**: fixed 2nd-order low-pass at 14.6 kHz, Q 0.382 (−4 dB at
    10 kHz, −19 dB at 20 kHz at 48 kHz), fitted to the reference plugin with its
    cabinet bypassed, together with the tone-stack voicing. Its roll-off doesn't
    change with level or Master. At 88.2 kHz and up the reference is darker (about −5 dB at
    14–16 kHz), so those rates use their own fit (7.7 kHz / Q 0.59 at 88.2–96 kHz,
    7.1 kHz / Q 0.64 at 176.4–192 kHz).
+6. **10 Hz DC blocker**, the only one in the chain (after the non-linearity, where DC
+   can appear).
 
-Combined with the numbers above: the preamp ceiling (≈ 0.39 at defaults) times
-the Master gain (0.25) is ≈ 0.1, far below 0.8. **At default settings the power
-section does nothing.** It only engages with low Gain + high Tube Gain (ceiling
-near 1.0) and Master near the top. If the reference plugin has audible
-"power amp" squash, this stage is under-driven by comparison.
+Tube Gain 5 and above adds almost nothing besides level; the character is at 0–2.5.
+§3 has measured levels and harmonics.
 
 ### Output switches · `Source/DSP/OutputSwitch.h`
-Runs last, after Dry/Wet. Both switches fade over 10 ms (no clicks).
+Runs last, after Dry/Wet. Both switches fade linearly over 50 ms, like the reference
+(10–90 % in 40 ms; the reference takes 43 ms). Fully bypassed, the output is the input
+bit for bit; muted, it is digital silence. No latency.
 
 | Control | Effect |
 |---|---|
@@ -152,9 +161,9 @@ Runs last, after Dry/Wet. Both switches fade over 10 ms (no clicks).
 | Mute | Output = silence (wins over Bypass) |
 
 **PEAK/MUTE LED** (`PluginProcessor::processBlock`, `PluginEditor::timerCallback`):
-lit when Mute is on, or for 300 ms after any overload — raw input ≥ 0.98,
-preamp drive ≥ 4 (hard saturation), or signal ≥ 1.0 after the tone stack and GEQ
-(too much boost). Same causes the reference manual lists.
+lit when Mute is on, or for 300 ms after any overload: raw input ≥ 0.98,
+preamp output ≥ 1.0 (Gain too high for the input), or signal ≥ 1.0 after the tone
+stack and GEQ (too much boost). Same causes the reference manual lists.
 
 ### Dry/Wet · `Source/DSP/Primitives/DryWetMixer.h`
 Equal-power crossfade (`cos/sin`) between the untouched input and the chain
@@ -164,51 +173,66 @@ output. Default 100 % wet.
 
 ## 3. Level map at default settings
 
-> These numbers predate the sound-matching work (docs/sound-matching-plan.md) and are refreshed after its
-> step 6 (distortion), which changes the preamp and power section.
+Defaults: Gain 3.4, Tube Gain 5, Master 5, tone knobs centred, GEQ off. Measured with
+`AmpBassHostRender` (2026-10-19), 1 kHz sine:
 
 | Point in chain | Quiet note (−30 dBFS in) | Loud note (−6 dBFS in) |
 |---|---|---|
-| After preamp | ≈ −19.5 dBFS (+10.5 dB, clean) | ≈ −8 dBFS (clipped at ceiling) |
-| After Master (×0.25) | ≈ −31.5 dBFS | ≈ −20 dBFS |
-| After PowerSection | unchanged | unchanged |
+| After preamp (×6.5, +16.2 dB) | −13.8 dBFS | +10.2 dBFS (PEAK lights) |
+| After tone-stack voicing (−3.2 dB at 1 kHz) | −17.0 dBFS | +7.0 dBFS |
+| After Master (×0.25, −12 dB) | −29.0 dBFS | −5.0 dBFS |
+| After PowerSection (+2.9 dB at Tube Gain 5) | −26.3 dBFS | −5.5 dBFS: 3.4 dB of compression, H3 −16 dBc |
 
-So at defaults the plugin is roughly **unity for quiet playing and turns loud
-playing down by ~14 dB** — strong compression from the preamp. Approximate:
-EQ is flat and a real signal is not a sine, but the shape holds.
+Values above full scale are fine inside the chain (floating point); only the power
+stage limits. Output level and harmonics against input level, 100 Hz sine, Tube Gain
+0 / 5 / 10:
+
+| Input | Tube Gain 0 | Tube Gain 5 (default) | Tube Gain 10 |
+|---|---|---|---|
+| −30 dBFS | −20.5 dBFS · H2 −35, H3 −60 dBc | −20.5 · H2 −77, H3 −64 | −23.4 · H2 −106, H3 −69 |
+| −18 dBFS | −11.1 · H2 −21, H3 −47 | −8.8 · H2 −70, H3 −43 | −11.6 · H2 −108, H3 −47 |
+| −12 dBFS | −9.3 · H2 −14, H3 −32 | −3.5 · H2 −60, H3 −33 | −6.0 · H2 −86, H3 −37 |
+| −6 dBFS | −10.3 · H2 −10, H3 −21 | +0.7 · H2 −52, H3 −25 | −1.2 · H2 −75, H3 −28 |
+
+So at defaults the plugin is **about +9.5 dB for quiet notes and squashes loud ones by
+~3 dB**, mostly 3rd harmonic. Tube Gain 0 adds a strong 2nd harmonic and clamps loud
+notes hard: a −6 dBFS note comes out quieter than a −12 dBFS one. Tube Gain 10 is
+3 dB quieter and the cleanest. The output can pass 0 dBFS; the reference peaks up to
++5.3 dBFS.
 
 ---
 
 ## 4. Where to tune
 
 The constants below shape the sound and are *not* exposed as parameters.
-Changing them doesn't break saved sessions (parameter IDs are untouched).
+Changing them doesn't break saved sessions (parameter IDs are untouched). Almost all of
+them are fitted to the reference: after changing one, re-run the comparison
+(`Tests/compare/`, regression gate in its README) as well as `AmpBassDSPTests`.
 
 | Character | Constant | Where |
 |---|---|---|
-| How fast Gain ramps up distortion | `1 + gainKnob·9` (drive range) | `TubePreamp.h` `setParams` |
-| Starved-plate range | `0.3 + tubeGainKnob·0.7` | `TubePreamp.h` `setParams` |
-| Even-harmonic amount | bias `0.1` | `TubePreamp.h` process, step 2 |
-| Asymmetry of clipping | `0.25` in the negative branch | `TubePreamp.h` process, step 4 |
-| Loudness vs Gain | `0.3` in `normGain` | `TubePreamp.h` process, step 5 |
-| Low-end tightness into the preamp | HPF 25 Hz | `TubePreamp.h` `prepare` |
-| Tone-stack corners / widths | 100 Hz, 2.5 kHz, Q 0.5 / mid Q 1.5 | `ToneStack.h` `prepare` |
-| Voicing switches | shelf freqs/gains, Ultra Lo +2 dB @ 40 / −10 dB @ 500 | `PreFilters.h` |
-| GEQ band width | Q 2.0 | `GraphicEQ.h` `prepare` |
-| Master taper | 0.5 × knob (linear, measured on the reference) | `MasterVolume.h` |
-| Power amp onset / squash | threshold 0.8, 2:1, 1 ms / 50 ms | `PowerSection.h` |
+| Gain law | `kLevelAtFullGain` (19) | `TubePreamp.h` |
+| Low-end tightness into the power stage | HPF 25 Hz | `TubePreamp.h` `prepare` |
+| Fixed voicing | `kVoicing*` (57.5 Hz +8.36 dB, 5.9 kHz +6.08 dB, −3.76 dB) | `ToneStack.h` |
+| Bass / Mid / Treble shapes | `kBassCurve`, `kMidHz` / `kMidGainDb` / `kMidQ`, `kTrebleCurve`, `kTrebleTop*` (per knob position) | `ToneStack.h` |
+| Voicing switches | `kBright*`, `kUltraHi*`, `kUltraLo*` | `PreFilters.h` |
+| GEQ bands and slider law | `kBandHz`, `kBand12*`, `kLawSlider` / `kBoost*` / `kCut*`, `kOnHump*` | `GraphicEQ.h` |
+| Master taper | `kGainAtFull` (0.5 × knob) | `MasterVolume.h` |
+| Power-stage softness and ceiling | `kHardness` (1.778), `kCeiling` (1.6435) | `PowerSection.h` |
+| Which frequencies distort first | `kEmphasis*` (872 Hz, Q 0.33, +7.9 dB) | `PowerSection.h` |
+| Tube Gain | `kLevelDb`, `kKinkDb`, `kDriveDb`, `kBias`, `kBlocking`, `kBlockingOnset` (per position); `kKink*`, `kEnvelopeHz` | `PowerSection.h` |
+| Top end | `kOutputLowPass*` (per sample-rate family) | `PowerSection.h` |
+| PEAK thresholds | `kPeakInput`, `kPeakDrive`, `kPeakPreMaster` | `PluginProcessor.h` |
 
-Known gaps worth considering while tuning:
-- **No oversampling.** At drive ×15 the shaper creates harmonics above Nyquist
-  that fold back as inharmonic aliasing, most audible on high notes with high Gain.
-  2×–4× oversampling around TubePreamp (`juce::dsp::Oversampling`) is the
-  standard fix.
-- **No cabinet** (decision D9). A DI-style output will sound much brighter and
-  fizzier than an amp + cab; check what the reference plugin does.
+Known gaps (accepted at Milestone B, see the plan):
+- **Tube Gain 0 "choke"**: after a loud note the reference drops by ~50 dB within
+  10–20 ms and recovers in ~60 ms. The 5 Hz envelope can't do that, so DI nulls at
+  Tube Gain 0 are −16 … −19 dB (−26 dB at Tube Gain 5 and 10).
+- **Very loud input**: 1–3 dB too little compression at the extremes.
+- **No cabinet** (decision D9) and **no Power Soak** (plan 9.2). Compare with the
+  reference's cabinet bypassed.
+- At 88.2 kHz and up, about 1 dB of top-end difference that depends on the tone settings.
 - **Independent tone controls** (see Stage 4).
-- **Static shaper**: no sag, no frequency-dependent clipping (real tubes clip
-  bass and treble differently because of coupling caps).
-- Mid Frequency is smoothed linearly in Hz; CLAUDE.md asks for logarithmic.
 
 ---
 
@@ -236,10 +260,18 @@ $H --in di_bass.wav --out wet.wav \
 
 `--set` takes **normalised** values (0–1). For stepped parameters,
 value = step index / (steps − 1); e.g. Mid Frequency 1.6 kHz = 3/4 = 0.75.
+`--set-at 2.5 "Bypass=1"` changes a parameter 2.5 s into the render, like automation.
+A parameter can also be named by its `--list` index, e.g. `"#0=1"` (the reference has
+two parameters called "Bypass").
+
+- **`Tests/compare/`** renders the same signals through AmpBass and the reference and
+  measures both; `behaviour.py` there checks sample rates, block sizes, stereo and
+  the Bypass/Mute fades. See its [README](../Tests/compare/README.md).
 
 Suggested learning exercises, one change at a time, same DI file:
-1. Gain 0 → 0.25 → 0.5 → 1 with Master compensated: hear the switch from
-   "volume" to "distortion" at ~0.26.
-2. Tube Gain 1 → 0 at fixed Gain: listen for the thicker, more even-harmonic tone.
+1. Gain 0.2 → 0.4 with Master 0.8 → 0.4: the same sound, because Gain and Master
+   trade 1:1. Then raise both: the power stage squashes and grows 3rd harmonic.
+2. Tube Gain 1 → 0 at fixed Gain: listen for the thicker, 2nd-harmonic bass and how
+   loud notes clamp.
 3. Ultra Lo on/off: the SVT scoop.
-4. Gain 0, Tube Gain 1, Master 1: the only way to hear the PowerSection.
+4. Gain 1, Master 1: the power stage at its hardest.
