@@ -14,6 +14,8 @@
 //   --set-text Name=t parameter by display name, value as the plugin displays it,
 //                     e.g. "Rec Chain=Cabinet Bypass" (repeatable)
 //   --probe Name      print the displayed text at normalised 0, 0.1 … 1
+//   --set-at <s> Name=v  change a parameter at <s> seconds into the render (automation; the block is split
+//                     there, repeatable). Name may also be #<index> from --list (for duplicate names)
 //   --sr <hz>         sample rate when no --in is given (default 48000)
 //   --block <n>       block size (default 512)
 
@@ -23,13 +25,23 @@
 
 #include "TestSignals.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <map>
+#include <vector>
 
 using namespace TestSignals;
 
 namespace
 {
+    struct TimedSet
+    {
+        double seconds = 0.0;
+        juce::String name;
+        float value = 0.0f;
+    };
+
     struct Options
     {
         juce::File plugin = juce::File::getSpecialLocation (juce::File::userHomeDirectory)
@@ -37,6 +49,7 @@ namespace
         juce::File in, out;
         std::map<juce::String, float> sets;
         std::map<juce::String, juce::String> textSets;
+        std::vector<TimedSet> timed;
         juce::String probe;
         double sr = 48000.0;
         int block = 512;
@@ -70,6 +83,13 @@ namespace
                 o.textSets[kv.upToFirstOccurrenceOf ("=", false, false).trim().toLowerCase()]
                     = kv.fromFirstOccurrenceOf ("=", false, false).trim();
             }
+            else if (a == "--set-at")
+            {
+                const double t = next().getDoubleValue();
+                const auto kv = next();
+                o.timed.push_back ({ t, kv.upToLastOccurrenceOf ("=", false, false).trim().toLowerCase(),
+                                     kv.fromLastOccurrenceOf ("=", false, false).getFloatValue() });
+            }
             else if (a == "--probe") o.probe = next().trim().toLowerCase();
             else std::fprintf (stderr, "Ignoring unknown argument: %s\n", argv[i]);
         }
@@ -96,6 +116,11 @@ namespace
 
     juce::AudioProcessorParameter* findParam (juce::AudioPluginInstance& p, const juce::String& lowerName)
     {
+        if (lowerName.startsWith ("#"))
+        {
+            const int index = lowerName.substring (1).getIntValue();
+            return juce::isPositiveAndBelow (index, p.getParameters().size()) ? p.getParameters()[index] : nullptr;
+        }
         for (auto* param : p.getParameters())
             if (param->getName (128).toLowerCase() == lowerName)
                 return param;
@@ -147,9 +172,19 @@ namespace
         return 0;
     }
 
-    juce::AudioBuffer<float> renderThrough (juce::AudioPluginInstance& p, const juce::AudioBuffer<float>& input,
-                                            double sr, int blockSize)
+    struct TimedParam
     {
+        int sample = 0;
+        juce::AudioProcessorParameter* param = nullptr;
+        float value = 0.0f;
+    };
+
+    juce::AudioBuffer<float> renderThrough (juce::AudioPluginInstance& p, const juce::AudioBuffer<float>& input,
+                                            double sr, int blockSize, std::vector<TimedParam> timed = {})
+    {
+        std::sort (timed.begin(), timed.end(), [] (const auto& a, const auto& b) { return a.sample < b.sample; });
+        size_t nextTimed = 0;
+
         // Re-prepare so DSP state from the previous render doesn't leak in.
         p.releaseResources();
         p.prepareToPlay (sr, blockSize);
@@ -158,9 +193,18 @@ namespace
         juce::AudioBuffer<float> block (std::max (2, p.getTotalNumOutputChannels()), blockSize);
         juce::MidiBuffer midi;
 
-        for (int pos = 0; pos < input.getNumSamples(); pos += blockSize)
+        for (int pos = 0; pos < input.getNumSamples();)
         {
-            const int n = std::min (blockSize, input.getNumSamples() - pos);
+            // Automation: apply changes due by now, and end this block where the next one is due.
+            while (nextTimed < timed.size() && timed[nextTimed].sample <= pos)
+            {
+                timed[nextTimed].param->setValueNotifyingHost (timed[nextTimed].value);
+                ++nextTimed;
+            }
+            int n = std::min (blockSize, input.getNumSamples() - pos);
+            if (nextTimed < timed.size())
+                n = std::min (n, timed[nextTimed].sample - pos);
+
             block.setSize (block.getNumChannels(), n, false, false, true);
             block.clear();
             for (int ch = 0; ch < 2; ++ch)
@@ -170,6 +214,7 @@ namespace
 
             for (int ch = 0; ch < out.getNumChannels(); ++ch)
                 out.copyFrom (ch, pos, block, ch, 0, n);
+            pos += n;
         }
         return out;
     }
@@ -295,7 +340,14 @@ int main (int argc, char* argv[])
     if (o.sweep) return sweep (*plugin, Options (o));
 
     if (! applyBaseline (*plugin, o)) return 1;
-    const auto output = renderThrough (*plugin, input, sr, o.block);
+    std::vector<TimedParam> timed;
+    for (const auto& t : o.timed)
+    {
+        auto* param = findParam (*plugin, t.name);
+        if (param == nullptr) { std::fprintf (stderr, "Unknown parameter '%s' (use --list)\n", t.name.toRawUTF8()); return 1; }
+        timed.push_back ({ static_cast<int> (std::lround (t.seconds * sr)), param, t.value });
+    }
+    const auto output = renderThrough (*plugin, input, sr, o.block, timed);
     report (input, output);
 
     if (o.out != juce::File())
