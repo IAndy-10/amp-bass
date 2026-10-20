@@ -449,11 +449,26 @@ Fitting scratch scripts from this session (`fitpower*.py`, `fittube.py`, targets
 
 - [ ] **8.1 Sample rate**: `screenshot_preset` and `clean_flat` at 44.1 and 96 kHz, within 0.5 dB of the 48 kHz
   result in both plugins.
-- [ ] **8.2 Block size**: render with `--block 32`, `512` and `4096`. AmpBass output must null between them (< −100 dB).
+  *(2026-10-19, `behaviour.py rates`; decision pending.)* Drive doesn't depend on the rate in either plugin (stepped
+  100 Hz tones, H3 and DI level within 0.01 dB). Only the top octave moves, and **the reference isn't rate-invariant
+  either** (FR shape vs 48 kHz, 0 dB at 1 kHz): 44.1 kHz +0.8 dB at 15.9 kHz, +2.7 at 20 kHz; 96 kHz a broad dip
+  from 4 kHz, −5 dB at 14–16 kHz, −1 at 20 kHz. AmpBass vs reference: 48 kHz within 0.3 dB; 44.1 kHz within 0.5 dB to
+  14 kHz, −1.6 at 15.9 kHz, −6.8 at 20 kHz; 96 kHz +1 dB at 8 kHz rising to +7 at 20 kHz. AmpBass's own change is the
+  14.6 kHz output low-pass (bilinear, fitted at 48 kHz: predicted −0.4 / −6.0 dB at 15.9 / 20 kHz for 44.1 kHz,
+  measured −0.5 / −4.1).
+- [x] **8.2 Block size**: render with `--block 32`, `512` and `4096`. AmpBass output must null between them (< −100 dB).
   The 32-sample coefficient updates must not depend on the host block.
-- [ ] **8.3 Stereo**: same channel handling as the reference (from 0.8).
-- [ ] **8.4 Bypass and Mute**: render each plugin with each switched on. Compare the output (dry, silent, latency-
+  *(2026-10-19, `behaviour.py blocks`: bit-exact, −240 dB at 32 / 100 / 4096 vs 512 on `screenshot_preset`,
+  `gain7.5_tube0`, `defaults` × DI / bursts / sweep_12.)*
+- [x] **8.3 Stereo**: same channel handling as the reference (from 0.8).
+  *(2026-10-19, `behaviour.py stereo`: both dual mono. Left-only input → right −240 dB in both; identical L/R → L − R
+  −240 dB in both. The 0.8 note's −96 dB was the old DC residual.)*
+- [x] **8.4 Bypass and Mute**: render each plugin with each switched on. Compare the output (dry, silent, latency-
   compensated?) and whether the switch ramps or hard-cuts.
+  *(2026-10-19, `behaviour.py switches`, host `--set-at` automation.)* Reference: 0 latency, bypass = input bit for bit,
+  mute = digital silence, both fade linearly (10–90 % in 43 ms; it reacts ~12 ms after the change, likely its control
+  rate, not copied). AmpBass had 10 ms fades and a −138 dB bypass residue; now 50 ms linear (40 ms 10–90 %) and
+  bit-exact bypass. (Dry/Wet keeps its equal-power crossfade; this is the bypass switch.)
 - [ ] **8.5 PEAK/MUTE LED** *(code check 2026-10-19: the UI already lights it on Mute, `Faceplate.svelte` `$peak || $mute`; only the DAW check is left)* (in a DAW, not measurable offline): per the manual it lights on input overload, high Gain,
   **or too much tone boost**, and **whenever Mute is on**. Check that AmpBass's LED logic (`PluginProcessor.cpp`, PEAK block)
   also lights on Mute.
@@ -518,3 +533,4 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 6.5 try 1 | 2026-10-19 | separate attack/release for the blocking envelope (`fittube4.py`) | — | fit returns to 5 Hz / 5 Hz; loud → quiet choke still 16 dB too shallow | no (needs a cutoff-type element) |
 | B | 2026-10-19 | **Milestone B passed**: user listened to `screenshot_preset`, `gain7.5_tube10`, `gain7.5_tube5`, `gain2.5_tube0`, `gain7.5_tube0` pairs: "they seem similar" | −22.9 dB null | Tube Gain 0 nulls −15.6…−19 accepted (choke, 6.5); ceiling 1–3 dB | — |
 | 7.1 | 2026-10-19 | Tube Gain glide 50 → 200 ms; parameters set before prepare | unchanged | jump bump −31 → −48 dB rel. tone; silence exact; gate 0 / 0 | yes |
+| 8.2–8.4 | 2026-10-19 | `behaviour.py` + host `--set-at`; Bypass/Mute fades 10 → 50 ms, bit-exact bypass | unchanged | block sizes bit-exact; stereo dual mono like the reference; fades 40 vs 43 ms; gate 0 / 0 | yes |
