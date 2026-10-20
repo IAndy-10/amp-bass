@@ -500,7 +500,7 @@ namespace
         const auto byp = run (true, false, false, step);
         err = 0.0;
         for (int i = n / 2; i < n; ++i) err = std::max (err, (double) std::abs (byp.getSample (0, i) - in[(size_t) i]));
-        check (err < 1e-6, "bypass outputs the dry input", fmt ("max err %.2g", err));
+        check (err == 0.0, "bypass outputs the dry input bit for bit", fmt ("max err %.2g", err));
 
         const auto muted = run (false, true, false, step);
         const double mutedPeak = peak (muted.getReadPointer (0), n / 2, n);
@@ -512,8 +512,15 @@ namespace
 
         // A 100 Hz sine at 0.5 changes by at most ~0.0033 per sample at 48 kHz;
         // a hard switch from -x to +x would jump up to 1.0.
-        run (true, false, true, step);
+        const auto switched = run (true, false, true, step);
         check (step < 0.01, "bypass switch has no click", fmt ("max step %.4f", step));
+        // Fade length like the reference's (linear, ~50 ms): from the block where bypass turns on to exact dry.
+        const int switchAt = ((n / 2 + kBlock - 1) / kBlock) * kBlock;
+        int lastDiff = switchAt;
+        for (int i = switchAt; i < n; ++i)
+            if (switched.getSample (0, i) != in[(size_t) i]) lastDiff = i;
+        const double fadeMs = 1000.0 * (lastDiff + 1 - switchAt) / kSr;
+        check (fadeMs > 45.0 && fadeMs < 55.0, "bypass fades over ~50 ms like the reference", fmt ("%.1f ms", fadeMs));
         run (false, true, true, step);
         check (step < 0.01, "mute switch has no click", fmt ("max step %.4f", step));
     }
