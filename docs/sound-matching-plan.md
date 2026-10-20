@@ -503,6 +503,22 @@ uses the per-case reference settings (0.7). No faceplate UI unless the user asks
   in one go. Note that the reference's A/B/C/D are settings *slots*, not factory presets, so behaviour differs on purpose.
 - [ ] **10.4** Prominent preset selector in the UI as its own component (so it moves to the later minimal UI).
 
+## Step 11 — Tone stack, from the schematics (2026-10-20)
+
+The amp schematics (`building-process/references/ampeg-svt-3-pro*-schematics.pdf`, local) show a **passive** Bass /
+Treble network and an LC (800 mH) mid, not the active, independent controls assumed in step 2. They also confirm Tube Gain
+= the power-amp driver tubes' plate voltage (step 6). Grid: Bass × Treble × Mid at 0 / 2.5 / 5 / 7.5 / 10 × Mid Freq 1–5,
+625 clean sweeps per plugin (`build-tests/compare/tonegrid/`, `render_grid.py`).
+
+- [x] **11.1 Bass × Treble interaction.** In the reference, combined minus the sum of single knobs depends only on Bass ×
+  Treble (within 0.3 dB over Mid / Mid Freq), at 200–550 Hz: −3.8 dB at Bass 10 + Treble 10, +1.6 at Bass 0 + Treble
+  10. Added one peak per [bass][treble] position (`fitpeak.py`, residual ≤ 0.35 dB, 0.72 at Bass 10 + Treble 10).
+- [x] **11.2 Mid at 2.5 / 7.5, every position.** They were scaled from position 3: up to 3.1 dB off (2.5 at position 5).
+  Refit gain + Q from the grid (`fitmid.py`, ≤ 0.5 dB).
+- [ ] **11.3 Knob tapers between grid positions.** Off-grid single knobs are off by up to 5 dB: Treble 1.25 −5.0 dB
+  and 8.75–9 +3.6–3.9 dB at 8 kHz, Bass 8.75–9 +2.4 dB at 70 Hz, Mid 1.25 (position 1) −3.4 dB, Mid 8.75 −1.4 dB
+  (`offgrid.py`). Needs denser knob measurements (and the interaction table between 7.5 and 10).
+
 ## Later — Cabinet
 
 User will compare with the cabinet next. Only the Rec Chains used by the 4 presets (+ Horn) need modelling.
@@ -539,4 +555,5 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | B | 2026-10-19 | **Milestone B passed**: user listened to `screenshot_preset`, `gain7.5_tube10`, `gain7.5_tube5`, `gain2.5_tube0`, `gain7.5_tube0` pairs: "they seem similar" | −22.9 dB null | Tube Gain 0 nulls −15.6…−19 accepted (choke, 6.5); ceiling 1–3 dB | — |
 | 7.1 | 2026-10-19 | Tube Gain glide 50 → 200 ms; parameters set before prepare | unchanged | jump bump −31 → −48 dB rel. tone; silence exact; gate 0 / 0 | yes |
 | 8.1 | 2026-10-19 | output low-pass per rate family | unchanged at 48 kHz | 44.1 / 96 / 192 kHz top end within 0.6 / 1.1 / 1.3 dB of the reference's change (was 1.3 / 6.5 / 7.0); gate 0 / 0 | yes |
+| 11.1–11.2 | 2026-10-20 | Bass × Treble interaction peak (5 × 5 table); mid 2.5 / 7.5 refit at every position | unchanged | 625-point grid: worst 4.74 → 1.29 dB, > 2 dB 75 → 0; `mid0_bass10_treble10` 3.98 → 1.29; gate 0 worse / 2 better | yes |
 | 8.2–8.4 | 2026-10-19 | `behaviour.py` + host `--set-at`; Bypass/Mute fades 10 → 50 ms, bit-exact bypass | unchanged | block sizes bit-exact; stereo dual mono like the reference; fades 40 vs 43 ms; gate 0 / 0 | yes |
