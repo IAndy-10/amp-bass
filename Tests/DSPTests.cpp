@@ -447,6 +447,9 @@ namespace
         check (std::abs (at1k) < 0.2, "output low-pass flat at 1 kHz", fmt ("%.2f dB", at1k));
         check (std::abs (at10k + 4.0) < 0.5, "output low-pass -4 dB at 10 kHz", fmt ("%.2f dB", at10k));
         check (std::abs (at20k + 19.2) < 1.5, "output low-pass -19 dB at 20 kHz", fmt ("%.2f dB", at20k));
+        // At 88.2 kHz and up the reference is darker (~5 dB at 14-16 kHz); its own fit there.
+        const double at10k96 = stageGainDb<PowerSection> (10000, [] (auto&) {}, 96000.0);
+        check (std::abs (at10k96 + 7.4) < 0.5, "output low-pass at 96 kHz: -7.4 dB at 10 kHz", fmt ("%.2f dB", at10k96));
     }
 
     void testOutputSwitch()

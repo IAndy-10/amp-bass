@@ -28,8 +28,7 @@ class PowerSection
 public:
     void prepare (double sampleRate, int /*maxBlockSize*/)
     {
-        // Kept below Nyquist at low rates.
-        const float lpHz = std::min (kOutputLowPassHz, 0.45f * static_cast<float> (sampleRate));
+        const auto lp = outputLowPassFor (sampleRate);
         for (int ch = 0; ch < 2; ++ch)
         {
             emphasis[ch].prepare (sampleRate);
@@ -37,7 +36,7 @@ public:
             deEmphasis[ch].prepare (sampleRate);
             deEmphasis[ch].setParams (Biquad::Type::Peak, kEmphasisHz, kEmphasisQ, -kEmphasisDb);
             outputLowPass[ch].prepare (sampleRate);
-            outputLowPass[ch].setParams (Biquad::Type::LowPass, lpHz, kOutputLowPassQ);
+            outputLowPass[ch].setParams (Biquad::Type::LowPass, lp.hz, lp.q);
         }
 
         kinkIn  = OnePole::lowPass (kKinkInHz, sampleRate);
@@ -166,9 +165,22 @@ private:
     static constexpr float kEmphasisHz   = 872.07f;
     static constexpr float kEmphasisQ    = 0.3254f;
     static constexpr float kEmphasisDb   = 7.9087f;
-    // Fixed output low-pass, fitted together with the tone-stack voicing (-4 dB at 10 kHz, -19 dB at 20 kHz)
-    static constexpr float kOutputLowPassHz = 14602.0f;
-    static constexpr float kOutputLowPassQ  = 0.382f;
+    // Fixed output low-pass, fitted together with the tone-stack voicing (-4 dB at 10 kHz, -19 dB at 20 kHz at 48 kHz).
+    // The reference's top octave depends on the sample rate (at 88.2 kHz and up it is ~5 dB darker at 14-16 kHz),
+    // so each rate family has its own fit to the reference's change from 48 kHz (plan 8.1).
+    struct LowPass { float hz, q; };
+    static constexpr LowPass kOutputLowPass48  { 14602.0f, 0.382f };
+    static constexpr LowPass kOutputLowPass441 { 21098.2f, 0.05f };    // f near Nyquist: reads as the 48 kHz design
+    static constexpr LowPass kOutputLowPass96  { 7691.6f, 0.5945f };   // 88.2 / 96 kHz
+    static constexpr LowPass kOutputLowPass192 { 7129.9f, 0.6372f };   // 176.4 / 192 kHz
+
+    static LowPass outputLowPassFor (double sampleRate)
+    {
+        if (sampleRate < 46000.0)  return kOutputLowPass441;
+        if (sampleRate < 70000.0)  return kOutputLowPass48;
+        if (sampleRate < 130000.0) return kOutputLowPass96;
+        return kOutputLowPass192;
+    }
     static constexpr float kDcBlockHz       = 10.0f;
 
     // Tube Gain, per knob position 0 / 2.5 / 5 / 7.5 / 10 (fitted on the reference's stepped tones)

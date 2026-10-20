@@ -133,7 +133,9 @@ Default 0.5 → ×0.25 = **−12 dB**; full → ×0.5 = −6 dB.
 3. **Output low-pass**: fixed 2nd-order low-pass at 14.6 kHz, Q 0.382 (−4 dB at
    10 kHz, −19 dB at 20 kHz at 48 kHz), fitted to the reference plugin with its
    cabinet bypassed, together with the tone-stack voicing. Its roll-off doesn't
-   change with level or Master.
+   change with level or Master. At 88.2 kHz and up the reference is darker (about −5 dB at
+   14–16 kHz), so those rates use their own fit (7.7 kHz / Q 0.59 at 88.2–96 kHz,
+   7.1 kHz / Q 0.64 at 176.4–192 kHz).
 
 Combined with the numbers above: the preamp ceiling (≈ 0.39 at defaults) times
 the Master gain (0.25) is ≈ 0.1, far below 0.8. **At default settings the power
