@@ -78,6 +78,10 @@ bool AmpBassAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) c
 void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     preparedBlockSize = juce::jmax (1, samplesPerBlock);
 
+    // Set the targets first: PowerSection starts at its target in prepare(), so Tube Gain doesn't glide
+    // (200 ms) from its default when playback starts.
+    updateDSPParameters();
+
     inputGain.prepare (sampleRate, samplesPerBlock);
     preFilters.prepare (sampleRate, samplesPerBlock);
     tubePreamp.prepare (sampleRate, samplesPerBlock);

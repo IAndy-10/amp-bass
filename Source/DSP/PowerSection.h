@@ -46,7 +46,7 @@ public:
         envelope = OnePole::lowPass (kEnvelopeHz, sampleRate);
         dcBlock = OnePole::highPass (kDcBlockHz, sampleRate);
 
-        smoothTube.reset (sampleRate, 0.05);    // 50 ms: the bias moves the operating point
+        smoothTube.reset (sampleRate, 0.2);     // 200 ms: the bias moves the operating point; faster glides thump (plan 7.1)
         smoothTube.setCurrentAndTargetValue (smoothTube.getTargetValue());
 
         reset();

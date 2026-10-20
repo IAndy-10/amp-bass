@@ -404,6 +404,43 @@ namespace
         check (std::abs (lvl0 - lvl10 - 3.1) < 0.3, "Tube Gain 0 is +3.1 dB louder than 10 at low level",
                fmt ("%+.2f dB", lvl0 - lvl10));
 
+        // Tube Gain automation (plan 7.1): jumping between 10 and 0 every 8 blocks keeps silence exactly silent,
+        // and with a tone the bias shift adds only a small subsonic bump (mean over one 100 Hz cycle, after the
+        // tone's onset). The 200 ms knob glide keeps it ~17 dB below what a 50 ms glide gave (-31 dB).
+        auto tubeRender = [] (const std::vector<float>& in, auto knobAtBlock)
+        {
+            PowerSection ps;
+            ps.setParams (knobAtBlock (0));     // prepare() starts the knob here, as in the plugin
+            ps.prepare (kSr, kBlock);
+            int block = 0;
+            return render (in, kBlock, [&] (auto& b) { ps.setParams (knobAtBlock (block++)); ps.process (b); });
+        };
+        const auto jumps = [] (int block) { return (block / 8) % 2 == 0 ? 1.0f : 0.0f; };
+        const std::vector<float> silent (static_cast<size_t> (kSr), 0.0f);
+        const auto quietOut = tubeRender (silent, jumps);
+        const double quietPeak = peak (quietOut.getReadPointer (0), 0, quietOut.getNumSamples());
+        check (quietPeak == 0.0, "Tube Gain jumps: silence stays silent", fmt ("peak %.3g", quietPeak));
+
+        auto thumpDb = [&] (auto knobAtBlock)
+        {
+            const auto in = sine (kSr, 100.0, 0.1f, 1.0);
+            const auto out = tubeRender (in, knobAtBlock);
+            const float* y = out.getReadPointer (0);
+            const int n = out.getNumSamples(), period = static_cast<int> (kSr / 100.0), skip = static_cast<int> (0.2 * kSr);
+            double worst = 0.0, sum = 0.0;
+            for (int i = 0; i < n; ++i)
+            {
+                sum += y[i] - (i >= period ? y[i - period] : 0.0f);
+                if (i >= skip) worst = std::max (worst, std::abs (sum) / period);
+            }
+            return toDb (worst / toneAmplitude (y, n / 2, n, kSr, 100.0));
+        };
+        const double thumpJumps = thumpDb (jumps), thumpAt0 = thumpDb ([] (int) { return 0.0f; }),
+                     thumpAt10 = thumpDb ([] (int) { return 1.0f; });
+        check (thumpJumps < -40.0 && thumpAt0 < -60.0 && thumpAt10 < -60.0,
+               "Tube Gain jumps add no low-frequency thump (one-cycle mean of a -20 dBFS 100 Hz tone)",
+               fmt ("jumps %.1f dB, held at 0 %.1f dB, held at 10 %.1f dB", thumpJumps, thumpAt0, thumpAt10));
+
         // Output low-pass (fitted to the reference): flat in the bass, rolls off above ~8 kHz.
         const auto lp = [] (double f) { return stageGainDb<PowerSection> (f, [] (auto&) {}); };
         const double at1k = lp (1000), at10k = lp (10000), at20k = lp (20000);
