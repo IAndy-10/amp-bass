@@ -487,11 +487,21 @@ One parameter per step: DSP + `ParameterIDs.h`/`ParameterLayout.h` + TS mirror +
 uses the per-case reference settings (0.7). No faceplate UI unless the user asks.
 
 - [ ] **9.1** Input gain (±20 dB, linear in dB like the reference).
-- [ ] **9.2** Power Soak (−40 … 0 dB). Its model depends on 0.4. Re-check the `master*` cases.
-- [ ] **9.3** Tight (Off/Pre/Post + frequency). Probe the reference's frequency range and slope first.
+- [x] **9.2** Power Soak (−40 … 0 dB). *(2026-10-20: linear in dB, −40 + 40 × normalised, default 0.9 = −4 dB; a pure
+  output gain (0.4), so `PowerSoak.h` is a 50 ms-smoothed gain after the cabinet. `powersoak_-20_gain7.5` level −0.05 dB.
+  `master*` cases unchanged: they run with Power Soak 0 dB in both plugins.)*
+- [x] **9.3** Tight (Off/Pre/Post + frequency). *(2026-10-20: frequency 30 × 100^normalised Hz (default 0.111 = 50 Hz);
+  Off / Pre / Post at 0 / 0.5 / 1. Measured at 30 Hz–3 kHz (`build-tests/compare/fx/tight.py`): a first-order high-pass
+  at the set frequency (within 2 %) plus makeup gain 2.468 × log10(f / 30) dB (within 0.02 dB); whole curve within
+  0.06–0.65 dB. Pre and Post identical when clean. `Tight.h`, one instance before the amp and one after the power stage.
+  `tight_post_50/300/1500` FR 0.2 dB; `tight_pre_300_gain7.5` / `tight_post_300_gain7.5` FR 1.3 / 1.2 dB, THD 0.97 vs
+  0.72 % / 8.3 vs 7.4 %, nulls −25.6 dB, like the plain drive cases.)*
 - [ ] **9.4** Smooth (Off/Pre/Post + frequency). Same.
 - [ ] **9.5** Noise gate (on/off, Threshold, Range), plus a gate case with a decaying note.
-- [ ] **9.6** `screenshot_preset_fxdefault` (Tight Post 50 Hz, Power Soak −4) passes the Milestone B targets.
+- [x] **9.6** `screenshot_preset_fxdefault` (Tight Post 50 Hz, Power Soak −4) passes the Milestone B targets.
+  *(2026-10-20: level −4.13 → +0.04 dB, FR −4.05 → −0.66 dB, THD 7.00 vs 7.07 %, null −23.7 dB, like `screenshot_preset`.
+  New `factory_defaults` / `factory_screenshot_preset`: both plugins as fresh instances (cabinet, horn, FX Rack, the
+  reference's gate): level −0.01 / +0.29 dB, FR −1.4 / +1.4 dB; about −2 dB at 16 kHz is the reference's Smooth, 9.4.)*
 - Horn and Rec Chain wait for the cabinet phase.
 
 ## Step 10 — Presets
@@ -582,6 +592,7 @@ turn them on through per-case baselines (0.7).
 | 7.1 | 2026-10-19 | Tube Gain glide 50 → 200 ms; parameters set before prepare | unchanged | jump bump −31 → −48 dB rel. tone; silence exact; gate 0 / 0 | yes |
 | 8.1 | 2026-10-19 | output low-pass per rate family | unchanged at 48 kHz | 44.1 / 96 / 192 kHz top end within 0.6 / 1.1 / 1.3 dB of the reference's change (was 1.3 / 6.5 / 7.0); gate 0 / 0 | yes |
 | 11.1–11.2 | 2026-10-20 | Bass × Treble interaction peak (5 × 5 table); mid 2.5 / 7.5 refit at every position | unchanged | 625-point grid: worst 4.74 → 1.29 dB, > 2 dB 75 → 0; `mid0_bass10_treble10` 3.98 → 1.29; gate 0 worse / 2 better | yes |
+| 9.2–9.3 | 2026-10-20 | Tight (first-order high-pass + makeup, Pre/Post) and Power Soak (output gain); defaults Post 50 Hz / −4 dB, `stateVersion` 4 | unchanged (FX off in amp cases) | gate 0 worse / 6 better; `screenshot_preset_fxdefault` level −4.13 → +0.04, FR −4.05 → −0.66; user's bass file at the same settings: level 4.2 → 0.35 dB, sub-bass 4.5 → 1.1 dB | yes |
 | 12 | 2026-10-20 | cabinet stage: Rec Chain 20 + Horn, per-rate biquad fits at 1/24 octave; `cabinet` / `horn` parameters | unchanged (cabinet off in amp cases) | gate 0 / 0; `cab_clean_flat` FR 0.40 dB, `cab_horn_*` 1.2–1.6 dB; DI null with cabinet −4 dB (phase, 12.5) | yes |
 | 11.3 | 2026-10-20 | knob tables every 0.5 / 0.25 (log Hz), interaction 9 × 9 | unchanged | single knobs anywhere ≤ 1.33 dB (were up to 5.0); off-grid combos ≤ 1.37 (were up to 6.0); gate 0 / 0; 5 new cases | yes |
 | 8.2–8.4 | 2026-10-19 | `behaviour.py` + host `--set-at`; Bypass/Mute fades 10 → 50 ms, bit-exact bypass | unchanged | block sizes bit-exact; stereo dual mono like the reference; fades 40 vs 43 ms; gate 0 / 0 | yes |
