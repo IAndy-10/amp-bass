@@ -524,10 +524,31 @@ Treble network and an LC (800 mH) mid, not the active, independent controls assu
   ≤ 1.33 dB (Mid ≤ 0.5), off-grid combinations ≤ 1.37 dB (were 2.2–6.0). New cases `treble_1.25`, `treble_8.75`,
   `bass_8.75`, `mid_1.25_f1`, `bass8.75_treble8.75`: 0.2–1.2 dB.
 
-## Later — Cabinet
+## Step 12 — Cabinet (2026-10-20)
 
-User will compare with the cabinet next. Only the Rec Chains used by the 4 presets (+ Horn) need modelling.
-Use per-case reference settings (0.7) instead of the global baseline.
+The colleague's listening test ("medioso", missing the Ampeg treble) was mostly the reference's default cabinet: AmpBass
+had none (D9). The user chose the cabinet next. Only the reference's default Rec Chain is modelled for now; the presets'
+chains wait for 10.1. Amp-only cases keep both cabinets off (`plugins.json` sets AmpBass `Cabinet` 0); the `cab_*` cases
+turn them on through per-case baselines (0.7).
+
+- [x] **12.1 Is it a fixed filter?** Cabinet effect (Rec Chain 20 minus `27 EMPTY PLAY REAL CAB`) under clean / driven /
+  Tube Gain 0 / Master 10 / two sweep levels: same within 0.3 dB (`build-tests/compare/cab/linearity.py`). Horn the same.
+  So a linear EQ is enough. Its IR peak sits 73 samples (1.5 ms) later than the bypass (85 with the horn).
+- [x] **12.2 Sample rate.** Above ~5 kHz the reference's cabinet depends on the rate, like its amp top end (8.1): at
+  16 kHz −25 dB at 44.1 / 48 kHz but −11 dB at 96 kHz (`rates.py`). One fit per rate family, as in 8.1.
+- [x] **12.3 Fit.** Biquad cascade per rate (high-pass + low-pass + greedy peaks, joint refit, `fitcab.py`). The first
+  fit, on the 1/6-octave FR, looked good point by point (≤ 1.2 dB) but scored 2.3–3.4 dB in the harness: its narrow peaks
+  are not what 1/6-octave averaging sees. The 1/24-octave data (`rates_fine.py`) shows why: narrow dips from the
+  two-microphone mix (−8 dB at 2.4 kHz; −14 dB at 4 kHz with the horn). Refit at 1/24 octave with 24 (cabinet) + 16
+  (horn) filters, Q ≤ 12: after 1/6-octave averaging ≤ 0.37 dB (cabinet) and ≤ 1.12 dB (horn) to 12 kHz at all three
+  rates (`smooth6.py`). Tables generated into `Source/DSP/Cabinet.h` (`gen_cabinet.py`).
+- [x] **12.4 Plugin.** Stage 8 after the power stage; parameters `cabinet` and `horn` (new IDs, appended, both on by
+  default like the reference; `stateVersion` 3 loads older sessions with the cabinet off); 50 ms linear crossfades;
+  off is bit-exact. No faceplate control yet (BACKLOG).
+- [ ] **12.5 Phase (open).** DI nulls with the cabinet on are −4 dB: the fit is minimum phase, the reference's
+  cabinet is a measured response with a microphone delay. Spectrum matches; only worth doing if listening says so.
+- [ ] **12.6 Listening (user).** Level-matched A/B of `cab_horn_screenshot_preset` / `cab_horn_defaults` DI renders,
+  and the colleague's check in a DAW with both plugins at their defaults.
 
 ---
 
@@ -561,5 +582,6 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 7.1 | 2026-10-19 | Tube Gain glide 50 → 200 ms; parameters set before prepare | unchanged | jump bump −31 → −48 dB rel. tone; silence exact; gate 0 / 0 | yes |
 | 8.1 | 2026-10-19 | output low-pass per rate family | unchanged at 48 kHz | 44.1 / 96 / 192 kHz top end within 0.6 / 1.1 / 1.3 dB of the reference's change (was 1.3 / 6.5 / 7.0); gate 0 / 0 | yes |
 | 11.1–11.2 | 2026-10-20 | Bass × Treble interaction peak (5 × 5 table); mid 2.5 / 7.5 refit at every position | unchanged | 625-point grid: worst 4.74 → 1.29 dB, > 2 dB 75 → 0; `mid0_bass10_treble10` 3.98 → 1.29; gate 0 worse / 2 better | yes |
+| 12 | 2026-10-20 | cabinet stage: Rec Chain 20 + Horn, per-rate biquad fits at 1/24 octave; `cabinet` / `horn` parameters | unchanged (cabinet off in amp cases) | gate 0 / 0; `cab_clean_flat` FR 0.40 dB, `cab_horn_*` 1.2–1.6 dB; DI null with cabinet −4 dB (phase, 12.5) | yes |
 | 11.3 | 2026-10-20 | knob tables every 0.5 / 0.25 (log Hz), interaction 9 × 9 | unchanged | single knobs anywhere ≤ 1.33 dB (were up to 5.0); off-grid combos ≤ 1.37 (were up to 6.0); gate 0 / 0; 5 new cases | yes |
 | 8.2–8.4 | 2026-10-19 | `behaviour.py` + host `--set-at`; Bypass/Mute fades 10 → 50 ms, bit-exact bypass | unchanged | block sizes bit-exact; stereo dual mono like the reference; fades 40 vs 43 ms; gate 0 / 0 | yes |
