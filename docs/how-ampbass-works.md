@@ -91,11 +91,11 @@ biquads in series for the knobs, and one for how Bass and Treble interact:
 
 | Control | Filter | Range |
 |---|---|---|
-| Bass | Low shelf, shape per knob position (77–152 Hz, Q 0.42–0.69) | −16.3 … +14.1 dB (fitted to the reference) |
-| Midrange | Peak per selector × knob position (Q 0.07–0.9) | −18 … −20 / +11 … +13 dB (fitted to the reference) |
+| Bass | Low shelf, shape per knob position, every 0.5 (77–152 Hz, Q 0.42–0.69) | −16.2 … +14.1 dB (fitted to the reference) |
+| Midrange | Peak per selector × knob position, every 0.5 (Q 0.11–1.0) | −18 … −20 / +11 … +13 dB (fitted to the reference) |
 | Mid Frequency | 249 / 543 / 895 / 1773 / 2884 Hz (measured; manual says 220 / 450 / 800 / 1.6k / 3k) | 5 steps, glides on a log scale |
-| Treble | High shelf per knob position (282–2929 Hz) + peak at 19 kHz, Q 1.2 | −30 … +16.5 dB shelf (fitted to the reference) |
-| Bass × Treble | Peak per [bass][treble] knob position (209–548 Hz) | −3.8 … +1.6 dB |
+| Treble | High shelf per knob position, every 0.25 (273–2913 Hz) + peak at 19 kHz, Q 1.2 | −30 … +16.5 dB shelf (fitted to the reference) |
+| Bass × Treble | Peak per [bass][treble] knob position, every 1.25 (200–550 Hz) | −3.8 … +1.6 dB |
 
 All knobs centred = the knobs are flat (only the voicing remains). The amp's tone
 stack is **passive** (schematic 07S534): Bass and Treble are 1 MΩ pots in one
@@ -106,9 +106,10 @@ Bass 10 + Treble 10 scoops 3.8 dB deeper at 464 Hz, Bass 0 + Treble 10 leaves 1.
 more. Mid (an 800 mH inductor resonance) doesn't interact. The interaction filter adds
 exactly that, so the stack is independent filters plus one correction.
 
-Between the measured knob positions (0 / 2.5 / 5 / 7.5 / 10) values are interpolated
-linearly, but the reference's tapers are curved: off-grid settings are off by up to
-5 dB (Treble 1.25, −5 dB at 8 kHz). See the plan, step 11.3.
+The reference's knob tapers are curved (Treble changes fastest near 0 and 10), so
+every knob is measured in 0.25 steps and tabulated densely; frequencies are
+interpolated on a log scale. Any setting matches the reference within about 1.4 dB
+(plan step 11).
 
 ### Stage 5 — GraphicEQ · `Source/DSP/GraphicEQ.h`
 Nine peaking biquads fitted to the reference plugin, centred at 33, 79, 141, 306,
@@ -244,7 +245,6 @@ Known gaps (accepted at Milestone B, see the plan):
 - **No cabinet** (decision D9) and **no Power Soak** (plan 9.2). Compare with the
   reference's cabinet bypassed.
 - At 88.2 kHz and up, about 1 dB of top-end difference that depends on the tone settings.
-- **Tone knobs between their measured positions** (see Stage 4): up to 5 dB off.
 
 ---
 
