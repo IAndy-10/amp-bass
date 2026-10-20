@@ -52,4 +52,9 @@ namespace ParameterIDs
     // Stage 8 — Cabinet (after the power stage, like the reference's Rec Chain)
     static constexpr const char* cabinet       = "cabinet";
     static constexpr const char* horn          = "horn";
+
+    // FX Rack — Tight (Off / Pre / Post the amp) and Power Soak (output attenuation)
+    static constexpr const char* tight         = "tight";
+    static constexpr const char* tightFreq     = "tightFreq";
+    static constexpr const char* powerSoak     = "powerSoak";
 }

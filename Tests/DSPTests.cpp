@@ -18,6 +18,8 @@
 #include "MasterVolume.h"
 #include "PowerSection.h"
 #include "Cabinet.h"
+#include "Tight.h"
+#include "PowerSoak.h"
 #include "OutputSwitch.h"
 #include "Primitives/DryWetMixer.h"
 
@@ -82,12 +84,15 @@ namespace
         float master = 0.5f;
         float dryWet = 1.0f;
         bool  cabinet = false, horn = true;   // the plugin defaults to the cabinet on; the amp tests measure without it
+        int   tight = 0;                      // 0 Off, 1 Pre, 2 Post (the plugin defaults to Post 50 Hz)
+        float tightHz = 50.0f, powerSoakDb = 0.0f;   // the plugin defaults to -4 dB
     };
 
     struct Chain
     {
         InputGain inputGain; PreFilters preFilters; TubePreamp tubePreamp; ToneStack toneStack;
         GraphicEQ graphicEQ; MasterVolume masterVolume; PowerSection powerSection; Cabinet cabinet; DryWetMixer dryWet;
+        Tight tightPre, tightPost; PowerSoak powerSoak;
 
         int preparedBlock = kBlock;
 
@@ -97,6 +102,7 @@ namespace
             inputGain.prepare (sr, block);  preFilters.prepare (sr, block); tubePreamp.prepare (sr, block);
             toneStack.prepare (sr, block);  graphicEQ.prepare (sr, block);  masterVolume.prepare (sr, block);
             powerSection.prepare (sr, block); cabinet.prepare (sr, block); dryWet.prepare (2, block);
+            tightPre.prepare (sr, block); tightPost.prepare (sr, block); powerSoak.prepare (sr, block);
         }
 
         void process (juce::AudioBuffer<float>& b, const Params& p)
@@ -109,6 +115,9 @@ namespace
             masterVolume.setParams (p.master);
             powerSection.setParams (p.tubeGain);
             cabinet.setParams (p.cabinet, p.horn);
+            tightPre.setParams (p.tight == 1, p.tightHz);
+            tightPost.setParams (p.tight == 2, p.tightHz);
+            powerSoak.setParams (p.powerSoakDb);
             dryWet.setMix (p.dryWet);
 
             // Sub-block chunking, as in the processor
@@ -117,8 +126,8 @@ namespace
                 const int n = std::min (preparedBlock, b.getNumSamples() - start);
                 juce::AudioBuffer<float> sub (b.getArrayOfWritePointers(), b.getNumChannels(), start, n);
                 dryWet.saveDry (sub);
-                inputGain.process (sub); preFilters.process (sub); tubePreamp.process (sub); toneStack.process (sub);
-                graphicEQ.process (sub); masterVolume.process (sub); powerSection.process (sub); cabinet.process (sub);
+                inputGain.process (sub); tightPre.process (sub); preFilters.process (sub); tubePreamp.process (sub); toneStack.process (sub);
+                graphicEQ.process (sub); masterVolume.process (sub); powerSection.process (sub); tightPost.process (sub); cabinet.process (sub); powerSoak.process (sub);
                 dryWet.mixToOutput (sub);
             }
         }
@@ -495,6 +504,39 @@ namespace
         }
     }
 
+    void testFxRack()
+    {
+        section ("FX Rack — Tight, Power Soak");
+
+        // Reference Tight at 300 Hz (Tight on minus off): high-pass + makeup gain
+        const auto tight = [] (double f, float hz)
+        {
+            return stageGainDb<Tight> (f, [&] (auto& t) { t.setParams (true, hz); t.prepare (kSr, kBlock); });
+        };
+        struct Point { double hz, db; };
+        const Point points[] = { { 50, -13.2 }, { 100, -7.5 }, { 200, -2.6 }, { 500, 1.2 }, { 4000, 2.5 } };
+        double worst = 0.0;
+        for (const auto& p : points)
+            worst = std::max (worst, std::abs (tight (p.hz, 300.0f) - p.db));
+        check (worst < 0.7, "Tight 300 Hz follows the reference (50 Hz-4 kHz)", fmt ("worst %.2f dB", worst));
+        const double top30 = tight (4000, 30.0f), top3k = tight (16000, 3000.0f);
+        check (std::abs (top30) < 0.1 && std::abs (top3k - 4.9) < 0.3, "Tight makeup gain: 0 dB at 30 Hz, +4.9 dB at 3 kHz",
+               fmt ("%.2f / %.2f dB", top30, top3k));
+
+        // Off and Power Soak 0 dB pass the signal through untouched
+        const auto in = sine (kSr, 80.0, 0.3f, 0.2);
+        Tight t;  t.setParams (false, 300.0f);  t.prepare (kSr, kBlock);
+        PowerSoak ps;  ps.setParams (0.0f);  ps.prepare (kSr, kBlock);
+        const auto out = render (in, kBlock, [&] (auto& b) { t.process (b); ps.process (b); });
+        bool exact = true;
+        for (int i = 0; i < out.getNumSamples(); ++i)
+            exact = exact && out.getSample (0, i) == in[static_cast<size_t> (i)];
+        check (exact, "Tight off and Power Soak 0 dB are bit-exact", exact ? "identical" : "differs");
+
+        const double soak = stageGainDb<PowerSoak> (1000, [] (auto& p) { p.setParams (-4.0f); });
+        check (std::abs (soak + 4.0) < 0.01, "Power Soak -4 dB is a -4 dB gain", fmt ("%.3f dB", soak));
+    }
+
     void testOutputSwitch()
     {
         section ("Output — bypass / mute");
@@ -804,6 +846,17 @@ namespace
         check (midFreq->getText (midFreq->getDefaultValue(), 8) == "1", "Mid Frequency defaults to 1 like the reference",
                midFreq->getText (midFreq->getDefaultValue(), 8).toStdString());
 
+        // FX Rack: same normalised values as the reference (Tight Post 50 Hz and Power Soak -4 dB by default)
+        auto* tf = probe.apvts.getParameter (ParameterIDs::tightFreq);
+        auto* soak = probe.apvts.getParameter (ParameterIDs::powerSoak);
+        auto* tightMode = probe.apvts.getParameter (ParameterIDs::tight);
+        const float f0 = tf->convertFrom0to1 (0.0f), fHalf = tf->convertFrom0to1 (0.5f), f1 = tf->convertFrom0to1 (1.0f);
+        check (std::abs (f0 - 30.0f) < 0.01f && std::abs (fHalf - 300.0f) < 0.1f && std::abs (f1 - 3000.0f) < 1.0f
+                   && std::abs (tf->getDefaultValue() - 0.111f) < 0.002f && std::abs (soak->getDefaultValue() - 0.9f) < 1e-5f
+                   && tightMode->getText (tightMode->getDefaultValue(), 8) == "Post",
+               "Tight 30 / 300 / 3000 Hz at 0 / 0.5 / 1, defaults Post 50 Hz and Power Soak -4 dB like the reference",
+               fmt ("%.1f / %.1f / %.1f Hz", f0, fHalf, f1));
+
         auto* band = probe.apvts.getParameter (ParameterIDs::geq300);
         check (band->getText (band->getValueForText ("-4.5"), 16) == "-4.5", "GEQ bands show and accept dB",
                band->getText (band->getValueForText ("-4.5"), 16).toStdString());
@@ -821,6 +874,7 @@ int main()
     testMasterVolume();
     testPowerSection();
     testCabinet();
+    testFxRack();
     testOutputSwitch();
     testChainSensitivity();
     testDefaultsAndSafety();

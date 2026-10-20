@@ -17,7 +17,9 @@ export type SliderParamId =
     | 'geq5k'
     | 'geq8k'
     | 'geqLevel'
-    | 'dryWet';
+    | 'dryWet'
+    | 'tightFreq'
+    | 'powerSoak';
 
 export type ToggleParamId =
     | 'inputPad'
@@ -33,6 +35,7 @@ export type ToggleParamId =
 
 export type ComboParamId =
     | 'midFreq'
-    | 'presetSelect';
+    | 'presetSelect'
+    | 'tight';
 
 export type ParameterId = SliderParamId | ToggleParamId | ComboParamId;

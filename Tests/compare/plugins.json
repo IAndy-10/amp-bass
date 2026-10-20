@@ -13,7 +13,9 @@
     "baseline": {
       "Input Select": 1.0,
       "Dry/Wet": 1.0,
-      "Cabinet": 0.0
+      "Cabinet": 0.0,
+      "Tight": 0.0,
+      "Power Soak": 1.0
     },
     "map": {
       "gain":     {"param": "Gain",          "as": "knob10"},

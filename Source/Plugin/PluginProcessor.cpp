@@ -46,6 +46,9 @@ AmpBassAudioProcessor::AmpBassAudioProcessor()
     paramMute      = apvts.getRawParameterValue (ParameterIDs::mute);
     paramCabinet   = apvts.getRawParameterValue (ParameterIDs::cabinet);
     paramHorn      = apvts.getRawParameterValue (ParameterIDs::horn);
+    paramTight     = apvts.getRawParameterValue (ParameterIDs::tight);
+    paramTightFreq = apvts.getRawParameterValue (ParameterIDs::tightFreq);
+    paramPowerSoak = apvts.getRawParameterValue (ParameterIDs::powerSoak);
 }
 
 AmpBassAudioProcessor::~AmpBassAudioProcessor() {}
@@ -85,13 +88,16 @@ void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     updateDSPParameters();
 
     inputGain.prepare (sampleRate, samplesPerBlock);
+    tightPre.prepare (sampleRate, samplesPerBlock);
     preFilters.prepare (sampleRate, samplesPerBlock);
     tubePreamp.prepare (sampleRate, samplesPerBlock);
     toneStack.prepare (sampleRate, samplesPerBlock);
     graphicEQ.prepare (sampleRate, samplesPerBlock);
     masterVolume.prepare (sampleRate, samplesPerBlock);
     powerSection.prepare (sampleRate, samplesPerBlock);
+    tightPost.prepare (sampleRate, samplesPerBlock);
     cabinet.prepare (sampleRate, samplesPerBlock);
+    powerSoak.prepare (sampleRate, samplesPerBlock);
     dryWetMixer.prepare (2, samplesPerBlock);
     outputSwitch.prepare (sampleRate, samplesPerBlock);
 
@@ -106,7 +112,10 @@ void AmpBassAudioProcessor::releaseResources() {
     graphicEQ.reset();
     masterVolume.reset();
     powerSection.reset();
+    tightPre.reset();
+    tightPost.reset();
     cabinet.reset();
+    powerSoak.reset();
     outputSwitch.reset();
 }
 
@@ -152,6 +161,12 @@ void AmpBassAudioProcessor::updateDSPParameters() {
     // Stage 8: Cabinet
     cabinet.setParams (paramCabinet->load() >= 0.5f, paramHorn->load() >= 0.5f);
 
+    // FX Rack: Tight (0 = Off, 1 = Pre, 2 = Post) and Power Soak
+    const int tightMode = static_cast<int> (paramTight->load() + 0.5f);
+    tightPre.setParams (tightMode == 1, paramTightFreq->load());
+    tightPost.setParams (tightMode == 2, paramTightFreq->load());
+    powerSoak.setParams (paramPowerSoak->load());
+
     // Global dry/wet
     dryWetMixer.setMix (paramDryWet->load());
 
@@ -188,6 +203,7 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
         // ── Signal chain (8 stages) ──
         inputGain.process (sub);      // Stage 1
+        tightPre.process (sub);       // FX Rack Tight, Pre
         preFilters.process (sub);     // Stage 2
         tubePreamp.process (sub);     // Stage 3
         toneStack.process (sub);      // Stage 4
@@ -206,7 +222,9 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
         masterVolume.process (sub);   // Stage 6
         powerSection.process (sub);   // Stage 7
+        tightPost.process (sub);      // FX Rack Tight, Post
         cabinet.process (sub);        // Stage 8
+        powerSoak.process (sub);      // FX Rack Power Soak
 
         // ── Blend dry/wet (equal-power crossfade) ──
         dryWetMixer.mixToOutput (sub);
@@ -225,8 +243,8 @@ juce::AudioProcessorEditor* AmpBassAudioProcessor::createEditor() {
 // Saved-state format. Bump it when a parameter's range or meaning changes, and convert older
 // states in setStateInformation so existing sessions keep sounding the same.
 // 1 = no version attribute (before the reference-matched ranges), 2 = reference-matched ranges,
-// 3 = cabinet added.
-static constexpr int kStateVersion = 3;
+// 3 = cabinet added, 4 = Tight and Power Soak added.
+static constexpr int kStateVersion = 4;
 static const juce::Identifier kStateVersionId { "stateVersion" };
 
 void AmpBassAudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
@@ -244,17 +262,23 @@ void AmpBassAudioProcessor::setStateInformation(const void* data, int sizeInByte
     auto state = juce::ValueTree::fromXml(*xmlState);
     const int version = state.getProperty(kStateVersionId, 1);
     // Version 1 states came from unreleased builds only; they load as-is (the user re-saves them).
-    // Sessions from before the cabinet existed keep sounding the same: the cabinet loads off.
-    if (version < 3)
-    {
-        auto cab = state.getChildWithProperty("id", ParameterIDs::cabinet);
-        if (! cab.isValid())
+    // Sessions from before a stage existed keep sounding the same: the stage loads off / neutral.
+    auto setValue = [&state](const char* id, float value) {
+        auto p = state.getChildWithProperty("id", id);
+        if (! p.isValid())
         {
-            cab = juce::ValueTree("PARAM");
-            cab.setProperty("id", ParameterIDs::cabinet, nullptr);
-            state.appendChild(cab, nullptr);
+            p = juce::ValueTree("PARAM");
+            p.setProperty("id", id, nullptr);
+            state.appendChild(p, nullptr);
         }
-        cab.setProperty("value", 0.0f, nullptr);
+        p.setProperty("value", value, nullptr);
+    };
+    if (version < 3)
+        setValue(ParameterIDs::cabinet, 0.0f);
+    if (version < 4)
+    {
+        setValue(ParameterIDs::tight, 0.0f);       // Off
+        setValue(ParameterIDs::powerSoak, 0.0f);   // 0 dB
     }
     apvts.replaceState(state);
 }

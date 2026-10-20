@@ -41,6 +41,11 @@ void NativeBridge::connectToAPVTS (juce::AudioProcessorValueTreeState& apvts)
     // --- Int selector attachments (slider relays: combo relays need AudioParameterChoice) ---
     midFreqAttach      = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::midFreq),      midFreqRelay);
     presetSelectAttach = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::presetSelect), presetSelectRelay);
+    tightAttach        = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::tight),        tightRelay);
+
+    // --- FX Rack ---
+    tightFreqAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::tightFreq),    tightFreqRelay);
+    powerSoakAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::powerSoak),    powerSoakRelay);
 }
 
 juce::WebBrowserComponent::Options NativeBridge::buildOptions (
@@ -81,7 +86,11 @@ juce::WebBrowserComponent::Options NativeBridge::buildOptions (
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (hornRelay))
         // Int selector relays (slider-backed)
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (midFreqRelay))
-        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (presetSelectRelay));
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (presetSelectRelay))
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (tightRelay))
+        // FX Rack sliders
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (tightFreqRelay))
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (powerSoakRelay));
 
     return options;
 }

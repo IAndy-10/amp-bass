@@ -9,7 +9,7 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 - [ ] **P1** New faceplate fills the plugin window; resizing keeps the 2562:558 aspect.
 - [ ] **P1** Knobs, GEQ sliders, toggles and FREQUENCY change the sound; DAW automation and session recall move them.
 - [ ] **P1** Undo: one wheel step / click is undoable; one whole drag is one undo step.
-- [ ] **P1** Session save/load keeps every value and writes `stateVersion` 2; a session saved before 2026-10-19 loads (re-save it). Double-click resets Gain to 3.4 and FREQUENCY to 1; EQ LEVEL shows 0.0 dB at the slider's centre.
+- [ ] **P1** Session save/load keeps every value and writes `stateVersion` 4; a session saved before 2026-10-19 loads (re-save it). Double-click resets Gain to 3.4 and FREQUENCY to 1; EQ LEVEL shows 0.0 dB at the slider's centre.
 - [ ] **P1** POWER rocker and toolbar icon switch together and pass the dry signal; MUTE silences. Both fade over ~50 ms (like the reference) — no click.
 - [ ] **P2** PEAK LED lights on hard playing with high GAIN/BASS, holds ~300 ms, stays off while bypassed.
 - [ ] **P2** Layout within 4 ref px of spec §2.4 at 1280, 1600 and 1800 px wide (spec §13).
@@ -47,8 +47,8 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 
 ## Later (decided, not started)
 - [ ] Presets A–D with Copy/Paste/Reset, persisted in plugin state.
-- [ ] Power Soak as an output trim (sound-matching plan 9.2).
 - [ ] Cabinet: more Rec Chains (the presets' ones, sound-matching plan 10.1) and/or a user-loaded IR. Today: the
   reference's default Rec Chain 20 + Horn only (plan step 12).
-- [ ] UI: Cabinet and Horn switches (parameters `cabinet` / `horn` and their relays exist; no faceplate control yet).
-- [ ] Missing reference controls: Input Gain (dB), Tight/Smooth filters (pre/post), Noise Gate.
+- [ ] UI: FX Rack panel with Cabinet, Horn, Tight (Off/Pre/Post + frequency) and Power Soak (parameters and relays
+  exist; no faceplate control yet).
+- [ ] Missing reference controls: Input Gain (dB), Smooth filter (pre/post), Noise Gate (sound-matching plan 9.1, 9.4, 9.5).

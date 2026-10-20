@@ -9,6 +9,8 @@
 #include "../DSP/MasterVolume.h" 
 #include "../DSP/PowerSection.h"
 #include "../DSP/Cabinet.h"
+#include "../DSP/Tight.h"
+#include "../DSP/PowerSoak.h"
 #include "../DSP/OutputSwitch.h"
 #include "../DSP/Primitives/DryWetMixer.h"
 
@@ -59,6 +61,8 @@ private:
     MasterVolume  masterVolume;
     PowerSection  powerSection;
     Cabinet       cabinet;
+    Tight         tightPre, tightPost;   // FX Rack Tight, before the amp / after the power stage
+    PowerSoak     powerSoak;
     DryWetMixer   dryWetMixer;
     OutputSwitch  outputSwitch;
 
@@ -98,6 +102,9 @@ private:
     std::atomic<float>* paramMute       = nullptr;
     std::atomic<float>* paramCabinet    = nullptr;
     std::atomic<float>* paramHorn       = nullptr;
+    std::atomic<float>* paramTight      = nullptr;
+    std::atomic<float>* paramTightFreq  = nullptr;
+    std::atomic<float>* paramPowerSoak  = nullptr;
 
     void updateDSPParameters();
 

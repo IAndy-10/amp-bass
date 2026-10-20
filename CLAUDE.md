@@ -36,8 +36,9 @@ No C++ linter is configured.
 ### Signal chain (`PluginProcessor::processBlock`)
 
 ```
-Input → InputGain → PreFilters → TubePreamp → ToneStack → GraphicEQ → [PEAK check]
-      → MasterVolume → PowerSection → Cabinet → Dry/Wet → OutputSwitch (bypass, mute) → Output
+Input → InputGain → [Tight Pre] → PreFilters → TubePreamp → ToneStack → GraphicEQ → [PEAK check]
+      → MasterVolume → PowerSection → [Tight Post] → Cabinet → PowerSoak → Dry/Wet → OutputSwitch (bypass, mute)
+      → Output
 ```
 
 Each stage is a **header-only** class in `Source/DSP/` with `prepare (sampleRate, blockSize)`,
@@ -58,10 +59,10 @@ size given to `prepareToPlay`. `docs/how-ampbass-works.md` explains every stage 
 
 ### Parameters
 
-- 29 parameters in `Source/Parameters/ParameterIDs.h` (**frozen IDs** — changing one breaks saved sessions)
+- 32 parameters in `Source/Parameters/ParameterIDs.h` (**frozen IDs** — changing one breaks saved sessions)
   and `ParameterLayout.h`; TypeScript mirror in `WebUI/src/types/parameters.ts`.
-- `geq8k` is labelled 9k on the faceplate. `inputHiLo`, `dryWet`, `presetSelect`, `cabinet` and `horn` exist but
-  aren't on the faceplate. `bypass` is also the host's bypass parameter.
+- `geq8k` is labelled 9k on the faceplate. `inputHiLo`, `dryWet`, `presetSelect`, `cabinet`, `horn`, `tight`,
+  `tightFreq` and `powerSoak` exist but aren't on the faceplate. `bypass` is also the host's bypass parameter.
 - Every float parameter is smoothed on the audio thread with `juce::SmoothedValue` (10 ms minimum).
 - Scales, display text and defaults match the reference plugin (same 0–1 value = same setting): knobs show 0.0–10.0,
   GEQ Level is piecewise (0 dB at the centre, mirrored in `WebUI/src/lib/stores/amp.ts`), defaults Gain 3.4 / Mid Freq 1.

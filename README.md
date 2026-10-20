@@ -19,13 +19,16 @@ all fitted to measurements of the reference.
 
 ```
 Input → InputGain (−15 dB pad)
+      → Tight, Pre (FX Rack high-pass, when set to Pre)
       → PreFilters (Bright, Hi, Lo)
       → TubePreamp (linear: 25 Hz high-pass + Gain level)
       → ToneStack (Bass, Midrange + 5-position Frequency, Treble)
       → GraphicEQ (9 bands 33 Hz–9k, ±12 dB, Level −10…+8 dB, switchable)
       → MasterVolume
       → PowerSection (Tube Gain stage + soft power-amp curve, output low-pass)
+      → Tight, Post (when set to Post: the default, 50 Hz)
       → Cabinet (4x10 + horn, fitted to the reference's default Rec Chain; switchable)
+      → Power Soak (output attenuation, −4 dB by default)
       → Dry/Wet → Bypass / Mute
 ```
 
@@ -89,7 +92,7 @@ amp-bass/
 
 ## Parameters
 
-29 parameters. IDs are frozen — changing one breaks saved sessions.
+32 parameters. IDs are frozen — changing one breaks saved sessions.
 
 | Group | Parameters |
 |---|---|
@@ -100,6 +103,7 @@ amp-bass/
 | Graphic EQ | On, 9 bands (ID `geq8k` = 9k band), Level |
 | Output | Master Volume, Dry/Wet (not on faceplate), Bypass, Mute |
 | Cabinet | Cabinet, Horn (both on by default; not on the faceplate yet) |
+| FX Rack | Tight (Off/Pre/Post, default Post), Tight Frequency (30 Hz–3 kHz, default 50 Hz), Power Soak (−40…0 dB, default −4); not on the faceplate yet |
 | Later | Preset (no function yet) |
 
 ## License

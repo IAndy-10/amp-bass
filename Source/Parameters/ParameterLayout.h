@@ -31,6 +31,23 @@ namespace ParameterText
                  [] (float, float, float x) { return x < 0.5f ? -10.0f + 20.0f * x : 16.0f * (x - 0.5f); },
                  [] (float, float, float v) { return v < 0.0f ? (v + 10.0f) / 20.0f : 0.5f + v / 16.0f; } };
     }
+
+    /// Tight frequency like the reference: 30 Hz at 0 to 3 kHz at 1 on a log scale (300 Hz at the centre).
+    inline juce::NormalisableRange<float> tightFrequencyRange()
+    {
+        return { 30.0f, 3000.0f,
+                 [] (float, float, float x) { return 30.0f * std::pow (100.0f, x); },
+                 [] (float, float, float v) { return std::log (v / 30.0f) / std::log (100.0f); } };
+    }
+
+    /// Hz attributes: one decimal, typed as a plain number.
+    inline juce::AudioParameterFloatAttributes hertz()
+    {
+        return juce::AudioParameterFloatAttributes()
+            .withLabel ("Hz")
+            .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 1); })
+            .withValueFromStringFunction ([] (const juce::String& t) { return t.getFloatValue(); });
+    }
 }
 
 inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
@@ -209,6 +226,24 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     params.push_back (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { ParameterIDs::horn, 1 },
         "Horn", true));
+
+    // --- FX Rack: Tight and Power Soak (defaults like the reference: Tight Post 50 Hz, Power Soak -4 dB) ---
+
+    params.push_back (std::make_unique<juce::AudioParameterChoice> (
+        juce::ParameterID { ParameterIDs::tight, 1 },
+        "Tight", juce::StringArray { "Off", "Pre", "Post" }, 2));
+
+    params.push_back (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { ParameterIDs::tightFreq, 1 },
+        "Tight Frequency",
+        ParameterText::tightFrequencyRange(),
+        50.0f, ParameterText::hertz()));
+
+    params.push_back (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { ParameterIDs::powerSoak, 1 },
+        "Power Soak",
+        juce::NormalisableRange<float> (-40.0f, 0.0f, 0.0f, 1.0f),
+        -4.0f, ParameterText::decibels()));
 
     return { params.begin(), params.end() };
 }

@@ -77,6 +77,8 @@ export const sliders = {
     geq8k:     createSliderStore('geq8k'),
     geqLevel:  createSliderStore('geqLevel'),
     dryWet:    createSliderStore('dryWet'),
+    tightFreq: createSliderStore('tightFreq'),
+    powerSoak: createSliderStore('powerSoak'),
 } as const;
 
 export const toggles = {
@@ -99,4 +101,5 @@ export const peak = readable(false, (set) => onPeakChanged(set));
 export const combos = {
     midFreq:       createComboStore('midFreq'),
     presetSelect:  createComboStore('presetSelect'),
+    tight:         createComboStore('tight'),
 } as const;

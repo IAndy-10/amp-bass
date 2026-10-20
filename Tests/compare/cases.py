@@ -8,6 +8,7 @@ Each case lists which signals it is rendered with:
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 DEFAULTS: dict[str, float | bool] = {
@@ -38,6 +39,25 @@ CAB_ON: dict[str, dict[str, float | str]] = {"reference": {"RecChain": 19 / 26, 
                                              "ampbass": {"Cabinet": 1.0, "Horn": 0.0}}
 CAB_HORN: dict[str, dict[str, float | str]] = {"reference": {"RecChain": 19 / 26, "Horn": 1.0},
                                                "ampbass": {"Cabinet": 1.0, "Horn": 1.0}}
+
+# FX Rack (step 9): Tight frequency 30 Hz-3 kHz on a log scale in both plugins; AmpBass FX values for REF_FX_DEFAULTS.
+def tight_norm(hz: float) -> float:
+    return math.log(hz / 30.0) / math.log(100.0)
+
+
+def tight(mode: str, hz: float) -> dict[str, dict[str, float | str]]:
+    t = {"pre": 0.5, "post": 1.0}[mode]
+    return {"reference": {"Tight": t, "TightFrequency": tight_norm(hz)},
+            "ampbass": {"Tight": t, "Tight Frequency": tight_norm(hz)}}
+
+
+AMP_FX_DEFAULTS: dict[str, float | str] = {"Tight": 1.0, "Tight Frequency": 0.111, "Power Soak": 0.9}
+
+# Both plugins as a fresh instance: cabinet, horn, FX Rack and (reference) gate at their defaults.
+FACTORY: dict[str, dict[str, float | str]] = {
+    "reference": {**REF_FX_DEFAULTS, "RecChain": 19 / 26, "Horn": 1.0, "NgByPass": 1.0, "NgThres": 0.267},
+    "ampbass": {**AMP_FX_DEFAULTS, "Cabinet": 1.0, "Horn": 1.0},
+}
 
 GEQ_BANDS = ["geq33", "geq80", "geq150", "geq300", "geq600", "geq900", "geq2k", "geq5k", "geq9k"]
 
@@ -122,13 +142,21 @@ def all_cases() -> list[Case]:
     # screenshots sound like if the FX Rack was untouched. AmpBass has no Tight / Power Soak yet (step 9).
     shot = cases[-1]
     cases.append(Case("screenshot_preset_fxdefault", shot.settings, shot.signals,
-                      {"reference": REF_FX_DEFAULTS}))
+                      {"reference": REF_FX_DEFAULTS, "ampbass": AMP_FX_DEFAULTS}))
     cases += [
         Case("cab_clean_flat", {**DEFAULTS, **CLEAN}, LINEAR_SIGNALS, CAB_ON),
         Case("cab_horn_clean_flat", {**DEFAULTS, **CLEAN}, LINEAR_SIGNALS, CAB_HORN),
         Case("cab_horn_tone_shot", {**DEFAULTS, **CLEAN, "bass": 7, "midrange": 6.75, "treble": 7}, LINEAR_SIGNALS, CAB_HORN),
         Case("cab_horn_defaults", dict(DEFAULTS), DRIVE_SIGNALS, CAB_HORN),
         Case("cab_horn_screenshot_preset", shot.settings, shot.signals, CAB_HORN),
+        # FX Rack (step 9)
+        *[Case(f"tight_post_{hz}", {**DEFAULTS, **CLEAN}, LINEAR_SIGNALS, tight("post", hz)) for hz in (50, 300, 1500)],
+        Case("tight_pre_300_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS, tight("pre", 300)),
+        Case("tight_post_300_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS, tight("post", 300)),
+        Case("powersoak_-20_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS,
+             {"reference": {"PowerSoak": 0.5}, "ampbass": {"Power Soak": 0.5}}),
+        Case("factory_defaults", dict(DEFAULTS), LINEAR_SIGNALS + DRIVE_SIGNALS, FACTORY),
+        Case("factory_screenshot_preset", shot.settings, shot.signals, FACTORY),
     ]
     names = [c.name for c in cases]
     assert len(names) == len(set(names)), "duplicate case names"

@@ -60,6 +60,9 @@ private:
     // --- Int parameter relays (combo box / selector) ---
     juce::WebSliderRelay midFreqRelay        { "midFreq" };
     juce::WebSliderRelay presetSelectRelay   { "presetSelect" };
+    juce::WebSliderRelay tightRelay          { "tight" };
+    juce::WebSliderRelay tightFreqRelay      { "tightFreq" };
+    juce::WebSliderRelay powerSoakRelay      { "powerSoak" };
 
     // --- Parameter attachments (own gesture begin/end) ---
     // Stored as unique_ptrs because they're constructed after APVTS is ready.
@@ -95,6 +98,9 @@ private:
 
     std::unique_ptr<juce::WebSliderParameterAttachment> midFreqAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> presetSelectAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> tightAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> tightFreqAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> powerSoakAttach;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NativeBridge)
 };
