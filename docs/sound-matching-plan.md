@@ -399,14 +399,31 @@ Fitting scratch scripts from this session (`fitpower*.py`, `fittube.py`, targets
   the THD rule.
 - [x] **6.2 Harmonic balance / Tube Gain stage**: even/odd per level. Done in the power stage (attempt 3, see handoff):
   DC-blocked kink for the low-level H2, envelope-driven bias for the high-level H2 and compression.
-- [ ] **6.3 Frequency dependence**: AmpBass is too dirty at 400 Hz at every level. Look at the filtering before and after the shaper.
+- [x] **6.3 Frequency dependence**: AmpBass is too dirty at 400 Hz at every level. Look at the filtering before and after the shaper.
+  *(2026-10-19: solved by 6.4's emphasis. `defaults` / `gain10_tube10` at 400 and 1600 Hz: H3 within 1–3 dB of the
+  reference at every level, output within 0.3 dB up to −8 dBFS. Left: 1–1.5 dB too little compression at 0 dBFS
+  input, the 6.4 ceiling gap.)* Topology re-run (0.8): boosts now shrink with level like the reference's (bass 41 Hz
+  +24.9 → +4.4 vs +25.1 → +1.7 dB, treble 400 Hz +5.4 → +0.6 vs +4.8 → +0.2, GEQ 80 Hz +14.5 → +1.9 vs +14.5 → +1.3)
+  and H3 rises with them. No reorder needed. AmpBass keeps 1.5–3 dB more boost above −16 dBFS (the same ceiling gap).
 - [x] **6.4 Power section = main distortion stage.** (`9b84435`) A linear zone, then a knee at the output level where the reference's
   H3 appears (about −30 dBFS fundamental peak, independent of Master), rising about 1.5–2 dB per dB above it. Check with
   the `clean_master*` cases (0.8) and `probe.py harmonics master=…`, then the ceiling and Master distortion. Target: ramp curve
   ±1 dB, burst levels ±1 dB.
 - [ ] **6.5 Dynamics**: attack/release of the `PowerSection` compressor from the burst envelopes (settle times ±20 %).
-- [ ] **6.6 Aliasing**: add oversampling around the shapers only if AmpBass aliases more than the reference. If added,
+  *(2026-10-19, attempt 1/3.)* Settle times with the 5 Hz envelope: reference 60/90, 90/120, 110/130 ms (quiet/loud,
+  `gain2.5/7.5/10_tube0`) vs AmpBass 50/80, 110/120, 120/120 (one +22 %, 10 ms resolution). Attack (quiet → loud) matches
+  within ±0.6 dB. **Release doesn't:** after loud → quiet the reference chokes: at Gain 7.5 it falls to −50.5 dB within
+  10–20 ms (33 dB under its quiet level) and recovers in ~60 ms; AmpBass only dips to −34 dB and recovers more slowly.
+  Fitting separate attack/release (`step6-fits/fittube4.py`, tones + burst envelopes, C envelope in `envasym.c`) returns
+  to ~5 Hz both ways from every start (score 75.22 vs 75.25): this model can't make the choke at any timing without
+  breaking the static tone fit. Next attempt would need a cutoff-type element (bias driving the stage past cutoff).
+- [x] **6.6 Aliasing**: add oversampling around the shapers only if AmpBass aliases more than the reference. If added,
   report the latency (`setLatencySamples`) and re-check the null alignment.
+  *(2026-10-19: no oversampling needed.)* The −93.8 dB was not aliasing: 3 kHz divides 48 kHz, so a static curve's aliases
+  land on harmonics and this metric can't see them. It was a steady ~−91 dBFS pattern near 14 Hz (period ~3340 samples,
+  plus ±28.8 Hz sidebands on the harmonics), present in every case incl. clean ones: float32 limit cycles in the
+  low-frequency biquads. `Biquad` (and `PowerSection`'s one-poles) now run in double: −125.9 / −126.0 dB vs the
+  reference's −125.0. The metric still can't detect real aliasing; a non-divisor tone (e.g. 2.9 kHz) would.
 - [ ] **6.7** DI null ≤ −20 dB on the exact-setting drive cases, and `screenshot_preset` ≤ −20 dB.
   **Milestone B: sound matches when driven.** (listen)
 
@@ -488,3 +505,5 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 6.2 try 2 | 2026-10-19 | kink + fixed and level-driven bias in the power stage (`fittube2.py`, `fit_per.json`) | — | Tube Gain 0 low-level H2 2.5–4.5 dB low at 41/100 Hz (DSP test FAIL) | no (superseded by try 3) |
 | 6.4 | 2026-10-19 | power stage committed on its own (`9b84435`) | — (old preamp still in) | DSP tests 0 FAIL, 1 WARN (old preamp clipping at default Gain) | yes |
 | 6.1+6.2 | 2026-10-19 | linear preamp + Tube Gain in the power stage: DC-blocked shelf kink, envelope-only bias (`fittube3.py`); one 10 Hz DC blocker at the end | +0.05 / 0.67 / 6.5 vs 6.5 % / −22.9 | 188 better, 3 worse (`screenshot_preset_fxdefault` = Power Soak, 9.2); Tube 10 THD 0.4/2.3/3.5 vs 0.3/1.9/3.1 %; noise −240 dBFS | yes |
+| 6.6 | 2026-10-19 | filters in double precision (float32 limit cycles in the biquads, not aliasing) | unchanged | alias −93.8 → −125.9 dB (ref −125.0); gate 0 / 0 | yes |
+| 6.5 try 1 | 2026-10-19 | separate attack/release for the blocking envelope (`fittube4.py`) | — | fit returns to 5 Hz / 5 Hz; loud → quiet choke still 16 dB too shallow | no (needs a cutoff-type element) |
