@@ -24,8 +24,8 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 - [ ] **P3** In `npm run dev` every control starts at 0 (no backend) — seed dev-mode stores with plugin defaults.
 
 ## DSP
-- [ ] **P2** Start-up thump: preamp bias offset settles through the DC blocker in the first ~0.2 s (≈ −31 dBFS). Start the DC blocker in steady state.
-- [ ] **P3** No oversampling around the preamp — aliasing at high GAIN.
+- [ ] **P3** No oversampling around the power stage — aliasing at high drive (sound-matching plan 6.6 decides).
+- [ ] **P3** DSP test "low E (41 Hz) survives preamp" runs `TubePreamp` at Gain 0, which is silence since step 4.2, so it always reads 0.00 dB and checks nothing. Run it at Gain > 0.
 
 ## Sanity check (2026-10-17)
 

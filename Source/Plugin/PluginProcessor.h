@@ -62,7 +62,7 @@ private:
 
     // PEAK/MUTE LED thresholds (see processBlock)
     static constexpr float kPeakInput     = 0.98f; // raw input near full scale
-    static constexpr float kPeakDrive     = 4.0f;  // preamp drive, tanh(4) = 0.999
+    static constexpr float kPeakDrive     = 1.0f;  // preamp output at full scale (Gain too high)
     static constexpr float kPeakPreMaster = 1.0f;  // after tone stack + GEQ
 
     int preparedBlockSize = 512;   // max sub-block size passed to the DSP stages

@@ -224,7 +224,7 @@ Do these in order. Each one uses a single knob's cases.
   **Done:** the pad already matched (−15.0 dB). Bright and Ultra Hi are broad peaks that ease off at the top, not shelves:
   Bright = peak 2991 Hz Q 0.269 +5.31 dB + high shelf 10.9 kHz +1.17 dB; Ultra Hi = peak 5602 Hz Q 0.369 +5.32 dB + high shelf
   9.0 kHz +2.36 dB. Ultra Lo = one peak 530 Hz Q 0.713 −12.36 dB; the manual's +2 dB at 40 Hz isn't in the reference. All within
-  ±0.3 dB, 0 regressions. **Open:** on the real amp Bright usually depends on Gain (bright cap); only measured at Gain 1.
+  ±0.3 dB, 0 regressions. On the real amp Bright usually depends on Gain (bright cap), but **not in the reference**: its curve is identical within 0.03 dB from Gain 1 to 10 (`step6-fits/bright_gain.py`, 2026-10-19).
   Re-check with drive cases after step 6.
 
 ## Step 3 — Graphic EQ
@@ -290,12 +290,117 @@ manual-verification list (not covered by an automated test).
 
 ## Step 6 — Distortion and dynamics (preamp, then power amp)
 
-- [ ] **6.1 Preamp onset.** The reference's preamp is clean at low and moderate Gain. Remove the low-level `x·|x|` term
-  (asymmetry only above a knee) and change the `TubePreamp` drive map or curve knee only.
-  Target: H2/H3 vs level at 41/100/400 Hz within the THD rule.
-- [ ] **6.2 Harmonic balance**: even/odd per level. Adjust the bias/asymmetry.
+### Handoff: where step 6 stands (2026-10-19)
+
+**6.1, 6.2 and 6.4 are committed** (`9b84435` power stage, then the linear preamp + Tube Gain stage). DSP tests 0 FAIL.
+Gate vs step 5: 188 better, 3 worse, all `screenshot_preset_fxdefault` (the reference's Power Soak −4 dB, which AmpBass
+gets in step 9.2; its old match was AmpBass being 3.8 dB too loud). **Next: action 6 below.** The rest of this section is
+how 6.2 was found, kept for reference.
+
+| File | State |
+|---|---|
+| `Source/DSP/PowerSection.h` | **6.4 done.** Old compressor + soft clip removed. Per channel: emphasis peak 872.07 Hz Q 0.3254 +7.9087 dB → static curve `u/(1+\|u/1.6435\|^1.7781)^(1/1.7781)` → inverse peak → output LP 14602 Hz Q 0.382 |
+| `Source/DSP/TubePreamp.h` | **6.1 done.** Linear: 25 Hz HPF → level `19 × gainKnob` (smoothed). Its 10 Hz DC blocker moved to the end of `PowerSection`, after the nonlinearity (two in series cost 0.5 dB of FR at 20–40 Hz in `bass_10` / `geq33_-12` / `clean_flat`). `setParams (gain)`. The bias and `x·\|x\|` shaper are gone (so step 7's DC source is gone too; re-check 7 after 6.2) |
+| `Source/Plugin/PluginProcessor.h` | `kPeakDrive = 1.0f` (PEAK = preamp output at full scale) |
+| `Tests/DSPTests.cpp` | Preamp clean at Gain 10 + level law (+20 dB 1→10, silent at 0); power-stage H3 (−48 dBc @100 Hz −10 dBFS, −39 @400 Hz −11.5 dBFS, clean at −40); output bound ≤ 2.0 (the reference itself peaks +5.3 dBFS); output LP (−4 dB @10 k, −19.2 @20 k) |
+| `Tests/compare/{signals,cases,analyze}.py` | `tones_1600` added (signal, DRIVE_SIGNALS, harm_err). **Rendered for both plugins already** |
+
+**Result of 6.4 + 6.1 together** (`analyze.py --compare-to summary-prev.json`, where `summary-prev.json` = step 5 state,
+current one saved as `build-tests/compare/step6-fits/summary-6.4-6.1-wip.json`): **173 metrics better, 14 worse**. All 14 worse are
+Tube Gain 0 / 2.5 / `screenshot_preset*` cases, i.e. the missing Tube Gain stage (6.2). Tube Gain 10 cases now match:
+THD at Gain 2.5 / 7.5 / 10 = 0.4 / 2.3 / 3.4 % vs reference 0.3 / 1.9 / 3.1 % (Gain 10 was 15.3 %). DI null −26 dB.
+How 6.4 was fitted: the power-stage knee depends only on the would-be-linear level after Master; fitted on clean-preamp
+(Tube Gain 10) stepped tones at 41 / 100 / 400 / 1600 Hz up to +16 dBFS. A shelf emphasis over-compressed the treble;
+the wide peak fits all four frequencies (H3 ≈ ±1 dB, compression ±0.4 dB to +2 dBFS, 1–3 dB at Gain 10).
+
+**What 6.2 has to model (measured on the reference, Tube Gain stage):**
+- Sits after the tone stack / GEQ (it reacts to them), before or around Master (to confirm, see next actions).
+- Small-signal **level** rises as Tube Gain goes down, flat across frequency: +3.1 / +3.1 / +2.9 / +1.5 / 0 dB at
+  Tube Gain 0 / 2.5 / 5 / 7.5 / 10 (relative to 10). This is part of the stage (4.3 moved here).
+- **H2 at −40 dBFS, Tube Gain 0** (Gain 1, Master 5): −26.5 / −37.5 / −47.9 / −57.3 dBc at 41 / 100 / 400 / 1600 Hz
+  (falls with frequency, ~8 dB/oct 41→100, ~5 dB/oct above). Tube Gain 2.5 ≈ 10 dB less H2; ≥ 5 ≈ none.
+- **At high level, Tube Gain 0 is a strong asymmetric clipper**, not a gentle bias shift: at input 0 dBFS (Gain 1,
+  Master 5) the reference compresses −7 to −8 dB (power stage alone: −2 to −4) and H2 reaches −7 to −11 dBc;
+  at Gain 2.5 / Master 10 compression reaches −29 dB with H2 −1 to −6 dBc, H3 −2 to −15 dBc.
+
+**Attempt 1 (failed, stop rule count 1/3):** envelope bias `y = x + k·(HP1_fh(LP1_fc(|x|)) + β|x|)` → fitted power stage
+→ 10 Hz DC blocker, fitted on the real stepped tones (`build-tests/compare/step6-fits/fittube.py`, log `fittube.log`).
+Best k +3.58 dB, fc 8.0 Hz, fh ≈ 0, β 0.0037, error 308. Low-level H2 is 2–7 dB too high with too shallow a frequency
+slope, and at high level it compresses only about half as much (−3.7 vs −8.2 dB) with H2 10–20 dB too low. **An
+envelope/bias term alone can't produce the high-level behaviour.**
+
+**Location (done, `step6-fits/locate.py`, `locate.log`):** Gain 2.5 / Master 10 and Gain 5 / Master 5 give *identical*
+compression, H2 and H3 at every Tube Gain, so Tube Gain acts **in the power stage** (after Master), not before it.
+Targets for every position: `step6-fits/tube_target2.json` (`gather.py`: Tube Gain 0 / 2.5 / 5 / 7.5 / 10 × Gain/Master
+(1,5) (2.5,5) (2.5,10) (7.5,5) × 41/100/400/1600 Hz). Read off them:
+- Tube Gain 5 / 7.5 / 10 share the power stage's knee exactly; 5 and 7.5 only add high-level H2 (−45…−50 vs −65…−70 dBc).
+- The −1 dB knee moves down 4.2 dB at Tube Gain 2.5 and 9.8 dB at 0, **the same at all four frequencies** (it follows
+  the emphasis, so it's inside the emphasis sandwich).
+- Low-level H2 is **constant with level** (a kink, degree-1: the half-waves get different gain), same frequency shape
+  at 0 and 2.5, 2.5 is ≈10 dB below 0.
+- At Tube Gain 0 the extra compression comes with H2 but **H3 stays at Tube Gain 10's value** for the same level, and at
+  extreme drive the fundamental *falls* as input rises: a level-driven bias shift (blocking), not extra drive.
+
+**Attempt 2 (works, `step6-fits/fittube2.py`):** inside the power stage, per Tube Gain position:
+`v = w + k·(LP1_p(|LP1_q(w)|) + β|w|)` (kink) → `u = emph(v)` → `e = LP1_5Hz(|u|)`, `s = b + κ·max(e − e0, 0)` →
+`c = curve(D·u + s) − curve(s)` → de-emph → LP → DC 10 Hz, divided by `D·curve'(b)` (unity small-signal gain), and the
+level table in front. Tube Gain 0 fit (`fit_t0.json`, score 69.8 vs attempt 1's 308): q 14.9 Hz, p 88.3 Hz, β −34.5 dB,
+k −9.6 dB, D +3.9 dB, b 0.086, κ 2.72. Compression within ~1 dB at high drive, H2/H3 within ~3–5 dB; known gap: the
+compression onset is ~1–1.5 dB early at moderate levels (an envelope threshold `e0` only gained 69.8 → 68.9, so dropped).
+Refit with low-level H2 weighted ×4 (THD rule) → `fit_t0w.json`, then the other positions with the shape fixed
+(`fittube_per.py` → `fit_per.json`). The C++ is written (`PowerSection.h`: `setParams (tubeGainKnob)`, tables per knob
+position; `TubePreamp::setParams (gain)`; processor and test `Chain` rewired; DSP test for Tube Gain 0 H2 and level)
+with provisional constants until `fit_per.json` exists.
+
+**Attempt 3 (kept, `step6-fits/fittube3.py`, all positions in `fit3_all.json`):** the attempt-2 fit missed the Tube Gain 0
+low-level H2 by 2.5–4.5 dB at 41/100 Hz (C++ test −28.6 / −41.5 vs −26.5 / −37.5 dBc). Two causes, fixed separately:
+- *Kink shape.* Its flat `β|w|` path taps a different point than the filtered path, so they interfere; the best this
+  shape can reach is ~5 dB off. New kink: `r = |LP1_q(w)|`, `v = w + k·HP1_10Hz(LP1_p(r) + β·r)` (a low shelf after the
+  rectifier, DC-blocked so it can't act as a bias). At low level its H2 is `k·4/(3π)·|LP_q(f)|·|shelf(2f)|`, fitted
+  in closed form: q 703.4 Hz, p 20 Hz, β 0.02011 (zero at 995 Hz), k −8.71 dB at Tube Gain 0 and −18.60 at 2.5
+  (2.5 is the same shape 9.9 dB lower). Simulated −28.4 / −35.9 / −47.2 / −58.0 vs −26.5 / −37.5 / −47.9 / −57.3 dBc.
+- *Fixed bias.* The reference's H2 is flat at low level, then rises ~1.6–1.8 dB per dB. On this curve a fixed bias gives
+  ~0.8 dB/dB and an envelope-driven bias ~1.8, so the reference's bias is all envelope: `b = 0` at Tube Gain 0 and 2.5.
+Then only D, κ, e0 refitted per position (b fixed 0; 5 and 7.5 only k, now −49.8 dB; 10 kept). Scores vs attempt 2:
+Tube Gain 0 66.4 vs 73.4, 2.5 16.5 vs 23.7, 5 9.96 vs 11.47, 7.5 9.75 vs 11.30, 10 5.57 = same. Rows off the THD rule at
+Tube Gain 0: H2 22 → 19, H3 35 → 34, compression > 1 dB 11 → 8 (max 8.0 → 5.2 dB). Trade-off at 2.5: H3 rows 6 → 0, but
+H2 8 → 11 and compression > 1 dB 8 → 14 (max 3.1 dB, under-compressing at extreme drive).
+Known gaps left: H2 rises 3–5 dB early at 1600 Hz around −24 dBFS; 41 Hz compression 2–5 dB off at extreme drive.
+
+**Next actions for 6.2 (in order):**
+1. *(done: in the power stage, see Location above)* **Locate it vs Master**: render the reference at Tube Gain 0, Gain 2.5, Master 2.5 / 5 / 10 on `tones_100` /
+   `tones_400` (`probe.py harmonics`). If H2 and its onset (input level) don't move with Master → the stage is before
+   Master; if they follow the output level → after.
+2. *(done differently: attempt 2 above)* **Model as an asymmetric saturating curve** driven by Tube Gain: drive and asymmetry rise as Tube Gain goes down
+   (Tube Gain 10 ≈ bypass), placed where step 1 says (a new header-only stage, e.g. `Source/DSP/TubeStage.h`, between
+   GraphicEQ and MasterVolume if before Master), with the level table above, a DC blocker after it, and a frequency
+   tilt before it if the H2-vs-frequency slope needs it. Possibly keep a small envelope term for the low-level H2 slope.
+3. *(done: attempt 3 above)* Fit on `step6-fits/tube_target.json` (cached reference steps for Tube Gain 0 at three Gain/Master settings ×
+   41/100/400/1600 Hz; reuse `fittube.py`'s harness, `err()` takes ~0.4 s) **plus** Tube Gain 2.5 and 5 renders.
+4. *(done)* `TubePreamp::setParams (gain)` only; update the processor, the DSPTests `Chain` mirror and the tests (Tube Gain H2
+   targets above at −40 dBFS); expect 0 FAIL.
+5. *(done 2026-10-19, see the log)* Full loop: render AmpBass all cases, gate vs `summary-prev.json` (still the step-5 state, **don't overwrite it before
+   the 6.x commits**), commit (two commits), log rows for 6.4 and 6.1+6.2, then copy `summary.json` → `summary-prev.json`.
+6. Then: 6.3 (frequency dependence, likely mostly solved), re-run `topo_*` and `alias_*` (0.8 notes), 6.5 dynamics
+   (burst settle times. Checked 2026-10-19 on existing renders: at Tube Gain 10 the reference settles at once, so it has
+   no slow compressor and removing the old one was right; at Tube Gain 0 it settles in 60–120 ms (quiet 0.06–0.09 s,
+   loud 0.09–0.12 s at Gain 2.5 / 7.5) = the blocking bias moving. So 6.5 = fit the envelope's attack/release
+   (`kEnvelopeHz`, 5 Hz placeholder) on the Tube Gain 0 bursts, after the static fit),
+   step 7 re-check, 6.7 DI nulls → **Milestone B** (user listens, `probe.py listen`).
+   Note for 6.5 / 6.7: with a second 10 Hz HP in the chain the `screenshot_preset` DI null was −25.5 dB instead of
+   −22.9, but clean FR got 0.5 dB worse at 20–40 Hz, so it was removed. Look at the low-frequency dynamics (the
+   envelope, 6.5) before adding any filtering. Driven DI nulls now: −26 dB at Tube Gain 5/10, −15.6 to −19 at 0.
+
+Fitting scratch scripts from this session (`fitpower*.py`, `fittube.py`, targets and logs) are kept in
+`build-tests/compare/step6-fits/` (gitignored, local only). They import `Tests/compare/probe.py` / `analyze.py`.
+
+- [x] **6.1 Preamp onset.** Done differently: the preamp is now fully linear (the
+  reference's preamp is clean even at Gain 10, Tube Gain 10). Original target: H2/H3 vs level at 41/100/400 Hz within
+  the THD rule.
+- [x] **6.2 Harmonic balance / Tube Gain stage**: even/odd per level. Done in the power stage (attempt 3, see handoff):
+  DC-blocked kink for the low-level H2, envelope-driven bias for the high-level H2 and compression.
 - [ ] **6.3 Frequency dependence**: AmpBass is too dirty at 400 Hz at every level. Look at the filtering before and after the shaper.
-- [ ] **6.4 Power section = main distortion stage.** A linear zone, then a knee at the output level where the reference's
+- [x] **6.4 Power section = main distortion stage.** (`9b84435`) A linear zone, then a knee at the output level where the reference's
   H3 appears (about −30 dBFS fundamental peak, independent of Master), rising about 1.5–2 dB per dB above it. Check with
   the `clean_master*` cases (0.8) and `probe.py harmonics master=…`, then the ceiling and Master distortion. Target: ramp curve
   ±1 dB, burst levels ±1 dB.
@@ -307,7 +412,8 @@ manual-verification list (not covered by an automated test).
 
 ## Step 7 — Silence and DC
 
-- [ ] **7.1** The "noise" is DC from the preamp bias, not hiss. `TubePreamp` adds `0.1 * (1 - headroom)` before the
+- [ ] **7.1** *(2026-10-19: the preamp bias is gone since 6.1; all 28 cases with a silence render now read −240 dBFS.
+  Left: check there's no step when Tube Gain is automated.)* The "noise" is DC from the preamp bias, not hiss. `TubePreamp` adds `0.1 * (1 - headroom)` before the
   shaper, so at silence the shaper outputs a constant that the 10 Hz DC blocker only removes slowly. That's why every
   Tube Gain 10 case reads −240 dBFS and the others read −104 to −111 (louder at high Master). It also means a thump
   and DC settling when Tube Gain moves. Subtract the shaper's at-rest output (bias through the shaper) so silence in gives
@@ -322,7 +428,7 @@ manual-verification list (not covered by an automated test).
 - [ ] **8.3 Stereo**: same channel handling as the reference (from 0.8).
 - [ ] **8.4 Bypass and Mute**: render each plugin with each switched on. Compare the output (dry, silent, latency-
   compensated?) and whether the switch ramps or hard-cuts.
-- [ ] **8.5 PEAK/MUTE LED** (in a DAW, not measurable offline): per the manual it lights on input overload, high Gain,
+- [ ] **8.5 PEAK/MUTE LED** *(code check 2026-10-19: the UI already lights it on Mute, `Faceplate.svelte` `$peak || $mute`; only the DAW check is left)* (in a DAW, not measurable offline): per the manual it lights on input overload, high Gain,
   **or too much tone boost**, and **whenever Mute is on**. Check that AmpBass's LED logic (`PluginProcessor.cpp`, PEAK block)
   also lights on Mute.
 - [ ] **8.6 Knob moves** (in a DAW): sweep every control during playback in both plugins. No zipper noise or clicks.
@@ -377,3 +483,8 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 4.4 | 2026-10-19 | Master linear taper (0.5 × knob) | +9.5 / −0.7 / 6.2 vs 6.5 % / −21.5 | `law_master*` ±0.1 dB; 12 better, 13 worse (Gain 5 levels, 4.2) | yes |
 | 4.2 | 2026-10-19 | Gain linear level law (19 × knob small-signal) | +3.8 / −0.7 / 7.6 vs 6.5 % / −21.5 | `law_gain*` ±0.1 dB; 77 better, 18 worse (noise = bias DC, step 7) | yes |
 | 5 | 2026-10-19 | parameter contract: display 0–10, GEQ Level piecewise, defaults, stateVersion | unchanged | 0 / 0 | yes |
+| 6.4+6.1 | 2026-10-19 | power stage (peak emphasis + static curve) + linear preamp, **uncommitted WIP** | Tube Gain 3.5 missing (6.2) | 173 better, 14 worse (all Tube Gain < 10, 6.2); Tube 10 THD 0.4/2.3/3.4 vs 0.3/1.9/3.1 %; DI null −26 dB | pending 6.2 |
+| 6.2 try 1 | 2026-10-19 | envelope bias + power stage fit (`step6-fits/fittube.py`) | — | low-level H2 +2…7 dB, high-level compression half the reference's | no (model can't clip asymmetrically) |
+| 6.2 try 2 | 2026-10-19 | kink + fixed and level-driven bias in the power stage (`fittube2.py`, `fit_per.json`) | — | Tube Gain 0 low-level H2 2.5–4.5 dB low at 41/100 Hz (DSP test FAIL) | no (superseded by try 3) |
+| 6.4 | 2026-10-19 | power stage committed on its own (`9b84435`) | — (old preamp still in) | DSP tests 0 FAIL, 1 WARN (old preamp clipping at default Gain) | yes |
+| 6.1+6.2 | 2026-10-19 | linear preamp + Tube Gain in the power stage: DC-blocked shelf kink, envelope-only bias (`fittube3.py`); one 10 Hz DC blocker at the end | +0.05 / 0.67 / 6.5 vs 6.5 % / −22.9 | 188 better, 3 worse (`screenshot_preset_fxdefault` = Power Soak, 9.2); Tube 10 THD 0.4/2.3/3.5 vs 0.3/1.9/3.1 %; noise −240 dBFS | yes |

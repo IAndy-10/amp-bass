@@ -101,10 +101,11 @@ namespace
         {
             inputGain.setParams (p.pad, p.hiInput);
             preFilters.setParams (p.bright, p.ultraHi, p.ultraLo);
-            tubePreamp.setParams (p.gain, p.tubeGain);
+            tubePreamp.setParams (p.gain);
             toneStack.setParams (p.bass, p.mid, p.midFreq, p.treble);
             graphicEQ.setParams (p.geqOn, p.geq, p.geqLevel);
             masterVolume.setParams (p.master);
+            powerSection.setParams (p.tubeGain);
             dryWet.setMix (p.dryWet);
 
             // Sub-block chunking, as in the processor
@@ -291,38 +292,29 @@ namespace
 
     void testTubePreamp()
     {
-        section ("Stage 3 — TubePreamp (nonlinear)");
+        section ("Stage 3 — TubePreamp");
         const float diAmp = 0.125f; // ≈ -18 dBFS peak, a typical bass DI
         const auto in = sine (kSr, 100.0, diAmp, 1.0);
         const int n = static_cast<int> (in.size());
         const double inRms = rms (in.data(), n / 2, n);
 
-        std::printf ("100 Hz sine @ -18 dBFS.  rows = GAIN, cols = TUBE GAIN.  cell = out level dB / THD %%\n");
-        std::printf ("%-6s %18s %18s %18s\n", "", "tube 0.0", "tube 0.5", "tube 1.0");
-
-        double thdAtGain[5] = {}, lvlAtGain[5] = {};
-        const float gains[] = { 0.1f, 0.25f, 0.5f, 0.75f, 1.0f };
-        for (int gi = 0; gi < 5; ++gi)
+        std::printf ("100 Hz sine @ -18 dBFS.  GAIN -> out level dB / THD %%\n");
+        double thdAtFull = 0.0;
+        for (float gain : { 0.1f, 0.25f, 0.5f, 0.75f, 1.0f })
         {
-            std::printf ("%-6.2f", gains[gi]);
-            for (float tube : { 0.0f, 0.5f, 1.0f })
-            {
-                TubePreamp tp;
-                tp.prepare (kSr, kBlock);
-                tp.setParams (gains[gi], tube);
-                const auto out = render (in, kBlock, [&] (auto& b) { tp.process (b); });
-                const double lvl = toDb (rms (out.getReadPointer (0), n / 2, n) / inRms);
-                const double d = 100.0 * thd (out.getReadPointer (0), n / 2, n, kSr, 100.0);
-                std::printf ("   %+7.2f / %5.1f%%", lvl, d);
-                if (tube == 0.5f) { thdAtGain[gi] = d; lvlAtGain[gi] = lvl; }
-            }
-            std::printf ("\n");
+            TubePreamp tp;
+            tp.prepare (kSr, kBlock);
+            tp.setParams (gain);
+            const auto out = render (in, kBlock, [&] (auto& b) { tp.process (b); });
+            const double lvl = toDb (rms (out.getReadPointer (0), n / 2, n) / inRms);
+            const double d = 100.0 * thd (out.getReadPointer (0), n / 2, n, kSr, 100.0);
+            std::printf ("%-6.2f %+7.2f / %5.2f%%\n", gain, lvl, d);
+            thdAtFull = d;
         }
 
-        check (thdAtGain[4] > thdAtGain[0] + 1.0, "GAIN increases distortion",
-               fmt ("THD %.1f%% → %.1f%%", thdAtGain[0], thdAtGain[4]));
-        check (thdAtGain[2] < 10.0, "default GAIN (0.5) is not already heavily clipped",
-               fmt ("THD %.1f%% at defaults with a -18 dBFS DI", thdAtGain[2]), true);
+        // The reference's preamp is clean at Tube Gain 10 at every Gain; its distortion is in the power stage.
+        check (thdAtFull < 0.1, "preamp is clean at full Gain (distortion lives in the power stage)",
+               fmt ("THD %.3f%% at Gain 10, -18 dBFS", thdAtFull));
         // Small-signal level vs GAIN, like the reference's linear pot: +20 dB from 1 to 10, silent at 0
         auto smallSignalDb = [] (float gain)
         {
@@ -330,7 +322,7 @@ namespace
             const int len = static_cast<int> (quiet.size());
             TubePreamp tp;
             tp.prepare (kSr, kBlock);
-            tp.setParams (gain, 1.0f);
+            tp.setParams (gain);
             const auto out = render (quiet, kBlock, [&] (auto& b) { tp.process (b); });
             return toDb (rms (out.getReadPointer (0), len / 2, len) / rms (quiet.data(), len / 2, len));
         };
@@ -341,7 +333,7 @@ namespace
         // Small-signal low-frequency response (80 Hz pre-emphasis HPF).
         auto lf = [] (double f)
         {
-            return stageGainDb<TubePreamp> (f, [] (auto& s) { s.setParams (0.0f, 1.0f); }, kSr, 0.01f);
+            return stageGainDb<TubePreamp> (f, [] (auto& s) { s.setParams (0.0f); }, kSr, 0.01f);
         };
         const double ref = lf (400), e1 = lf (41.2), a1 = lf (55);
         check (e1 - ref > -3.0, "low E (41 Hz) survives preamp",
@@ -386,6 +378,31 @@ namespace
         check (std::abs (h100 + 48.0) < 3.0 && std::abs (h400 + 39.0) < 3.0 && hQuiet < -80.0,
                "power-stage H3 matches the reference (-48 dBc @100 Hz, -39 dBc @400 Hz, clean at -40 dBFS)",
                fmt ("%.1f / %.1f / %.1f dBc", h100, h400, hQuiet));
+
+        // Tube Gain (measured on the reference at -40 dBFS): at 0 the level is +3.1 dB and the 2nd harmonic
+        // is -26.5 / -37.5 / -47.9 dBc at 41 / 100 / 400 Hz; at 10 there is none.
+        auto tubeTone = [] (float tube, double f, double& levelDb)
+        {
+            PowerSection ps;
+            ps.prepare (kSr, kBlock);
+            ps.setParams (tube);
+            const auto in = sine (kSr, f, 0.01f, 1.0);
+            const auto out = render (in, kBlock, [&] (auto& b) { ps.process (b); });
+            const int n = static_cast<int> (in.size());
+            const float* y = out.getReadPointer (0);
+            const double fund = toneAmplitude (y, n / 2, n, kSr, f);
+            levelDb = toDb (fund / 0.01);
+            return toDb (toneAmplitude (y, n / 2, n, kSr, 2.0 * f) / fund);
+        };
+        double lvl0 = 0.0, lvl10 = 0.0, unused = 0.0;
+        const double h2_41 = tubeTone (0.0f, 41.0, unused), h2_100 = tubeTone (0.0f, 100.0, lvl0),
+                     h2_400 = tubeTone (0.0f, 400.0, unused), h2_off = tubeTone (1.0f, 100.0, lvl10);
+        check (std::abs (h2_41 + 26.5) < 4.0 && std::abs (h2_100 + 37.5) < 4.0 && std::abs (h2_400 + 47.9) < 6.0,
+               "Tube Gain 0: 2nd harmonic like the reference (-26.5 / -37.5 / -47.9 dBc at 41 / 100 / 400 Hz)",
+               fmt ("%.1f / %.1f / %.1f dBc", h2_41, h2_100, h2_400));
+        check (h2_off < -60.0, "Tube Gain 10: no 2nd harmonic at low level", fmt ("%.1f dBc", h2_off));
+        check (std::abs (lvl0 - lvl10 - 3.1) < 0.3, "Tube Gain 0 is +3.1 dB louder than 10 at low level",
+               fmt ("%+.2f dB", lvl0 - lvl10));
 
         // Output low-pass (fitted to the reference): flat in the bass, rolls off above ~8 kHz.
         const auto lp = [] (double f) { return stageGainDb<PowerSection> (f, [] (auto&) {}); };

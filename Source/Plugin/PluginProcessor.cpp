@@ -119,7 +119,7 @@ void AmpBassAudioProcessor::updateDSPParameters() {
                           paramUltraLo->load() >= 0.5f);
 
     // Stage 3: TubePreamp
-    tubePreamp.setParams (paramGain->load(), paramTubeGain->load());
+    tubePreamp.setParams (paramGain->load());
 
     // Stage 4: ToneStack
     toneStack.setParams (paramBass->load(),
@@ -137,6 +137,9 @@ void AmpBassAudioProcessor::updateDSPParameters() {
 
     // Stage 6: MasterVolume
     masterVolume.setParams (paramMaster->load());
+
+    // Stage 7: PowerSection (Tube Gain acts here, as in the reference)
+    powerSection.setParams (paramTubeGain->load());
 
     // Global dry/wet
     dryWetMixer.setMix (paramDryWet->load());
