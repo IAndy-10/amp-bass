@@ -27,16 +27,16 @@ public:
         updateCoefficients();
     }
 
-    void reset() { s1 = 0.0f; s2 = 0.0f; }
+    void reset() { s1 = 0.0; s2 = 0.0; }
 
     float processSample(float x) {
-        float y = b0 * x + s1;
+        const double y = b0 * x + s1;
         s1 = b1 * x - a1 * y + s2;
         s2 = b2 * x - a2 * y;
         // Denormal flush
-        s1 += 1e-18f; s1 -= 1e-18f;
-        s2 += 1e-18f; s2 -= 1e-18f;
-        return y;
+        s1 += 1e-18; s1 -= 1e-18;
+        s2 += 1e-18; s2 -= 1e-18;
+        return static_cast<float>(y);
     }
 
 private:
@@ -46,12 +46,13 @@ private:
     float Q = 0.707f;
     float gainDb = 0.0f;
 
-    // Coefficients (normalized: a0 = 1)
-    float b0 = 1.0f, b1 = 0.0f, b2 = 0.0f;
-    float a1 = 0.0f, a2 = 0.0f;
+    // Coefficients (normalized: a0 = 1). Double precision: in float, low-frequency sections fall into
+    // limit cycles (a steady ~-90 dB pattern near 14 Hz on a 3 kHz tone, sound-matching plan 6.6).
+    double b0 = 1.0, b1 = 0.0, b2 = 0.0;
+    double a1 = 0.0, a2 = 0.0;
 
     // State (Direct Form II Transposed)
-    float s1 = 0.0f, s2 = 0.0f;
+    double s1 = 0.0, s2 = 0.0;
 
     void updateCoefficients() {
         if (sr <= 0.0 || freq <= 0.0f || Q <= 0.0f) return;
@@ -138,10 +139,10 @@ private:
 
         // Normalize by a0
         double invA0 = 1.0 / ca0;
-        b0 = static_cast<float>(cb0 * invA0);
-        b1 = static_cast<float>(cb1 * invA0);
-        b2 = static_cast<float>(cb2 * invA0);
-        a1 = static_cast<float>(ca1 * invA0);
-        a2 = static_cast<float>(ca2 * invA0);
+        b0 = cb0 * invA0;
+        b1 = cb1 * invA0;
+        b2 = cb2 * invA0;
+        a1 = ca1 * invA0;
+        a2 = ca2 * invA0;
     }
 };

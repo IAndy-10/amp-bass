@@ -129,30 +129,31 @@ private:
         return v[i] + (x - static_cast<float> (i)) * (v[i + 1] - v[i]);
     }
 
-    /// First-order bilinear filter; the state is kept per channel by the caller.
+    /// First-order bilinear filter; the state is kept per channel by the caller. Double precision: with poles this
+    /// close to 1 (5-20 Hz at 48 kHz) float rounding noise is amplified ~60 dB near DC.
     struct OnePole
     {
-        float b0 = 1.0f, b1 = 0.0f, a1 = 0.0f;
-        struct State { float x1 = 0.0f, y1 = 0.0f; };
+        double b0 = 1.0, b1 = 0.0, a1 = 0.0;
+        struct State { double x1 = 0.0, y1 = 0.0; };
 
         static OnePole lowPass (float hz, double sr)
         {
-            const float k = static_cast<float> (std::tan (juce::MathConstants<double>::pi * hz / sr));
-            return { k / (1.0f + k), k / (1.0f + k), (k - 1.0f) / (1.0f + k) };
+            const double k = std::tan (juce::MathConstants<double>::pi * hz / sr);
+            return { k / (1.0 + k), k / (1.0 + k), (k - 1.0) / (1.0 + k) };
         }
 
         static OnePole highPass (float hz, double sr)
         {
-            const float k = static_cast<float> (std::tan (juce::MathConstants<double>::pi * hz / sr));
-            return { 1.0f / (1.0f + k), -1.0f / (1.0f + k), (k - 1.0f) / (1.0f + k) };
+            const double k = std::tan (juce::MathConstants<double>::pi * hz / sr);
+            return { 1.0 / (1.0 + k), -1.0 / (1.0 + k), (k - 1.0) / (1.0 + k) };
         }
 
         float process (float x, State& st) const
         {
-            const float y = b0 * x + b1 * st.x1 - a1 * st.y1;
+            const double y = b0 * x + b1 * st.x1 - a1 * st.y1;
             st.x1 = x;
             st.y1 = y;
-            return y;
+            return static_cast<float> (y);
         }
     };
 
