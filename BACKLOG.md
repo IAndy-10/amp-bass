@@ -49,6 +49,6 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 
 ## Later (decided, not started)
 - [ ] Presets A–D with Copy/Paste/Reset, persisted in plugin state.
-- [ ] Power amp model + Power Soak (Master drives a power stage).
+- [ ] Power Soak as an output trim (sound-matching plan 9.2).
 - [ ] Cabinet: built-in cab EQ and/or user-loaded IR, with bypass.
 - [ ] Missing reference controls: Input Gain (dB), Tight/Smooth filters (pre/post), Noise Gate.

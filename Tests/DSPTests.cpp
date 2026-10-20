@@ -368,8 +368,24 @@ namespace
             if (r < prevRms - 0.05 && monotonic) { monotonic = false; where = fmt ("output drops at input %.2f", amp); }
             prevRms = r;
         }
-        check (monotonic, "louder input never gives quieter output",
-               monotonic ? "ok" : where + " — compressor gain is T/sqrt(env/T)/env, i.e. slope -1, not 2:1");
+        check (monotonic, "louder input never gives quieter output", monotonic ? "ok" : where);
+
+        // 3rd harmonic vs level and frequency, as measured on the reference (clean preamp, after Master):
+        // 100 Hz at -10 dBFS -> -48 dBc, 400 Hz at -11.5 dBFS -> -39 dBc, -40 dBFS stays clean.
+        auto h3 = [] (double f, double levelDb)
+        {
+            PowerSection ps;
+            ps.prepare (kSr, kBlock);
+            const auto in = sine (kSr, f, static_cast<float> (std::pow (10.0, levelDb / 20.0)), 1.0);
+            const auto out = render (in, kBlock, [&] (auto& b) { ps.process (b); });
+            const int n = static_cast<int> (in.size());
+            const float* y = out.getReadPointer (0);
+            return toDb (toneAmplitude (y, n / 2, n, kSr, 3.0 * f) / toneAmplitude (y, n / 2, n, kSr, f));
+        };
+        const double h100 = h3 (100, -10.0), h400 = h3 (400, -11.5), hQuiet = h3 (100, -40.0);
+        check (std::abs (h100 + 48.0) < 3.0 && std::abs (h400 + 39.0) < 3.0 && hQuiet < -80.0,
+               "power-stage H3 matches the reference (-48 dBc @100 Hz, -39 dBc @400 Hz, clean at -40 dBFS)",
+               fmt ("%.1f / %.1f / %.1f dBc", h100, h400, hQuiet));
 
         // Output low-pass (fitted to the reference): flat in the bass, rolls off above ~8 kHz.
         const auto lp = [] (double f) { return stageGainDb<PowerSection> (f, [] (auto&) {}); };
@@ -546,7 +562,9 @@ namespace
             const auto out = renderChain (noise, p);
             const double pk = peak (out.getReadPointer (0), 0, out.getNumSamples());
             check (allFinite (out), "no NaN/Inf at extreme settings", "full-scale noise, everything maxed");
-            check (pk <= 1.05, "output bounded by power section", fmt ("peak %.3f", pk));
+            // The reference also exceeds 0 dBFS at extreme settings (fundamental up to about +3 dBFS);
+            // the power curve must still bound the output.
+            check (pk <= 2.0, "output bounded by power section (<= +6 dBFS)", fmt ("peak %.3f", pk));
         }
 
         // Silence after signal decays to (near) zero

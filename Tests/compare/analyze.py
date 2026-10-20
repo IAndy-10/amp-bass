@@ -333,7 +333,7 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
             res.fr_full_max_db = float(np.nanmax(np.abs((r - a)[full] - offset)))
             break
     worst = (0.0, None)
-    for sig in ("tones_41", "tones_100", "tones_400"):
+    for sig in ("tones_41", "tones_100", "tones_400", "tones_1600"):
         if sig not in data:
             continue
         for sa, sr_ in zip(data[sig]["ampbass"]["steps"], data[sig]["reference"]["steps"]):
@@ -346,7 +346,7 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
                 err = abs(max(ha, HARM_FLOOR_DBC) - max(hr, HARM_FLOOR_DBC))
                 if err > worst[0]:
                     worst = (err, f"H{h + 2} @{int(data[sig]['ampbass']['freq'])} Hz {sa['in_db']} dBFS")
-    if any(s in data for s in ("tones_41", "tones_100", "tones_400")):
+    if any(s in data for s in ("tones_41", "tones_100", "tones_400", "tones_1600")):
         res.harm_err_db, res.harm_worst = worst
     if "ramp" in data:
         clamp = lambda v: np.maximum(np.array(v), LEVEL_FLOOR_DB)  # noqa: E731
@@ -399,7 +399,7 @@ def plot_case(name: str, data: dict, path: Path) -> None:
             panels.append(("fr", sig))
             panels.append(("frdiff", sig))
             break
-    panels += [("tones", s) for s in ("tones_41", "tones_100", "tones_400") if s in data]
+    panels += [("tones", s) for s in ("tones_41", "tones_100", "tones_400", "tones_1600") if s in data]
     panels += [(k, k) for k in ("ramp", "bursts", "di") if k in data]
 
     cols = 2

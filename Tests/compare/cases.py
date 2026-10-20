@@ -22,7 +22,7 @@ DEFAULTS: dict[str, float | bool] = {
 CLEAN = {"gain": 1, "tubeGain": 10}
 
 LINEAR_SIGNALS = ["sweep_30"]
-DRIVE_SIGNALS = ["sweep_12", "tones_41", "tones_100", "tones_400", "ramp", "bursts", "silence", "di"]
+DRIVE_SIGNALS = ["sweep_12", "tones_41", "tones_100", "tones_400", "tones_1600", "ramp", "bursts", "silence", "di"]
 
 # Reference FX Rack defaults as normalised values (from AmpBassHostRender --list), minus the cabinet.
 REF_FX_DEFAULTS: dict[str, float | str] = {
