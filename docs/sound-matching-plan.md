@@ -294,8 +294,8 @@ manual-verification list (not covered by an automated test).
 
 **6.1, 6.2 and 6.4 are committed** (`9b84435` power stage, then the linear preamp + Tube Gain stage). DSP tests 0 FAIL.
 Gate vs step 5: 188 better, 3 worse, all `screenshot_preset_fxdefault` (the reference's Power Soak −4 dB, which AmpBass
-gets in step 9.2; its old match was AmpBass being 3.8 dB too loud). **Step 6 and 7 are done (Milestone B passed); next is
-step 8.** The rest of this section is how 6.2 was found, kept for reference.
+gets in step 9.2; its old match was AmpBass being 3.8 dB too loud). **Steps 6 and 7 are done (Milestone B passed); 8.1–8.4 are
+done; next are 8.5–8.6 (in a DAW, with the user).** The rest of this section is how 6.2 was found, kept for reference.
 
 | File | State |
 |---|---|
@@ -447,15 +447,20 @@ Fitting scratch scripts from this session (`fitpower*.py`, `fittube.py`, targets
 
 ## Step 8 — Behaviour
 
-- [ ] **8.1 Sample rate**: `screenshot_preset` and `clean_flat` at 44.1 and 96 kHz, within 0.5 dB of the 48 kHz
+- [x] **8.1 Sample rate**: `screenshot_preset` and `clean_flat` at 44.1 and 96 kHz, within 0.5 dB of the 48 kHz
   result in both plugins.
-  *(2026-10-19, `behaviour.py rates`; decision pending.)* Drive doesn't depend on the rate in either plugin (stepped
+  *(2026-10-19, `behaviour.py rates`; target changed to "follow the reference's change", since the reference
+  misses its own 0.5 dB.)* Drive doesn't depend on the rate in either plugin (stepped
   100 Hz tones, H3 and DI level within 0.01 dB). Only the top octave moves, and **the reference isn't rate-invariant
   either** (FR shape vs 48 kHz, 0 dB at 1 kHz): 44.1 kHz +0.8 dB at 15.9 kHz, +2.7 at 20 kHz; 96 kHz a broad dip
   from 4 kHz, −5 dB at 14–16 kHz, −1 at 20 kHz. AmpBass vs reference: 48 kHz within 0.3 dB; 44.1 kHz within 0.5 dB to
   14 kHz, −1.6 at 15.9 kHz, −6.8 at 20 kHz; 96 kHz +1 dB at 8 kHz rising to +7 at 20 kHz. AmpBass's own change is the
   14.6 kHz output low-pass (bilinear, fitted at 48 kHz: predicted −0.4 / −6.0 dB at 15.9 / 20 kHz for 44.1 kHz,
-  measured −0.5 / −4.1).
+  measured −0.5 / −4.1). The reference behaves the same at 88.2 / 96 / 176.4 / 192 kHz (two families within 0.2 dB).
+  **Fix:** the output low-pass has one fit per rate family (< 46k, 48k, 88.2/96, 176.4/192 kHz), fitted to the
+  reference's change from 48 kHz on `clean_flat` + `screenshot_preset` together (`step8/fitlp2.py`). Worst AmpBass −
+  reference change, 1–16 kHz: 44.1 kHz 1.3 → 0.6 dB, 88.2/96 kHz 6.5 → 1.1, 176.4/192 kHz 7.0 → 1.3. The ~1 dB
+  left is case-dependent (the reference's tone stack also moves at high rates), not followed. 48 kHz unchanged.
 - [x] **8.2 Block size**: render with `--block 32`, `512` and `4096`. AmpBass output must null between them (< −100 dB).
   The 32-sample coefficient updates must not depend on the host block.
   *(2026-10-19, `behaviour.py blocks`: bit-exact, −240 dB at 32 / 100 / 4096 vs 512 on `screenshot_preset`,
@@ -533,4 +538,5 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 6.5 try 1 | 2026-10-19 | separate attack/release for the blocking envelope (`fittube4.py`) | — | fit returns to 5 Hz / 5 Hz; loud → quiet choke still 16 dB too shallow | no (needs a cutoff-type element) |
 | B | 2026-10-19 | **Milestone B passed**: user listened to `screenshot_preset`, `gain7.5_tube10`, `gain7.5_tube5`, `gain2.5_tube0`, `gain7.5_tube0` pairs: "they seem similar" | −22.9 dB null | Tube Gain 0 nulls −15.6…−19 accepted (choke, 6.5); ceiling 1–3 dB | — |
 | 7.1 | 2026-10-19 | Tube Gain glide 50 → 200 ms; parameters set before prepare | unchanged | jump bump −31 → −48 dB rel. tone; silence exact; gate 0 / 0 | yes |
+| 8.1 | 2026-10-19 | output low-pass per rate family | unchanged at 48 kHz | 44.1 / 96 / 192 kHz top end within 0.6 / 1.1 / 1.3 dB of the reference's change (was 1.3 / 6.5 / 7.0); gate 0 / 0 | yes |
 | 8.2–8.4 | 2026-10-19 | `behaviour.py` + host `--set-at`; Bypass/Mute fades 10 → 50 ms, bit-exact bypass | unchanged | block sizes bit-exact; stereo dual mono like the reference; fades 40 vs 43 ms; gate 0 / 0 | yes |
