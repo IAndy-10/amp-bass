@@ -294,8 +294,8 @@ manual-verification list (not covered by an automated test).
 
 **6.1, 6.2 and 6.4 are committed** (`9b84435` power stage, then the linear preamp + Tube Gain stage). DSP tests 0 FAIL.
 Gate vs step 5: 188 better, 3 worse, all `screenshot_preset_fxdefault` (the reference's Power Soak −4 dB, which AmpBass
-gets in step 9.2; its old match was AmpBass being 3.8 dB too loud). **Next: action 6 below.** The rest of this section is
-how 6.2 was found, kept for reference.
+gets in step 9.2; its old match was AmpBass being 3.8 dB too loud). **Step 6 and 7 are done (Milestone B passed); next is
+step 8.** The rest of this section is how 6.2 was found, kept for reference.
 
 | File | State |
 |---|---|
@@ -409,7 +409,7 @@ Fitting scratch scripts from this session (`fitpower*.py`, `fittube.py`, targets
   H3 appears (about −30 dBFS fundamental peak, independent of Master), rising about 1.5–2 dB per dB above it. Check with
   the `clean_master*` cases (0.8) and `probe.py harmonics master=…`, then the ceiling and Master distortion. Target: ramp curve
   ±1 dB, burst levels ±1 dB.
-- [ ] **6.5 Dynamics**: attack/release of the `PowerSection` compressor from the burst envelopes (settle times ±20 %).
+- [x] **6.5 Dynamics** *(accepted at Milestone B with the choke gap below)*: attack/release of the `PowerSection` compressor from the burst envelopes (settle times ±20 %).
   *(2026-10-19, attempt 1/3.)* Settle times with the 5 Hz envelope: reference 60/90, 90/120, 110/130 ms (quiet/loud,
   `gain2.5/7.5/10_tube0`) vs AmpBass 50/80, 110/120, 120/120 (one +22 %, 10 ms resolution). Attack (quiet → loud) matches
   within ±0.6 dB. **Release doesn't:** after loud → quiet the reference chokes: at Gain 7.5 it falls to −50.5 dB within
@@ -424,13 +424,22 @@ Fitting scratch scripts from this session (`fitpower*.py`, `fittube.py`, targets
   plus ±28.8 Hz sidebands on the harmonics), present in every case incl. clean ones: float32 limit cycles in the
   low-frequency biquads. `Biquad` (and `PowerSection`'s one-poles) now run in double: −125.9 / −126.0 dB vs the
   reference's −125.0. The metric still can't detect real aliasing; a non-divisor tone (e.g. 2.9 kHz) would.
-- [ ] **6.7** DI null ≤ −20 dB on the exact-setting drive cases, and `screenshot_preset` ≤ −20 dB.
+- [x] **6.7** DI null ≤ −20 dB on the exact-setting drive cases, and `screenshot_preset` ≤ −20 dB.
   **Milestone B: sound matches when driven.** (listen)
+  *(2026-10-19: met except Tube Gain 0, accepted at Milestone B.)* `screenshot_preset` −22.9 dB, every Tube Gain 5 / 10
+  drive case −26 dB, `topo_*` −19.8 to −26.8. Tube Gain 0: `gain2.5_tube0` −19.0, `gain7.5_tube0` −17.3,
+  `gain10_tube0` −15.6 (the 6.5 choke). The user listened to level-matched DI pairs (`build-tests/compare/listen/step6/`:
+  `screenshot_preset`, `gain7.5_tube10`, `gain7.5_tube5`, `gain2.5_tube0`, `gain7.5_tube0`): "they seem similar".
+  Known gaps kept: the loud → quiet choke at Tube Gain 0 (6.5), and 1–3 dB too little compression at extreme input
+  (ramp up to 2.7 dB, loud bursts −1 to −2 dB, `topo_*` boosts 1.5–3 dB too big above −16 dBFS).
 
 ## Step 7 — Silence and DC
 
-- [ ] **7.1** *(2026-10-19: the preamp bias is gone since 6.1; all 28 cases with a silence render now read −240 dBFS.
-  Left: check there's no step when Tube Gain is automated.)* The "noise" is DC from the preamp bias, not hiss. `TubePreamp` adds `0.1 * (1 - headroom)` before the
+- [x] **7.1** *(2026-10-19: the preamp bias is gone since 6.1; all 28 cases with a silence render now read −240 dBFS.
+  Tube Gain automation, DSP test: jumping 10 ↔ 0 every 85 ms keeps silence exactly silent. With a −20 dBFS 100 Hz tone
+  the bias shift made a subsonic bump of −31 dB (one-cycle mean rel. the tone) with the 50 ms knob glide; now 200 ms,
+  −48 dB (held at 0: −84, at 10: −127). `prepareToPlay` sets the parameters before preparing, so Tube Gain doesn't
+  glide from its default when playback starts.)* The "noise" is DC from the preamp bias, not hiss. `TubePreamp` adds `0.1 * (1 - headroom)` before the
   shaper, so at silence the shaper outputs a constant that the 10 Hz DC blocker only removes slowly. That's why every
   Tube Gain 10 case reads −240 dBFS and the others read −104 to −111 (louder at high Master). It also means a thump
   and DC settling when Tube Gain moves. Subtract the shaper's at-rest output (bias through the shaper) so silence in gives
@@ -507,3 +516,5 @@ Use per-case reference settings (0.7) instead of the global baseline.
 | 6.1+6.2 | 2026-10-19 | linear preamp + Tube Gain in the power stage: DC-blocked shelf kink, envelope-only bias (`fittube3.py`); one 10 Hz DC blocker at the end | +0.05 / 0.67 / 6.5 vs 6.5 % / −22.9 | 188 better, 3 worse (`screenshot_preset_fxdefault` = Power Soak, 9.2); Tube 10 THD 0.4/2.3/3.5 vs 0.3/1.9/3.1 %; noise −240 dBFS | yes |
 | 6.6 | 2026-10-19 | filters in double precision (float32 limit cycles in the biquads, not aliasing) | unchanged | alias −93.8 → −125.9 dB (ref −125.0); gate 0 / 0 | yes |
 | 6.5 try 1 | 2026-10-19 | separate attack/release for the blocking envelope (`fittube4.py`) | — | fit returns to 5 Hz / 5 Hz; loud → quiet choke still 16 dB too shallow | no (needs a cutoff-type element) |
+| B | 2026-10-19 | **Milestone B passed**: user listened to `screenshot_preset`, `gain7.5_tube10`, `gain7.5_tube5`, `gain2.5_tube0`, `gain7.5_tube0` pairs: "they seem similar" | −22.9 dB null | Tube Gain 0 nulls −15.6…−19 accepted (choke, 6.5); ceiling 1–3 dB | — |
+| 7.1 | 2026-10-19 | Tube Gain glide 50 → 200 ms; parameters set before prepare | unchanged | jump bump −31 → −48 dB rel. tone; silence exact; gate 0 / 0 | yes |
