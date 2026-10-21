@@ -56,6 +56,7 @@ private:
     juce::WebToggleButtonRelay muteRelay      { "mute" };
     juce::WebToggleButtonRelay cabinetRelay   { "cabinet" };
     juce::WebToggleButtonRelay hornRelay      { "horn" };
+    juce::WebToggleButtonRelay gateRelay      { "gate" };
 
     // --- Int parameter relays (combo box / selector) ---
     juce::WebSliderRelay midFreqRelay        { "midFreq" };
@@ -66,6 +67,8 @@ private:
     juce::WebSliderRelay smoothRelay         { "smooth" };
     juce::WebSliderRelay smoothFreqRelay     { "smoothFreq" };
     juce::WebSliderRelay inputGainRelay      { "inputGain" };
+    juce::WebSliderRelay gateThresholdRelay  { "gateThreshold" };
+    juce::WebSliderRelay gateRangeRelay      { "gateRange" };
 
     // --- Parameter attachments (own gesture begin/end) ---
     // Stored as unique_ptrs because they're constructed after APVTS is ready.
@@ -98,6 +101,7 @@ private:
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> muteAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> cabinetAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> hornAttach;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> gateAttach;
 
     std::unique_ptr<juce::WebSliderParameterAttachment> midFreqAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> presetSelectAttach;
@@ -107,6 +111,8 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment> smoothAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> smoothFreqAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> inputGainAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> gateThresholdAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> gateRangeAttach;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NativeBridge)
 };

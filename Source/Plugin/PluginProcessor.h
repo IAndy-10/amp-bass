@@ -12,6 +12,7 @@
 #include "../DSP/Tight.h"
 #include "../DSP/Smooth.h"
 #include "../DSP/PowerSoak.h"
+#include "../DSP/NoiseGate.h"
 #include "../DSP/OutputSwitch.h"
 #include "../DSP/Primitives/DryWetMixer.h"
 
@@ -65,6 +66,7 @@ private:
     Tight         tightPre, tightPost;   // FX Rack Tight, before the amp / after the power stage
     Smooth        smoothPre, smoothPost; // FX Rack Smooth, same places
     PowerSoak     powerSoak;
+    NoiseGate     noiseGate;             // FX Rack Noise Gate: hears the input, acts on the amp's output
     DryWetMixer   dryWetMixer;
     OutputSwitch  outputSwitch;
 
@@ -110,6 +112,9 @@ private:
     std::atomic<float>* paramSmooth     = nullptr;
     std::atomic<float>* paramSmoothFreq = nullptr;
     std::atomic<float>* paramInputGain  = nullptr;
+    std::atomic<float>* paramGate       = nullptr;
+    std::atomic<float>* paramGateThreshold = nullptr;
+    std::atomic<float>* paramGateRange  = nullptr;
 
     void updateDSPParameters();
 

@@ -21,7 +21,9 @@ export type SliderParamId =
     | 'tightFreq'
     | 'powerSoak'
     | 'smoothFreq'
-    | 'inputGain';
+    | 'inputGain'
+    | 'gateThreshold'
+    | 'gateRange';
 
 export type ToggleParamId =
     | 'inputPad'
@@ -33,7 +35,8 @@ export type ToggleParamId =
     | 'bypass'
     | 'mute'
     | 'cabinet'
-    | 'horn';
+    | 'horn'
+    | 'gate';
 
 export type ComboParamId =
     | 'midFreq'

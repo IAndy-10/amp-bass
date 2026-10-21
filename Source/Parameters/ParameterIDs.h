@@ -64,4 +64,9 @@ namespace ParameterIDs
     // FX Rack — Smooth (Off / Pre / Post the amp: a gentle low-pass, 3-35 kHz)
     static constexpr const char* smooth        = "smooth";
     static constexpr const char* smoothFreq    = "smoothFreq";
+
+    // FX Rack — Noise Gate (listens to the input, turns the amp's output down below the threshold)
+    static constexpr const char* gate          = "gate";
+    static constexpr const char* gateThreshold = "gateThreshold";
+    static constexpr const char* gateRange     = "gateRange";
 }

@@ -11,6 +11,7 @@ Measurements (each plugin's latency is found from its clean_flat sweep and remov
   tones    output level, THD and harmonics H2-H5 at each input level
   ramp     output level vs input level (static compression curve)
   bursts   level envelope over time (attack / release)
+  decay    decaying notes: 5 ms level envelope (where a noise gate closes and how far it turns the floor down)
   silence  output noise floor
   di       null test after time and level alignment, 1/3-octave level difference
   alias    energy away from the harmonics of a loud 3 kHz tone (aliasing), dB rel. total
@@ -49,7 +50,7 @@ HARM_FLOOR_DBC = -60.0  # harmonics below this in both plugins count as matching
 LEVEL_FLOOR_DB = -120.0  # levels are clamped here before comparing (a silent plugin reads -240)
 # Regression gate: a metric is "worse" when it moves by more than this against --compare-to.
 GATE = {"level": 0.5, "fr": 0.5, "fr_full": 0.5, "harm": 3.0, "ramp": 0.5,
-        "burst": 0.5, "settle": 0.02, "null": 1.0, "noise": 6.0, "lr": 6.0}
+        "burst": 0.5, "settle": 0.02, "null": 1.0, "noise": 6.0, "lr": 6.0, "decay": 0.5}
 EPS = 1e-12
 
 log = logging.getLogger("analyze")
@@ -191,6 +192,21 @@ def analyze_bursts(y: np.ndarray, info: dict, sr: int, start: int) -> dict:
             "settle_quiet_s": float(np.mean(settle["quiet"])), "settle_loud_s": float(np.mean(settle["loud"]))}
 
 
+def analyze_decay(y: np.ndarray, info: dict, sr: int, start: int) -> dict:
+    n = int(len(info["notes"]) * (info["note_seconds"] + info["gap_seconds"]) * sr)
+    env = envelope_db(y[start: start + n], sr, 0.005)
+    return {"t": (np.arange(len(env)) * 0.005).tolist(), "env_db": env.tolist()}
+
+
+def decay_err_db(a: list[float], r: list[float]) -> float:
+    """Mean |reference - AmpBass| of the 5 ms envelopes, after removing the level offset measured while the notes are
+    loud (both above -40 dBFS). A gate that closes at another level or time shows up as tens of dB in those frames."""
+    a, r = np.maximum(np.array(a), LEVEL_FLOOR_DB), np.maximum(np.array(r), LEVEL_FLOOR_DB)
+    loud = (a > -40) & (r > -40)
+    offset = float(np.median((r - a)[loud])) if loud.any() else 0.0
+    return float(np.mean(np.abs(r - np.maximum(a + offset, LEVEL_FLOOR_DB))))
+
+
 def third_octave_db(y: np.ndarray, sr: int) -> tuple[np.ndarray, np.ndarray]:
     f, p = welch(y, sr, nperseg=8192)
     centres = 1000 * 2 ** (np.arange(-17, 14) / 3)  # 20 Hz … 20 kHz
@@ -255,6 +271,7 @@ class CaseResult:
     alias_ref_db: float | None = None
     xtalk_amp_db: float | None = None      # right output rel. left for a left-only input
     xtalk_ref_db: float | None = None
+    decay_env_db: float | None = None      # decaying notes (noise gate): mean envelope error after level match
     plots: dict = field(default_factory=dict)
 
 
@@ -299,6 +316,8 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
             d = {p: analyze_ramp(y, info, sr, pre) for p, y in ys.items()}
         elif kind == "bursts":
             d = {p: analyze_bursts(y, info, sr, pre) for p, y in ys.items()}
+        elif kind == "decay":
+            d = {p: analyze_decay(y, info, sr, pre) for p, y in ys.items()}
         elif kind == "alias":
             res.alias_amp_db, res.alias_ref_db = (alias_db(ys[p], info, sr, pre) for p in ("ampbass", "reference"))
             continue
@@ -358,6 +377,8 @@ def analyze_case(name: str, renders: Path, signals: Path, manifest: dict,
         res.burst_quiet_db = lv(r, "quiet_db") - lv(a, "quiet_db")
         res.burst_loud_db = lv(r, "loud_db") - lv(a, "loud_db")
         res.settle_err_s = max(abs(r["settle_quiet_s"] - a["settle_quiet_s"]), abs(r["settle_loud_s"] - a["settle_loud_s"]))
+    if "decay" in data:
+        res.decay_env_db = decay_err_db(data["decay"]["ampbass"]["env_db"], data["decay"]["reference"]["env_db"])
     if "tones_100" in data:
         pick = lambda p: next(s["thd_pct"] for s in data["tones_100"][p]["steps"] if s["in_db"] == -16)  # noqa: E731
         res.thd_amp_pct, res.thd_ref_pct = pick("ampbass"), pick("reference")
@@ -400,7 +421,7 @@ def plot_case(name: str, data: dict, path: Path) -> None:
             panels.append(("frdiff", sig))
             break
     panels += [("tones", s) for s in ("tones_41", "tones_100", "tones_400", "tones_1600") if s in data]
-    panels += [(k, k) for k in ("ramp", "bursts", "di") if k in data]
+    panels += [(k, k) for k in ("ramp", "bursts", "decay", "di") if k in data]
 
     cols = 2
     rows = (len(panels) + cols - 1) // cols
@@ -431,6 +452,10 @@ def plot_case(name: str, data: dict, path: Path) -> None:
         elif kind == "bursts":
             pair(ax, d["ampbass"]["t"], d["ampbass"]["env_db"], d["reference"]["t"], d["reference"]["env_db"])
             style(ax, "Level envelope, -30/-6 dBFS bursts", "s", "dBFS (20 ms RMS)")
+        elif kind == "decay":
+            clamp = lambda v: np.maximum(np.array(v), LEVEL_FLOOR_DB)  # noqa: E731
+            pair(ax, d["ampbass"]["t"], clamp(d["ampbass"]["env_db"]), d["reference"]["t"], clamp(d["reference"]["env_db"]))
+            style(ax, "Decaying notes (noise gate)", "s", "dBFS (5 ms RMS)")
         elif kind == "di":
             c = d["both"]["centres"]
             pair(ax, c, d["ampbass"]["bands_db"], c, d["reference"]["bands_db"])
@@ -457,7 +482,7 @@ def gate_metrics(r: dict) -> dict[str, float | None]:
             "harm": r.get("harm_err_db"), "ramp": r.get("ramp_err_db"), "burst": burst,
             "settle": r.get("settle_err_s"), "null": r.get("di_null_db"),
             "noise": None if r.get("noise_amp_db") is None else max(r["noise_amp_db"], -140.0),
-            "lr": r.get("lr_amp_db")}
+            "lr": r.get("lr_amp_db"), "decay": r.get("decay_env_db")}
 
 
 def regression_gate(results: list[CaseResult], previous: Path) -> list[str]:
@@ -507,16 +532,19 @@ def write_report(results: list[CaseResult], lat: dict[str, Latency], out: Path, 
         f"FR full = worst shape difference {FR_FULL[0]:.0f} Hz–{FR_FULL[1] / 1000:.0f} kHz. Harmonics = worst H2/H3 error in dBc "
         f"over all tone levels (both below {HARM_FLOOR_DBC:.0f} dBc counts as a match). Ramp = worst output-level error. "
         "Bursts = steady level reference minus AmpBass, and worst settle-time difference. L−R = worst left/right "
-        "difference (identical stereo input, so lower is better).",
+        "difference (identical stereo input, so lower is better). Decay = decaying notes through the noise gate: mean "
+        "envelope error (5 ms frames, after level match).",
         "",
-        "| Case | FR full dB | Harmonics dB | where | Ramp dB | Burst quiet / loud dB | Settle s | L−R AmpBass / ref dB |",
-        "|---|---:|---:|---|---:|---|---:|---|",
+        "| Case | FR full dB | Harmonics dB | where | Ramp dB | Burst quiet / loud dB | Settle s | L−R AmpBass / ref dB "
+        "| Decay dB |",
+        "|---|---:|---:|---|---:|---|---:|---|---:|",
     ]
     for r in results:
         burst = "—" if r.burst_quiet_db is None else f"{r.burst_quiet_db:+.1f} / {r.burst_loud_db:+.1f}"
         lr = "—" if r.lr_amp_db is None else f"{r.lr_amp_db:.0f} / {fmt(r.lr_ref_db, '.0f')}"
         lines.append(f"| {r.name} | {fmt(r.fr_full_max_db, '.1f')} | {fmt(r.harm_err_db, '.1f')} | {r.harm_worst or '—'} | "
-                     f"{fmt(r.ramp_err_db, '.1f')} | {burst} | {fmt(r.settle_err_s, '.2f')} | {lr} |")
+                     f"{fmt(r.ramp_err_db, '.1f')} | {burst} | {fmt(r.settle_err_s, '.2f')} | {lr} | "
+                     f"{fmt(r.decay_env_db, '.2f')} |")
     extra = [r for r in results if r.alias_amp_db is not None or r.xtalk_amp_db is not None]
     if extra:
         lines += ["", "Aliasing = energy away from the harmonics of a 3 kHz, −6 dBFS tone (lower is cleaner). "

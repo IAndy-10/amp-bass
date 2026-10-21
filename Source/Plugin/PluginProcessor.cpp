@@ -52,6 +52,9 @@ AmpBassAudioProcessor::AmpBassAudioProcessor()
     paramSmooth    = apvts.getRawParameterValue (ParameterIDs::smooth);
     paramSmoothFreq = apvts.getRawParameterValue (ParameterIDs::smoothFreq);
     paramInputGain = apvts.getRawParameterValue (ParameterIDs::inputGain);
+    paramGate      = apvts.getRawParameterValue (ParameterIDs::gate);
+    paramGateThreshold = apvts.getRawParameterValue (ParameterIDs::gateThreshold);
+    paramGateRange = apvts.getRawParameterValue (ParameterIDs::gateRange);
 }
 
 AmpBassAudioProcessor::~AmpBassAudioProcessor() {}
@@ -103,6 +106,7 @@ void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     smoothPost.prepare (sampleRate, samplesPerBlock);
     cabinet.prepare (sampleRate, samplesPerBlock);
     powerSoak.prepare (sampleRate, samplesPerBlock);
+    noiseGate.prepare (sampleRate, samplesPerBlock);
     dryWetMixer.prepare (2, samplesPerBlock);
     outputSwitch.prepare (sampleRate, samplesPerBlock);
 
@@ -123,6 +127,7 @@ void AmpBassAudioProcessor::releaseResources() {
     smoothPost.reset();
     cabinet.reset();
     powerSoak.reset();
+    noiseGate.reset();
     outputSwitch.reset();
 }
 
@@ -177,6 +182,8 @@ void AmpBassAudioProcessor::updateDSPParameters() {
     smoothPre.setParams (smoothMode == 1, 1000.0f * paramSmoothFreq->load());
     smoothPost.setParams (smoothMode == 2, 1000.0f * paramSmoothFreq->load());
     powerSoak.setParams (paramPowerSoak->load());
+    noiseGate.setParams (paramGate->load() >= 0.5f, paramGateThreshold->load(), paramGateRange->load(),
+                         paramInputGain->load());
 
     // Global dry/wet
     dryWetMixer.setMix (paramDryWet->load());
@@ -236,6 +243,7 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         powerSection.process (sub);   // Stage 7
         tightPost.process (sub);      // FX Rack Tight, Post
         smoothPost.process (sub);     // FX Rack Smooth, Post
+        noiseGate.process (sub, dryWetMixer.getDry());   // FX Rack Noise Gate: hears the input, turns the amp down
         cabinet.process (sub);        // Stage 8
         powerSoak.process (sub);      // FX Rack Power Soak
 
@@ -256,8 +264,9 @@ juce::AudioProcessorEditor* AmpBassAudioProcessor::createEditor() {
 // Saved-state format. Bump it when a parameter's range or meaning changes, and convert older
 // states in setStateInformation so existing sessions keep sounding the same.
 // 1 = no version attribute (before the reference-matched ranges), 2 = reference-matched ranges,
-// 3 = cabinet added, 4 = Tight and Power Soak added, 5 = Smooth added (and Input Gain, neutral by default).
-static constexpr int kStateVersion = 5;
+// 3 = cabinet added, 4 = Tight and Power Soak added, 5 = Smooth added (and Input Gain, neutral by default),
+// 6 = Noise Gate added.
+static constexpr int kStateVersion = 6;
 static const juce::Identifier kStateVersionId { "stateVersion" };
 
 void AmpBassAudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
@@ -295,6 +304,8 @@ void AmpBassAudioProcessor::setStateInformation(const void* data, int sizeInByte
     }
     if (version < 5)
         setValue(ParameterIDs::smooth, 0.0f);      // Off
+    if (version < 6)
+        setValue(ParameterIDs::gate, 0.0f);        // Off
     apvts.replaceState(state);
 }
 

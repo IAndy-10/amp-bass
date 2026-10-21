@@ -17,7 +17,8 @@
       "Tight": 0.0,
       "Smooth": 0.0,
       "Input Gain": 0.5,
-      "Power Soak": 1.0
+      "Power Soak": 1.0,
+      "Noise Gate": 0.0
     },
     "map": {
       "gain":     {"param": "Gain",          "as": "knob10"},

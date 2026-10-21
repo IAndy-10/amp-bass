@@ -282,5 +282,23 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::NormalisableRange<float> (-20.0f, 20.0f, 0.0f, 1.0f),
         0.0f, ParameterText::decibels()));
 
+    // --- FX Rack: Noise Gate (default like the reference: on, -88 dB, Range 50 dB; Range 100 = muted) ---
+
+    params.push_back (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { ParameterIDs::gate, 1 },
+        "Noise Gate", true));
+
+    params.push_back (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { ParameterIDs::gateThreshold, 1 },
+        "Gate Threshold",
+        juce::NormalisableRange<float> (-120.0f, 0.0f, 0.0f, 1.0f),
+        -88.0f, ParameterText::decibels()));
+
+    params.push_back (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { ParameterIDs::gateRange, 1 },
+        "Gate Range",
+        juce::NormalisableRange<float> (0.0f, 100.0f, 0.0f, 1.0f),
+        50.0f, ParameterText::decibels()));
+
     return { params.begin(), params.end() };
 }

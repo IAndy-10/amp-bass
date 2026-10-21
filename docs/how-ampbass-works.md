@@ -12,8 +12,8 @@ Where the code and the research spec disagree, this file describes the code.
 
 ```
 Host audio ─┬─► InputGain ► [Tight Pre] ► [Smooth Pre] ► PreFilters ► TubePreamp ► ToneStack ► GraphicEQ ► MasterVolume
-            │       ► PowerSection ► [Tight Post] ► [Smooth Post] ► Cabinet ► PowerSoak ─┬─► out
-            └──────────────── dry copy ────────────────────┘
+            │       ► PowerSection ► [Tight Post] ► [Smooth Post] ► NoiseGate ► Cabinet ► PowerSoak ─┬─► out
+            └──────────────── dry copy (also the gate's detector) ──────────────┘
                                                                                      (equal-power Dry/Wet)
 ```
 
@@ -189,17 +189,20 @@ either control crossfades linearly over 50 ms; off, the stage passes the signal 
 The fit matches the spectrum, not the phase: the reference's cabinet is a measured response
 with a ~1.5 ms microphone delay, so DI nulls with the cabinet on are only about −4 dB.
 
-### FX Rack · `Source/DSP/Tight.h`, `Source/DSP/Smooth.h`, `Source/DSP/PowerSoak.h`
-Three of the reference's FX Rack controls, with its defaults: **Tight Post 50 Hz**, **Smooth Post 21 kHz** and
-**Power Soak −4 dB**. Sessions saved before they existed load with them off / 0 dB (`stateVersion` 4 and 5).
+### FX Rack · `Source/DSP/Tight.h`, `Source/DSP/Smooth.h`, `Source/DSP/PowerSoak.h`, `Source/DSP/NoiseGate.h`
+The reference's FX Rack controls, with its defaults: **Tight Post 50 Hz**, **Smooth Post 21 kHz**,
+**Power Soak −4 dB** and the **Noise Gate on at −88 dB, Range 50 dB**. Sessions saved before they existed load with
+them off / 0 dB (`stateVersion` 4, 5 and 6).
 
 | Control | Effect |
 |---|---|
 | Tight (Off / Pre / Post) + frequency (30 Hz–3 kHz, log) | First-order high-pass (6 dB/octave, −3 dB at the set frequency) with a makeup gain of 2.47 dB per decade above 30 Hz (+0.55 dB at 50 Hz, +2.5 dB at 300 Hz, +4.9 dB at 3 kHz). Pre runs before the amp, so it also changes what distorts; Post runs after the power stage. Within 0.65 dB of the reference. |
 | Smooth (Off / Pre / Post) + frequency (3–35 kHz, log) | First-order low-pass that keeps its analog shape at every sample rate, as the reference's does (a plain bilinear one-pole would fall to nothing at Nyquist): matched to the analog magnitude at DC, Nyquist and a mid frequency, cutoff 1.02 × the displayed value. At the default 21 kHz: −0.5 dB at 8 kHz, −2 dB at 16 kHz. Within 0.17 dB of the reference at 44.1–96 kHz. |
 | Power Soak (−40 … 0 dB) | Plain output attenuation after the cabinet; the reference's is a pure gain too (plan 0.4), so it doesn't change the drive. |
+| Noise Gate (on/off) + Threshold (−120 … 0 dB) + Range (0 … 100 dB, 100 = muted) | Listens to the plugin input after the Input knob (the pad and Hi/Lo don't move it) and turns the amp's output down by Range dB, before the cabinet, while that input is below the threshold. The detector hears the input through a first-order high-pass at 348 Hz and low-pass at 3.9 kHz, so a low note must be louder to hold it open (+11 dB at 100 Hz, +19 dB at 41 Hz, compared with the threshold), and follows it with a 32 ms envelope, the same up and down; it opens and closes at the same level (no hysteresis) and the gain fades in 1.6 ms. Each channel has its own detector. Switch levels within 0.2 dB of the reference to 5 kHz, switch times within 2 ms. |
 
-All glide over 50 ms (the frequencies on a log scale); off, Tight and Smooth pass the signal bit for bit.
+All glide over 50 ms (the frequencies on a log scale); off, Tight, Smooth and the gate pass the signal bit for bit
+(the gate also while open).
 
 ### Output switches · `Source/DSP/OutputSwitch.h`
 Runs last, after Dry/Wet. Both switches fade linearly over 50 ms, like the reference

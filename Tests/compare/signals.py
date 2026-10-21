@@ -31,6 +31,8 @@ BURST_FREQ, BURST_LOW_DB, BURST_HIGH_DB, BURST_S, BURST_PAIRS = 100.0, -30.0, -6
 SILENCE_S = 3.0
 ALIAS_FREQ, ALIAS_DB, ALIAS_S = 3_000.0, -6.0, 1.0  # loud HF tone: harmonics above Nyquist fold back
 LEFT_FREQ, LEFT_DB, LEFT_S = 100.0, -20.0, 1.0      # left channel only: does a plugin mix channels?
+DECAY_NOTES = (41.2, 55.0, 73.4, 98.0)               # E1 A1 D2 G2: decaying notes for the noise gate
+DECAY_FROM_DB, DECAY_DB_PER_S, DECAY_NOTE_S, DECAY_GAP_S, DECAY_NOISE_DB = -12.0, 15.0, 4.5, 0.5, -80.0
 FADE_S = 0.005
 
 log = logging.getLogger("signals")
@@ -82,6 +84,21 @@ def bursts() -> np.ndarray:
     # Level jumps are abrupt on purpose: they expose attack/release behaviour.
     parts = [tone * db_to_amp(db) for _ in range(BURST_PAIRS) for db in (BURST_LOW_DB, BURST_HIGH_DB)]
     return fade(np.concatenate(parts))
+
+
+def decay() -> np.ndarray:
+    """Plucked-like notes (harmonics falling 1.3/k) that fade 15 dB/s from -12 dBFS, over a -80 dBFS noise floor.
+    A gate closes somewhere along each tail; the noise shows how far it turns the floor down."""
+    n = int(DECAY_NOTE_S * SR)
+    t = np.arange(n) / SR
+    parts = []
+    for f0 in DECAY_NOTES:
+        x = sum(np.sin(2 * np.pi * f0 * k * t) / k ** 1.3 for k in range(1, 30) if f0 * k < 15_000)
+        x = x / np.max(np.abs(x)) * db_to_amp(DECAY_FROM_DB) * 10.0 ** (-DECAY_DB_PER_S * t / 20.0)
+        parts += [fade(x, 0.003), np.zeros(int(DECAY_GAP_S * SR))]
+    x = np.concatenate(parts)
+    noise = np.random.default_rng(1).standard_normal(len(x))   # fixed seed: the file is the same every run
+    return x + db_to_amp(DECAY_NOISE_DB) * noise / np.sqrt(np.mean(noise ** 2))
 
 
 def tone(freq: float, level_db: float, seconds: float) -> np.ndarray:
@@ -152,6 +169,11 @@ def main() -> None:
     write(args.out / "left_only.wav", left, np.zeros_like(left))
     manifest["signals"]["left_only"] = {"kind": "stereo", "freq": LEFT_FREQ, "level_db": LEFT_DB,
                                         "seconds": LEFT_S}
+
+    write(args.out / "decay.wav", pad(decay()))
+    manifest["signals"]["decay"] = {"kind": "decay", "notes": list(DECAY_NOTES), "from_db": DECAY_FROM_DB,
+                                     "db_per_s": DECAY_DB_PER_S, "note_seconds": DECAY_NOTE_S,
+                                     "gap_seconds": DECAY_GAP_S, "noise_db": DECAY_NOISE_DB}
 
     if args.di:
         write(args.out / "di.wav", pad(load_di(args.di)))

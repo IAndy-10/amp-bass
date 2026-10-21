@@ -21,6 +21,7 @@
 #include "Tight.h"
 #include "Smooth.h"
 #include "PowerSoak.h"
+#include "NoiseGate.h"
 #include "OutputSwitch.h"
 #include "Primitives/DryWetMixer.h"
 
@@ -89,13 +90,15 @@ namespace
         float tightHz = 50.0f, powerSoakDb = 0.0f;   // the plugin defaults to -4 dB
         int   smooth = 0;                     // 0 Off, 1 Pre, 2 Post (the plugin defaults to Post 21 kHz)
         float smoothHz = 21000.0f;
+        bool  gate = false;                   // the plugin defaults to on, -88 dB, Range 50 dB
+        float gateThresholdDb = -88.0f, gateRangeDb = 50.0f;
     };
 
     struct Chain
     {
         InputGain inputGain; PreFilters preFilters; TubePreamp tubePreamp; ToneStack toneStack;
         GraphicEQ graphicEQ; MasterVolume masterVolume; PowerSection powerSection; Cabinet cabinet; DryWetMixer dryWet;
-        Tight tightPre, tightPost; Smooth smoothPre, smoothPost; PowerSoak powerSoak;
+        Tight tightPre, tightPost; Smooth smoothPre, smoothPost; PowerSoak powerSoak; NoiseGate noiseGate;
 
         int preparedBlock = kBlock;
 
@@ -106,7 +109,7 @@ namespace
             toneStack.prepare (sr, block);  graphicEQ.prepare (sr, block);  masterVolume.prepare (sr, block);
             powerSection.prepare (sr, block); cabinet.prepare (sr, block); dryWet.prepare (2, block);
             tightPre.prepare (sr, block); tightPost.prepare (sr, block); powerSoak.prepare (sr, block);
-            smoothPre.prepare (sr, block); smoothPost.prepare (sr, block);
+            smoothPre.prepare (sr, block); smoothPost.prepare (sr, block); noiseGate.prepare (sr, block);
         }
 
         void process (juce::AudioBuffer<float>& b, const Params& p)
@@ -124,6 +127,7 @@ namespace
             smoothPre.setParams (p.smooth == 1, p.smoothHz);
             smoothPost.setParams (p.smooth == 2, p.smoothHz);
             powerSoak.setParams (p.powerSoakDb);
+            noiseGate.setParams (p.gate, p.gateThresholdDb, p.gateRangeDb, 0.0f);
             dryWet.setMix (p.dryWet);
 
             // Sub-block chunking, as in the processor
@@ -133,7 +137,8 @@ namespace
                 juce::AudioBuffer<float> sub (b.getArrayOfWritePointers(), b.getNumChannels(), start, n);
                 dryWet.saveDry (sub);
                 inputGain.process (sub); tightPre.process (sub); smoothPre.process (sub); preFilters.process (sub); tubePreamp.process (sub); toneStack.process (sub);
-                graphicEQ.process (sub); masterVolume.process (sub); powerSection.process (sub); tightPost.process (sub); smoothPost.process (sub); cabinet.process (sub); powerSoak.process (sub);
+                graphicEQ.process (sub); masterVolume.process (sub); powerSection.process (sub); tightPost.process (sub); smoothPost.process (sub);
+                noiseGate.process (sub, dryWet.getDry()); cabinet.process (sub); powerSoak.process (sub);
                 dryWet.mixToOutput (sub);
             }
         }
@@ -568,6 +573,132 @@ namespace
         check (smExact, "Smooth off is bit-exact", smExact ? "identical" : "differs");
     }
 
+    // The gate applied to the signal itself (detector and output = the same buffer), as the processor does with the dry input.
+    juce::AudioBuffer<float> gateRender (const std::vector<float>& in, NoiseGate& gate)
+    {
+        juce::AudioBuffer<float> detect (2, kBlock);
+        return render (in, kBlock, [&] (auto& b) { detect.makeCopyOf (b, true); gate.process (b, detect); });
+    }
+
+    // Gain (dB) of the gate on a steady sine at `levelDb` peak, second half of 1 s.
+    double gateGainDb (double freq, double levelDb, float thresholdDb, float rangeDb, float inputDb = 0.0f)
+    {
+        NoiseGate g;
+        g.setParams (true, thresholdDb, rangeDb, inputDb);
+        g.prepare (kSr, kBlock);
+        const auto in = sine (kSr, freq, static_cast<float> (std::pow (10.0, levelDb / 20.0)), 1.0);
+        const auto out = gateRender (in, g);
+        const int n = static_cast<int> (in.size());
+        return toDb (rms (out.getReadPointer (0), n / 2, n) / rms (in.data(), n / 2, n));
+    }
+
+    // Time (ms) after a 1 kHz tone steps from `fromLevel` to `toLevel` (dBFS) until the gate's gain crosses -10 dB
+    // (threshold -60, Range 20), in 1 ms windows.
+    double gateSwitchMs (double fromLevel, double toLevel)
+    {
+        NoiseGate g;
+        g.setParams (true, -60.0f, 20.0f, 0.0f);
+        g.prepare (kSr, kBlock);
+        const int pre = static_cast<int> (1.5 * kSr), post = static_cast<int> (1.0 * kSr);
+        std::vector<float> in (static_cast<size_t> (pre + post));
+        for (size_t i = 0; i < in.size(); ++i)
+        {
+            const double lv = std::pow (10.0, (static_cast<int> (i) < pre ? fromLevel : toLevel) / 20.0);
+            in[i] = static_cast<float> (lv * std::sin (2.0 * kPi * 1000.0 * static_cast<double> (i) / kSr));
+        }
+        const auto out = gateRender (in, g);
+        const int w = static_cast<int> (kSr / 1000.0);
+        for (int k = 0; pre + (k + 1) * w <= pre + post; ++k)
+        {
+            const int a = pre + k * w, b = a + w;
+            const double gdb = toDb (rms (out.getReadPointer (0), a, b) / rms (in.data(), a, b));
+            if (toLevel > fromLevel ? gdb > -10.0 : gdb < -10.0)
+                return k + 0.5;
+        }
+        return 1e9;
+    }
+
+    void testNoiseGate()
+    {
+        section ("FX Rack — Noise Gate");
+
+        // Reference switch level minus threshold per frequency (slow ramps; the detector band-limits the input)
+        struct Offset { double hz, db; };
+        const Offset offsets[] = { { 41, 18.6 }, { 100, 11.3 }, { 400, 2.5 }, { 1000, 0.8 }, { 5000, 4.2 } };
+        bool levelsOk = true;
+        std::string detail;
+        for (const auto& o : offsets)
+        {
+            const double open = gateGainDb (o.hz, -60.0 + o.db + 0.5, -60.0f, 20.0f);
+            const double closed = gateGainDb (o.hz, -60.0 + o.db - 0.5, -60.0f, 20.0f);
+            levelsOk = levelsOk && open > -0.1 && closed < -19.9;
+            detail += fmt ("%.0f Hz %.1f / %.1f; ", o.hz, open, closed);
+        }
+        check (levelsOk, "Gate opens 0.5 dB above and closes 0.5 dB below the reference's level (41 Hz-5 kHz)", detail);
+
+        const double r20 = gateGainDb (1000, -70.0, -60.0f, 20.0f);
+        const double shifted = gateGainDb (1000, -68.2, -60.0f, 20.0f, 10.0f) - gateGainDb (1000, -70.2, -60.0f, 20.0f, 10.0f);
+        check (std::abs (r20 + 20.0) < 0.05 && shifted > 19.9, "Range 20 = -20 dB; Input +10 dB lowers the switch level by 10 dB",
+               fmt ("%.2f dB; open minus closed %.1f dB", r20, shifted));
+
+        // Reference switch times (1 kHz, threshold -60): a 32 ms detector, the same up and down
+        struct Step { double from, to, ms; };
+        const Step steps[] = { { -55, -62, 41.3 }, { -50, -62, 69.3 }, { -30, -62, 151.2 }, { -55, -70, 22.9 },
+                               { -80, -57, 44.7 }, { -80, -50, 12.8 }, { -80, -40, 3.8 } };
+        double worstMs = 0.0;
+        for (const auto& st : steps)
+            worstMs = std::max (worstMs, std::abs (gateSwitchMs (st.from, st.to) - st.ms));
+        check (worstMs < 3.0, "Gate switch times follow the reference (7 level steps, 4-151 ms)", fmt ("worst %.1f ms", worstMs));
+
+        // Range 100 mutes; off, or open, the signal passes bit for bit
+        {
+            NoiseGate g;  g.setParams (true, -60.0f, 100.0f, 0.0f);  g.prepare (kSr, kBlock);
+            const auto quiet = sine (kSr, 1000.0, 0.0001f, 0.5);     // -80 dBFS
+            const auto out = gateRender (quiet, g);
+            bool silent = true;
+            for (int i = out.getNumSamples() / 2; i < out.getNumSamples(); ++i)
+                silent = silent && out.getSample (0, i) == 0.0f;
+            check (silent, "Range 100 mutes (exact zeros)", silent ? "zeros" : "not silent");
+        }
+        {
+            const auto in = sine (kSr, 80.0, 0.3f, 0.5);
+            NoiseGate off;  off.setParams (false, -60.0f, 50.0f, 0.0f);  off.prepare (kSr, kBlock);
+            NoiseGate open; open.setParams (true, -88.0f, 50.0f, 0.0f);  open.prepare (kSr, kBlock);
+            const auto a = gateRender (in, off), b = gateRender (in, open);
+            bool exactOff = true, exactOpen = true;
+            for (int i = 0; i < a.getNumSamples(); ++i)
+                exactOff = exactOff && a.getSample (0, i) == in[static_cast<size_t> (i)];
+            for (int i = static_cast<int> (0.05 * kSr); i < b.getNumSamples(); ++i)
+                exactOpen = exactOpen && b.getSample (0, i) == in[static_cast<size_t> (i)];
+            check (exactOff && exactOpen, "Gate off, and open (after 50 ms), is bit-exact",
+                   std::string (exactOff ? "off identical" : "off differs") + ", " + (exactOpen ? "open identical" : "open differs"));
+        }
+
+        // Each channel has its own detector (the reference is dual mono)
+        {
+            NoiseGate g;  g.setParams (true, -60.0f, 20.0f, 0.0f);  g.prepare (kSr, kBlock);
+            const int n = static_cast<int> (kSr);
+            juce::AudioBuffer<float> b (2, n);
+            for (int i = 0; i < n; ++i)
+            {
+                const float s = static_cast<float> (std::sin (2.0 * kPi * 1000.0 * i / kSr));
+                b.setSample (0, i, 0.0316f * s);    // -30 dBFS
+                b.setSample (1, i, 0.0001f * s);    // -80 dBFS
+            }
+            const juce::AudioBuffer<float> in (b);
+            for (int start = 0; start < n; start += kBlock)
+            {
+                juce::AudioBuffer<float> sub (b.getArrayOfWritePointers(), 2, start, std::min (kBlock, n - start));
+                juce::AudioBuffer<float> det (const_cast<float* const*> (in.getArrayOfReadPointers()), 2, start, sub.getNumSamples());
+                g.process (sub, det);
+            }
+            const double l = toDb (rms (b.getReadPointer (0), n / 2, n) / rms (in.getReadPointer (0), n / 2, n));
+            const double r = toDb (rms (b.getReadPointer (1), n / 2, n) / rms (in.getReadPointer (1), n / 2, n));
+            check (std::abs (l) < 0.01 && std::abs (r + 20.0) < 0.05, "Gate channels are independent (L open, R closed)",
+                   fmt ("L %.2f dB, R %.2f dB", l, r));
+        }
+    }
+
     // Energy above 2 kHz of a 98 Hz tone through a stage while `set (stage, knob)` moves the knob 0 -> 1 over 1 s in
     // 10 ms steps (a mouse drag), in dB relative to the tone. A filter that jumps to new coefficients every few samples
     // clicks at that rate (zipper noise); a held knob leaves next to nothing up there.
@@ -951,6 +1082,15 @@ namespace
                    && std::abs (ig->getDefaultValue() - 0.5f) < 1e-6f,
                "Input Gain -20 / +10 dB at 0 / 0.75, default 0 dB at 0.5 like the reference", "");
 
+        auto* gt = probe.apvts.getParameter (ParameterIDs::gateThreshold);
+        auto* gr = probe.apvts.getParameter (ParameterIDs::gateRange);
+        auto* gateOn = probe.apvts.getParameter (ParameterIDs::gate);
+        check (std::abs (gt->convertFrom0to1 (0.0f) + 120.0f) < 1e-4f && std::abs (gt->convertFrom0to1 (0.5f) + 60.0f) < 1e-4f
+                   && std::abs (gt->getDefaultValue() - 32.0f / 120.0f) < 1e-5f && gt->getText (gt->getDefaultValue(), 8) == "-88.0"
+                   && std::abs (gr->convertFrom0to1 (1.0f) - 100.0f) < 1e-4f && std::abs (gr->getDefaultValue() - 0.5f) < 1e-6f
+                   && gateOn->getDefaultValue() > 0.5f,
+               "Gate Threshold -120 / -60 dB at 0 / 0.5, Range 0-100 dB; defaults on, -88 dB, 50 dB like the reference", "");
+
         auto* band = probe.apvts.getParameter (ParameterIDs::geq300);
         check (band->getText (band->getValueForText ("-4.5"), 16) == "-4.5", "GEQ bands show and accept dB",
                band->getText (band->getValueForText ("-4.5"), 16).toStdString());
@@ -969,6 +1109,7 @@ int main()
     testPowerSection();
     testCabinet();
     testFxRack();
+    testNoiseGate();
     testZipper();
     testOutputSwitch();
     testChainSensitivity();

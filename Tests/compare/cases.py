@@ -61,13 +61,20 @@ def smooth(mode: str, hz: float) -> dict[str, dict[str, float | str]]:
             "ampbass": {"Smooth": t, "Smooth Frequency": smooth_norm(hz)}}
 
 
+def gate(threshold_db: float, range_db: float) -> dict[str, dict[str, float | str]]:
+    """Noise gate on in both plugins: threshold -120 ... 0 dB and Range 0 ... 100 dB, linear in both (100 = muted)."""
+    t, r = (threshold_db + 120.0) / 120.0, range_db / 100.0
+    return {"reference": {"NgByPass": 1.0, "NgThres": t, "NgRange": r},
+            "ampbass": {"Noise Gate": 1.0, "Gate Threshold": t, "Gate Range": r}}
+
+
 AMP_FX_DEFAULTS: dict[str, float | str] = {"Tight": 1.0, "Tight Frequency": 0.111, "Power Soak": 0.9,
                                            "Smooth": 1.0, "Smooth Frequency": 0.792}
 
 # Both plugins as a fresh instance: cabinet, horn, FX Rack and (reference) gate at their defaults.
 FACTORY: dict[str, dict[str, float | str]] = {
     "reference": {**REF_FX_DEFAULTS, "RecChain": 19 / 26, "Horn": 1.0, "NgByPass": 1.0, "NgThres": 0.267},
-    "ampbass": {**AMP_FX_DEFAULTS, "Cabinet": 1.0, "Horn": 1.0},
+    "ampbass": {**AMP_FX_DEFAULTS, "Cabinet": 1.0, "Horn": 1.0, "Noise Gate": 1.0},
 }
 
 GEQ_BANDS = ["geq33", "geq80", "geq150", "geq300", "geq600", "geq900", "geq2k", "geq5k", "geq9k"]
@@ -169,6 +176,10 @@ def all_cases() -> list[Case]:
         Case("input_+10_gain5", dict(DEFAULTS), DRIVE_SIGNALS, {"reference": {"Input": 0.75}, "ampbass": {"Input Gain": 0.75}}),
         Case("powersoak_-20_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS,
              {"reference": {"PowerSoak": 0.5}, "ampbass": {"Power Soak": 0.5}}),
+        Case("gate_-60_r20", dict(DEFAULTS), ["decay"], gate(-60, 20)),
+        Case("gate_-50_mute", dict(DEFAULTS), ["decay"], gate(-50, 100)),
+        Case("gate_-70_r50_gain7.5", {**DEFAULTS, "gain": 7.5}, ["decay"], gate(-70, 50)),
+        Case("gate_defaults", dict(DEFAULTS), ["decay", "silence"], gate(-88, 50)),
         Case("factory_defaults", dict(DEFAULTS), LINEAR_SIGNALS + DRIVE_SIGNALS, FACTORY),
         Case("factory_screenshot_preset", shot.settings, shot.signals, FACTORY),
     ]

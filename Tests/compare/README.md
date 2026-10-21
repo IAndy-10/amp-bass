@@ -31,10 +31,10 @@ Self-test (AmpBass on both sides, every difference must be 0):
 ## Files
 | File | Purpose |
 |---|---|
-| `signals.py` | sweeps, stepped tones, level ramp, bursts, silence, DI |
+| `signals.py` | sweeps, stepped tones, level ramp, bursts, decaying notes (noise gate), silence, DI |
 | `cases.py` | settings to compare, in faceplate units |
 | `plugins.json` | how each plugin's parameters map to those units |
 | `render.py` | batch rendering |
-| `analyze.py` | frequency response, THD/harmonics, compression, dynamics, noise, DI null, aliasing, crosstalk; `--compare-to` regression gate |
+| `analyze.py` | frequency response, THD/harmonics, compression, dynamics, gate envelope, noise, DI null, aliasing, crosstalk; `--compare-to` regression gate |
 | `probe.py` | measuring and fitting tools: FR rows, knob curves, shelf/peak fits, harmonics vs level, topology, reference nulls (see its docstring) |
 | `behaviour.py` | step-8 checks with their own renders: sample rates (44.1 / 96 kHz vs 48), host block sizes (must null), stereo, Bypass / Mute fades (uses the host's `--set-at` automation) |

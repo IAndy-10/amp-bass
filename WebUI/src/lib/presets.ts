@@ -13,7 +13,7 @@ export interface Preset {
 }
 
 /** The settings that reproduce build-tests/Bass for testing amp - Ampeg version.wav in the reference
- *  (search on the reference, null -45 dB, 2026-10-20), with the reference's FX Rack defaults and Input 0 dB. */
+ *  (search on the reference, null -45 dB, 2026-10-20), with the reference's FX Rack defaults (gate included) and Input 0 dB. */
 const AMPEG_FILE_MATCH: PresetValues = {
     numeric: {
         gain: 3.4, tubeGain: 3.9, bass: 7, midrange: 6.75, treble: 7, master: 6.4,
@@ -22,7 +22,8 @@ const AMPEG_FILE_MATCH: PresetValues = {
     },
     flags: { bright: false, inputPad: false, ultraHi: true, ultraLo: false, geqOn: true },
     midFreqPos: 3,
-    fx: { cabinet: true, horn: true, tight: 2, tightFreq: 0.111, powerSoak: 0.9, smooth: 2, smoothFreq: 0.792, inputGain: 0.5 },
+    fx: { cabinet: true, horn: true, tight: 2, tightFreq: 0.111, powerSoak: 0.9, smooth: 2, smoothFreq: 0.792, inputGain: 0.5,
+          gate: true, gateThreshold: 32 / 120, gateRange: 0.5 },
 };
 
 export const PRESETS: readonly Preset[] = [

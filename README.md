@@ -29,6 +29,7 @@ Input → InputGain (−15 dB pad)
       → PowerSection (Tube Gain stage + soft power-amp curve, output low-pass)
       → Tight, Post (when set to Post: the default, 50 Hz)
       → Smooth, Post (when set to Post: the default, 21 kHz)
+      → Noise Gate (turns the amp down while the input is below the threshold: on, −88 dB, Range 50 dB by default)
       → Cabinet (4x10 + horn, fitted to the reference's default Rec Chain; switchable)
       → Power Soak (output attenuation, −4 dB by default)
       → Dry/Wet → Bypass / Mute
@@ -94,7 +95,7 @@ amp-bass/
 
 ## Parameters
 
-35 parameters. IDs are frozen — changing one breaks saved sessions.
+38 parameters. IDs are frozen — changing one breaks saved sessions.
 
 | Group | Parameters |
 |---|---|
@@ -105,7 +106,7 @@ amp-bass/
 | Graphic EQ | On, 9 bands (ID `geq8k` = 9k band), Level |
 | Output | Master Volume, Dry/Wet (not on faceplate), Bypass, Mute |
 | Cabinet | Cabinet, Horn (both on by default; not on the faceplate yet) |
-| FX Rack | Tight (Off/Pre/Post, default Post), Tight Frequency (30 Hz–3 kHz, default 50 Hz), Power Soak (−40…0 dB, default −4), Smooth (Off/Pre/Post, default Post), Smooth Frequency (3–35 kHz, default 21 kHz); not on the faceplate yet |
+| FX Rack | Tight (Off/Pre/Post, default Post), Tight Frequency (30 Hz–3 kHz, default 50 Hz), Power Soak (−40…0 dB, default −4), Smooth (Off/Pre/Post, default Post), Smooth Frequency (3–35 kHz, default 21 kHz), Noise Gate (default on), Gate Threshold (−120…0 dB, default −88), Gate Range (0…100 dB, default 50; 100 = muted); not on the faceplate yet |
 | Later | Preset (no function yet) |
 
 ## License

@@ -81,6 +81,8 @@ export const sliders = {
     powerSoak: createSliderStore('powerSoak'),
     smoothFreq: createSliderStore('smoothFreq'),
     inputGain: createSliderStore('inputGain'),
+    gateThreshold: createSliderStore('gateThreshold'),
+    gateRange: createSliderStore('gateRange'),
 } as const;
 
 export const toggles = {
@@ -94,6 +96,7 @@ export const toggles = {
     mute:      createToggleStore('mute'),
     cabinet:   createToggleStore('cabinet'),
     horn:      createToggleStore('horn'),
+    gate:      createToggleStore('gate'),
 } as const;
 
 // PEAK overload from the audio engine (read-only). The PEAK/MUTE LED is

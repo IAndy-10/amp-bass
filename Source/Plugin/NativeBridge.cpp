@@ -37,6 +37,7 @@ void NativeBridge::connectToAPVTS (juce::AudioProcessorValueTreeState& apvts)
     muteAttach      = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::mute),      muteRelay);
     cabinetAttach   = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::cabinet),   cabinetRelay);
     hornAttach      = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::horn),      hornRelay);
+    gateAttach      = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::gate),      gateRelay);
 
     // --- Int selector attachments (slider relays: combo relays need AudioParameterChoice) ---
     midFreqAttach      = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::midFreq),      midFreqRelay);
@@ -49,6 +50,8 @@ void NativeBridge::connectToAPVTS (juce::AudioProcessorValueTreeState& apvts)
     smoothAttach       = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::smooth),       smoothRelay);
     smoothFreqAttach   = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::smoothFreq),   smoothFreqRelay);
     inputGainAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::inputGain),    inputGainRelay);
+    gateThresholdAttach = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::gateThreshold), gateThresholdRelay);
+    gateRangeAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::gateRange),    gateRangeRelay);
 }
 
 juce::WebBrowserComponent::Options NativeBridge::buildOptions (
@@ -87,6 +90,7 @@ juce::WebBrowserComponent::Options NativeBridge::buildOptions (
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (muteRelay))
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (cabinetRelay))
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (hornRelay))
+        .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (gateRelay))
         // Int selector relays (slider-backed)
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (midFreqRelay))
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (presetSelectRelay))
@@ -96,7 +100,9 @@ juce::WebBrowserComponent::Options NativeBridge::buildOptions (
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (powerSoakRelay))
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (smoothRelay))
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (smoothFreqRelay))
-        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (inputGainRelay));
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (inputGainRelay))
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (gateThresholdRelay))
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (gateRangeRelay));
 
     return options;
 }
