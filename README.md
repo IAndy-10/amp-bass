@@ -20,6 +20,7 @@ all fitted to measurements of the reference.
 ```
 Input → InputGain (−15 dB pad)
       → Tight, Pre (FX Rack high-pass, when set to Pre)
+      → Smooth, Pre (FX Rack low-pass, when set to Pre)
       → PreFilters (Bright, Hi, Lo)
       → TubePreamp (linear: 25 Hz high-pass + Gain level)
       → ToneStack (Bass, Midrange + 5-position Frequency, Treble)
@@ -27,6 +28,7 @@ Input → InputGain (−15 dB pad)
       → MasterVolume
       → PowerSection (Tube Gain stage + soft power-amp curve, output low-pass)
       → Tight, Post (when set to Post: the default, 50 Hz)
+      → Smooth, Post (when set to Post: the default, 21 kHz)
       → Cabinet (4x10 + horn, fitted to the reference's default Rec Chain; switchable)
       → Power Soak (output attenuation, −4 dB by default)
       → Dry/Wet → Bypass / Mute
@@ -92,18 +94,18 @@ amp-bass/
 
 ## Parameters
 
-32 parameters. IDs are frozen — changing one breaks saved sessions.
+35 parameters. IDs are frozen — changing one breaks saved sessions.
 
 | Group | Parameters |
 |---|---|
-| Input | −15 dB Pad, Input Select (HI/LO, not on faceplate) |
+| Input | −15 dB Pad, Input Select (HI/LO, not on faceplate), Input Gain (−20…+20 dB like the reference's Input, not on faceplate) |
 | Pre-filters | Bright, Ultra Hi, Ultra Lo |
 | Gain | Gain (preamp level), Tube Gain (in the power stage) |
 | Tone | Bass, Midrange, Mid Frequency (220/450/800/1.6k/3k), Treble |
 | Graphic EQ | On, 9 bands (ID `geq8k` = 9k band), Level |
 | Output | Master Volume, Dry/Wet (not on faceplate), Bypass, Mute |
 | Cabinet | Cabinet, Horn (both on by default; not on the faceplate yet) |
-| FX Rack | Tight (Off/Pre/Post, default Post), Tight Frequency (30 Hz–3 kHz, default 50 Hz), Power Soak (−40…0 dB, default −4); not on the faceplate yet |
+| FX Rack | Tight (Off/Pre/Post, default Post), Tight Frequency (30 Hz–3 kHz, default 50 Hz), Power Soak (−40…0 dB, default −4), Smooth (Off/Pre/Post, default Post), Smooth Frequency (3–35 kHz, default 21 kHz); not on the faceplate yet |
 | Later | Preset (no function yet) |
 
 ## License

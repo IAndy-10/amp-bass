@@ -270,11 +270,11 @@ Do these in order. Each one uses a single knob's cases.
 
 The goal is that the same normalised value (automation, presets, `.vstpreset`) means the same setting in both plugins.
 
-- [ ] **5.1 Normalised ↔ value scales** match the reference: knobs linear 0–10, Mid Freq 5 steps, GEQ ±12 linear,
+- [x] **5.1 Normalised ↔ value scales** match the reference: knobs linear 0–10, Mid Freq 5 steps, GEQ ±12 linear,
   **GEQ Level −10…0…+8 piecewise** (the reference puts 0 dB at 0.5; AmpBass's linear range puts −1 dB there).
-- [ ] **5.2 Display text**: knobs shown as 0.0–10.0 (AmpBass shows 0–1), dB values with one decimal, switches On/Off,
+- [x] **5.2 Display text**: knobs shown as 0.0–10.0 (AmpBass shows 0–1), dB values with one decimal, switches On/Off,
   Mid Freq 1–5. Also make AmpBass's `getValueForText` work, so the harness can use `text` for both plugins.
-- [ ] **5.3 Defaults** match a fresh reference: Gain 3.4, Mid Freq 1, others as listed in Context. Changing ranges and
+- [x] **5.3 Defaults** match a fresh reference: Gain 3.4, Mid Freq 1, others as listed in Context. Changing ranges and
   defaults keeps the IDs but changes what old sessions load. That's acceptable before release, and should be noted in CHANGELOG.
 - [x] **5.4** AmpBass-only parameters (`inputHiLo`, `dryWet`) stay neutral by default (Hi, 100 % wet) and stay off the
   faceplate. Confirm with the user whether to keep them at all.
@@ -486,7 +486,11 @@ Fitting scratch scripts from this session (`fitpower*.py`, `fittube.py`, targets
 One parameter per step: DSP + `ParameterIDs.h`/`ParameterLayout.h` + TS mirror + `plugins.json` map + a case that
 uses the per-case reference settings (0.7). No faceplate UI unless the user asks.
 
-- [ ] **9.1** Input gain (±20 dB, linear in dB like the reference).
+- [x] **9.1** Input gain (±20 dB, linear in dB like the reference). *(2026-10-20: −20 + 40 × normalised dB. In the
+  reference a pure gain before everything: Input +6 / −10 dB nulls to −112 / −109 dB against the input scaled by the
+  same amount (gate off). `inputGain` parameter (appended; default 0 dB, so old sessions are unchanged) applied in
+  `InputGain.h`. `input_+10_gain5`: level −0.9, FR +2.5 dB, THD 9.0 vs 11.1 %, null −25.9 dB: the known 1–3 dB of
+  too little compression at the hardest drive, not the control.)*
 - [x] **9.2** Power Soak (−40 … 0 dB). *(2026-10-20: linear in dB, −40 + 40 × normalised, default 0.9 = −4 dB; a pure
   output gain (0.4), so `PowerSoak.h` is a 50 ms-smoothed gain after the cabinet. `powersoak_-20_gain7.5` level −0.05 dB.
   `master*` cases unchanged: they run with Power Soak 0 dB in both plugins.)*
@@ -496,7 +500,13 @@ uses the per-case reference settings (0.7). No faceplate UI unless the user asks
   0.06–0.65 dB. Pre and Post identical when clean. `Tight.h`, one instance before the amp and one after the power stage.
   `tight_post_50/300/1500` FR 0.2 dB; `tight_pre_300_gain7.5` / `tight_post_300_gain7.5` FR 1.3 / 1.2 dB, THD 0.97 vs
   0.72 % / 8.3 vs 7.4 %, nulls −25.6 dB, like the plain drive cases.)*
-- [ ] **9.4** Smooth (Off/Pre/Post + frequency). Same.
+- [x] **9.4** Smooth (Off/Pre/Post + frequency). Same. *(2026-10-20: frequency 3 × (35/3)^normalised kHz (default
+  0.792 = 21 kHz), Off / Pre / Post at 0 / 0.5 / 1. Measured at 3–35 kHz and 44.1 / 48 / 96 kHz
+  (`build-tests/compare/fx/smooth.py`): an analog first-order low-pass at the displayed frequency, the same curve at
+  every rate (so not bilinear, which would fall to nothing at Nyquist). `Smooth.h`: a one-pole matched to the analog
+  magnitude at DC, Nyquist and min(fc, fs / 4), cutoff 1.02 × the displayed value: within 0.17 dB everywhere. Pre and
+  Post identical when clean. `smooth_post_3k` / `_21k` FR −0.2 / +0.3 dB; `smooth_pre_6k_gain7.5` FR +0.8, THD 3.7 vs
+  3.3 %, null −26.1 dB.)*
 - [ ] **9.5** Noise gate (on/off, Threshold, Range), plus a gate case with a decaying note.
 - [x] **9.6** `screenshot_preset_fxdefault` (Tight Post 50 Hz, Power Soak −4) passes the Milestone B targets.
   *(2026-10-20: level −4.13 → +0.04 dB, FR −4.05 → −0.66 dB, THD 7.00 vs 7.07 %, null −23.7 dB, like `screenshot_preset`.
@@ -512,6 +522,10 @@ uses the per-case reference settings (0.7). No faceplate UI unless the user asks
 - [ ] **10.3** Preset table in C++ applied via the existing `presetSelect` parameter (frozen ID), setting all parameters
   in one go. Note that the reference's A/B/C/D are settings *slots*, not factory presets, so behaviour differs on purpose.
 - [ ] **10.4** Prominent preset selector in the UI as its own component (so it moves to the later minimal UI).
+  *(2026-10-20: `PresetBar.svelte` in the toolbar (in place of the A–D stubs): R&B / Rock / Synth / Upright, data in
+  `WebUI/src/lib/presets.ts`. Only R&B is set, as a tuning aid: the settings that reproduce the user's Ampeg test file
+  (`Bass for testing amp - Ampeg version.wav`). A preset is one undo step and stays lit while every value equals it.
+  Replace its values with the reference's R&B once 10.1 has them.)*
 
 ## Step 11 — Tone stack, from the schematics (2026-10-20)
 
@@ -596,3 +610,6 @@ turn them on through per-case baselines (0.7).
 | 12 | 2026-10-20 | cabinet stage: Rec Chain 20 + Horn, per-rate biquad fits at 1/24 octave; `cabinet` / `horn` parameters | unchanged (cabinet off in amp cases) | gate 0 / 0; `cab_clean_flat` FR 0.40 dB, `cab_horn_*` 1.2–1.6 dB; DI null with cabinet −4 dB (phase, 12.5) | yes |
 | 11.3 | 2026-10-20 | knob tables every 0.5 / 0.25 (log Hz), interaction 9 × 9 | unchanged | single knobs anywhere ≤ 1.33 dB (were up to 5.0); off-grid combos ≤ 1.37 (were up to 6.0); gate 0 / 0; 5 new cases | yes |
 | 8.2–8.4 | 2026-10-19 | `behaviour.py` + host `--set-at`; Bypass/Mute fades 10 → 50 ms, bit-exact bypass | unchanged | block sizes bit-exact; stereo dual mono like the reference; fades 40 vs 43 ms; gate 0 / 0 | yes |
+| 8.5a | 2026-10-20 | user: "treble seems to add noise" → zipper noise while a filter knob moves (coefficients jumped every 32 samples): `Biquad::glideTo`, used by ToneStack / GraphicEQ / PreFilters; Tight glides too (and no longer skips its last update) | bit-identical when still | moving a knob, energy above 2 kHz vs held (98 Hz tone, 44.1 kHz, full chain): Treble +46 → +4 dB, Mid +34 → −1, Mid Freq +21 → −2, GEQ 150 Hz–9k +6…+28 → ≤ 0, Tight Freq +15 → 0 (reference ±5); still settings: AmpBass adds no more distortion or noise than the reference on the user's file at any treble; new DSP test; blocks bit-exact | — |
+| 9.4 | 2026-10-20 | Smooth (matched analog one-pole, Pre/Post), default Post 21 kHz, `stateVersion` 5 | unchanged (FX off in amp cases) | gate 0 worse / 3 better: `factory_defaults` full-band FR 2.98 → 1.93 dB, `factory_screenshot_preset` 3.61 → 1.94; user's bass file at the R&B settings: spectrum rms 1.60 → 1.43 dB, worst 5.73 → 4.99 (10 kHz, where the reference's own offline render differs from the file by the same 5.6 dB) | — |
+| 9.1 | 2026-10-20 | Input Gain (−20 … +20 dB pure pre-gain, like the reference's Input) | unchanged (0 dB) | gate 0 / 0; `input_+10_gain5` level −0.9, FR +2.5 dB (heavy-drive gap) | — |
