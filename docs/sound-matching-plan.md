@@ -507,7 +507,24 @@ uses the per-case reference settings (0.7). No faceplate UI unless the user asks
   magnitude at DC, Nyquist and min(fc, fs / 4), cutoff 1.02 × the displayed value: within 0.17 dB everywhere. Pre and
   Post identical when clean. `smooth_post_3k` / `_21k` FR −0.2 / +0.3 dB; `smooth_pre_6k_gain7.5` FR +0.8, THD 3.7 vs
   3.3 %, null −26.1 dB.)*
-- [ ] **9.5** Noise gate (on/off, Threshold, Range), plus a gate case with a decaying note.
+- [x] **9.5** Noise gate (on/off, Threshold, Range), plus a gate case with a decaying note. *(2026-10-21, scripts in
+  `build-tests/compare/gate/`. Reference: Threshold −120 + 120 × normalised dB, Range 0–100 dB (100 = muted), default
+  on / −88 / 50 (`NgByPass` On = active). It listens to the input after Input, before the pad (Input ±10 dB moves the
+  switch level ±10 dB; pad, Gain, Treble, Master, Power Soak don't) and turns the amp's output down by Range dB (a driven
+  render gated by 15 dB = the ungated one −14.8 dB, residual −46 dB). Dual mono. Detector: band-limited input, switch
+  level − threshold +18.6 / +11.3 / +2.5 / +0.8 / +4.2 / +9.1 dB at 41 / 100 / 400 / 1k / 5k / 10k Hz, the same at every
+  threshold and at 44.1 / 48 / 96 kHz → first-order high-pass 348 Hz + low-pass 3.9 kHz (`sidechain.py`, ≤ 0.33 dB);
+  a one-pole on |x|, 32 ms up and down (12 level steps, rms error 0.4 ms, `fitdet.py`; mean-|x| not RMS: a two-tone
+  moves the switch 2.18 dB, predicted 2.18 vs RMS 3.06, `twotone.py`); no hysteresis; gain one-pole 1.6 ms. Below about
+  −120 dBFS output the reference fades to exact zero with or without the gate (its silence floor, step 7), not
+  modelled. `NoiseGate.h` before the cabinet, detector on the dry input with the threshold minus Input dB; parameters
+  `gate` / `gateThreshold` / `gateRange` appended, `stateVersion` 6 loads older sessions with the gate off. Switch levels
+  within 0.2 dB of the reference to 5 kHz (≤ 0.85 dB to 10 kHz, 3 dB at 20 kHz: the simple one-pole low-pass), switch
+  times within 1.8 ms (DSP tests). Signal `decay` (four notes E1–G2 fading 15 dB/s over −80 dBFS noise), metric
+  `decay_env_db`, cases `gate_-60_r20`, `gate_-50_mute`, `gate_-70_r50_gain7.5`, `gate_defaults`: 0.25 / 0.70 / 0.40 /
+  0.18 dB (gate off in both: 0.19). Known gap: on these harmonic-rich notes AmpBass closes 5–20 ms early, up to 75–90 ms
+  on the 41 Hz note at Range 50–100, where both gates flutter for ~150 ms; pure tones flutter identically (`flutter.py`).
+  On the user's bass file (first 60 s) the time closed matches within 0.1 %.)*
 - [x] **9.6** `screenshot_preset_fxdefault` (Tight Post 50 Hz, Power Soak −4) passes the Milestone B targets.
   *(2026-10-20: level −4.13 → +0.04 dB, FR −4.05 → −0.66 dB, THD 7.00 vs 7.07 %, null −23.7 dB, like `screenshot_preset`.
   New `factory_defaults` / `factory_screenshot_preset`: both plugins as fresh instances (cabinet, horn, FX Rack, the
@@ -515,6 +532,12 @@ uses the per-case reference settings (0.7). No faceplate UI unless the user asks
 - Horn and Rec Chain wait for the cabinet phase.
 
 ## Step 10 — Presets
+
+**Deferred (user, 2026-10-21):** the toolbar's current R&B values are good enough for now; skip this step until the user
+brings it back. Note for then: the reference's factory presets are installed as `.vstpreset` files in
+`~/Library/Audio/Presets/Plugin Alliance/Ampeg SVT3Pro/` (31 + Zero; four-letter tags such as `gain`, `bass`, `pmid`,
+`mifq`, `trbl`, `tbgn`, `mstr`, `eqb1`–`eqb9`, `cabt`, `ngth`, then four big-endian floats, one per A–D slot), and none
+of them is called R&B, Rock, Synth or Upright.
 
 - [ ] **10.1** Get exact values for the 4 presets (R&B, Rock, Synth, Upright), including the FX Rack / Rec Chain.
 - [ ] **10.2** Add one compare case per preset (cabinet bypassed, with the preset's own FX settings via 0.7).
@@ -702,3 +725,4 @@ Steps (one commit each, `chore:` / `docs:` / `test:` / `refactor:`):
 | 8.5a | 2026-10-20 | user: "treble seems to add noise" → zipper noise while a filter knob moves (coefficients jumped every 32 samples): `Biquad::glideTo`, used by ToneStack / GraphicEQ / PreFilters; Tight glides too (and no longer skips its last update) | bit-identical when still | moving a knob, energy above 2 kHz vs held (98 Hz tone, 44.1 kHz, full chain): Treble +46 → +4 dB, Mid +34 → −1, Mid Freq +21 → −2, GEQ 150 Hz–9k +6…+28 → ≤ 0, Tight Freq +15 → 0 (reference ±5); still settings: AmpBass adds no more distortion or noise than the reference on the user's file at any treble; new DSP test; blocks bit-exact | — |
 | 9.4 | 2026-10-20 | Smooth (matched analog one-pole, Pre/Post), default Post 21 kHz, `stateVersion` 5 | unchanged (FX off in amp cases) | gate 0 worse / 3 better: `factory_defaults` full-band FR 2.98 → 1.93 dB, `factory_screenshot_preset` 3.61 → 1.94; user's bass file at the R&B settings: spectrum rms 1.60 → 1.43 dB, worst 5.73 → 4.99 (10 kHz, where the reference's own offline render differs from the file by the same 5.6 dB) | — |
 | 9.1 | 2026-10-20 | Input Gain (−20 … +20 dB pure pre-gain, like the reference's Input) | unchanged (0 dB) | gate 0 / 0; `input_+10_gain5` level −0.9, FR +2.5 dB (heavy-drive gap) | — |
+| 9.5 | 2026-10-21 | Noise Gate (input-keyed, band-limited 32 ms detector, Range dB on the amp output), default on −88 dB / 50 dB, `stateVersion` 6 | unchanged (gate off in amp cases) | gate 0 worse / 0 better; all 430 non-factory AmpBass renders bit-identical; `gate_*` decay envelope 0.18–0.70 dB (gate off 0.19); factory cases with both gates on within tolerance | — |
