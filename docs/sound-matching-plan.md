@@ -574,6 +574,95 @@ turn them on through per-case baselines (0.7).
 - [ ] **12.6 Listening (user).** Level-matched A/B of `cab_horn_screenshot_preset` / `cab_horn_defaults` DI renders,
   and the colleague's check in a DAW with both plugins at their defaults.
 
+## Step 13 — Project clean-up (added 2026-10-21)
+
+Goal: when this step is done, the repository holds only what a JUCE C++ plugin project normally has. The matching
+material (this plan, the comparison harness, the backlog, the AI notes) is kept in a git tag and in local folders, not
+in the tree. Target tree:
+
+```
+amp-bass/
+├── .gitignore
+├── CMakeLists.txt
+├── CHANGELOG.md          # user-facing, one line per release
+├── LICENSE
+├── README.md             # what it is, build, signal chain, parameters, tests
+├── Source/
+│   ├── DSP/              # stages + Primitives/
+│   ├── Parameters/       # ParameterIDs.h (frozen), ParameterLayout.h
+│   └── Plugin/           # PluginProcessor, PluginEditor, NativeBridge
+├── Tests/                # C++ unit tests only (DSPTests.cpp, TestSignals.h, CMakeLists.txt), run with ctest
+└── WebUI/                # the editor's UI source (Svelte), built into BinaryData
+```
+
+Gone from the tree: `docs/`, `BACKLOG.md`, `CLAUDE.md`, `WebUI/CLAUDE.md`, `Tests/compare/`, `Tests/HostRender.cpp`.
+
+**Start only after** the matching work is finished or explicitly dropped (9.5, 10.1–10.4, 12.5, 12.6, 8.5, 8.6,
+Milestone C), because those steps need the comparison harness, the reference renders and this plan.
+
+**Decisions to make first (user).** The recommended option is listed first.
+- **D13.1 Development notes** (`CLAUDE.md`, `WebUI/CLAUDE.md`, this plan, `BACKLOG.md`): (a) take them out of git
+  but keep them on disk and add them to `.gitignore`, as `building-process/` already is, so Claude Code still reads
+  them locally; or (b) delete them (the archive tag still holds them).
+- **D13.2 Tests**: (a) keep `AmpBassDSPTests` as a ctest unit-test target and remove `HostRender` + `Tests/compare/`;
+  or (b) remove `Tests/` entirely.
+- **D13.3 `docs/how-ampbass-works.md`**: (a) move a short version (signal chain, level map, where to tune) into the
+  README and delete `docs/`; or (b) keep `docs/` with that one file.
+- **D13.4 Licence**: the README says "All rights reserved". JUCE 8 is AGPLv3 or commercial, so a closed-source
+  release needs a commercial JUCE licence (a free tier with a revenue cap exists). Choose the plugin's licence and
+  write `LICENSE` to match.
+- **D13.5 Fitting scripts** (`build-tests/compare/**/*.py`, `step6-fits/envasym.c`, about 60 files; they generated the
+  tables in `Cabinet.h`, `ToneStack.h`, `PowerSection.h` and the output low-pass): (a) commit them once, with
+  repo-relative paths, so the archive tag holds them; or (b) keep them only in the local backup (13.1).
+
+Steps (one commit each, `chore:` / `docs:` / `test:` / `refactor:`):
+
+- [ ] **13.1 Archive.** Copy everything local-only that is worth keeping to a backup outside the repo: `build-tests/compare/`
+  without renders (fit scripts, fit `.json`, `summary-*.json`, `report/`), `build-tests/*.wav` (the user's test files),
+  `docs/research/`, `docs/ui/`, `docs/decision-log.md`, `docs/findings.md`. Then make an annotated tag
+  `sound-matching-archive` on the last commit that still has the harness and this plan, and push it. Check
+  `git show sound-matching-archive:docs/sound-matching-plan.md` works.
+- [ ] **13.2 Backlog.** Close or move every open `BACKLOG.md` item to a GitHub issue (P1 DAW checks first: they are
+  release blockers, not notes). Items that change code are done as normal fixes before this step ends: `dryWet`
+  smoothing or removal, hidden `inputHiLo` / `dryWet` / `presetSelect` (hide, wire up or document), the DSP test that
+  runs at Gain 0, the `Chain` mirror in `DSPTests.cpp`, `npm install` on every build, idle coefficient updates.
+- [ ] **13.3 Source comments.** Rewrite comments that point to removed material so each one states the fact itself:
+  "sound-matching plan N" / "step N" / "plan N" (`Cabinet.h`, `InputGain.h`, `PowerSection.h`, `PowerSoak.h`, `Smooth.h`,
+  `ToneStack.h`, `Primitives/Biquad.h`, and the rest that `git grep -nE "[Ss]tep [0-9]|plan [0-9]"` finds), build-tests
+  script paths (`Cabinet.h:109`), "UI spec §" (`PluginEditor.cpp`, most of `WebUI/src/lib/`), and `presets.ts`'s
+  test-file path. Example: `(plan 7.1)` → nothing, the comment already says why. Done when the grep over `Source/`,
+  `WebUI/src/`, `Tests/` returns nothing.
+- [ ] **13.4 Trademarks.** No reference brand in shipped code or UI: the placeholder "Ampeg" wordmark in
+  `Chassis.svelte` (replace with the product's own wordmark; user sign-off), `AMPEG_FILE_MATCH` and its note in
+  `presets.ts`, "Ampeg SVT-3 PRO" in `ParameterLayout.h`'s comment ("the reference plugin" or plain units). Check
+  with `git grep -niE "ampeg|svt|brainworx|plugin alliance" -- Source WebUI/src CMakeLists.txt`. The README may name
+  the inspiration only if the user wants that.
+- [ ] **13.5 Tests** (D13.2). Delete `Tests/compare/` and `Tests/HostRender.cpp` and their target in
+  `Tests/CMakeLists.txt`. Register `AmpBassDSPTests` with `enable_testing()` / `add_test()` so `ctest --test-dir
+  build-tests` runs it; rename the option text to "Build unit tests". Remove checks that only make sense against the
+  reference renders. Still 0 FAIL.
+- [ ] **13.6 Docs** (D13.3). README sections: what it is, build, development (`npm run dev`, `svelte-check`), tests
+  (ctest), signal chain, parameters, project structure (the target tree above), licence. Fold in what is kept from
+  `how-ampbass-works.md`, drop `docs/`, drop the README's `Tests/compare` and plan bullets.
+- [ ] **13.7 Development notes** (D13.1). `git rm --cached` (option a) or `git rm` (option b) for `CLAUDE.md`,
+  `WebUI/CLAUDE.md`, `BACKLOG.md`, `docs/sound-matching-plan.md`. Before that, write the last log row here and update
+  `CLAUDE.md`'s "Project files" so it no longer sends sessions to removed files. Do this last of the content steps:
+  it removes this plan.
+- [ ] **13.8 `.gitignore` and licence.** `.gitignore` covers only real outputs: build folders, `node_modules/`,
+  `WebUI/dist/`, plugin binaries, OS / IDE files (`.DS_Store`, `.idea/`, `.vscode/`, `.cache/`,
+  `compile_commands.json`, `*.tsbuildinfo`), audio files (`*.wav`, `*.aif*`, `*.flac`), logs, `.env`; plus the local
+  folders from D13.1. Drop the `docs/*` rules and `__pycache__/` once Python is gone. Add `LICENSE` (D13.4) and
+  make the README's licence section match. `package-release.sh` stays local or becomes a committed, generic release
+  script (no signing identities in it).
+- [ ] **13.9 Fresh-clone check.** `git clone` into a temporary folder, then:
+  `cmake -S . -B build -DAMPBASS_COPY_PLUGIN=OFF && cmake --build build` (VST3, AU, Standalone build);
+  tests configure + `ctest` 0 FAIL; `cd WebUI && npm ci && npm run build && npx svelte-check` 0 errors;
+  `git ls-files` matches the target tree. Optional: pluginval on the VST3 and AU. Then the plugin in a DAW: loads,
+  UI shows, a saved session recalls.
+- [ ] **13.10 Release notes.** Rewrite `CHANGELOG.md`'s Unreleased list in user terms (no step numbers, no
+  "matches reference"), one line per merge to `dev` from here on. Merge to `dev` when 13.9 passes.
+- **Milestone D: clean JUCE project.**
+
 ---
 
 ## Log
