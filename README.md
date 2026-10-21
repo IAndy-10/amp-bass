@@ -5,6 +5,28 @@ Bass amplifier plugin (faceplate name **EPIC-AMP-1**): a clean preamp with three
 a 4x10 cabinet with horn and an FX Rack (Tight, Smooth, Noise Gate, Power Soak). Most constants are fitted to
 measurements of a reference amp plugin.
 
+Version 1.0.0, by Epica Audio. VST3, AU and Standalone on macOS.
+
+## User interface
+
+The editor is a web view (Svelte) embedded in the plugin: a long, thin faceplate under a toolbar. The window resizes
+from 960 to 1800 px wide and keeps the faceplate's 2562 × 558 shape.
+
+- **Faceplate**: POWER (bypass) with its LED, Gain, Bass, Midrange with its 5-position FREQUENCY selector, Treble,
+  Master and Tube Gain; the BRT, HI, LO, −15 dB, MUTE and EQ buttons with LEDs; the nine graphic-EQ sliders and Level
+  (dimmed while EQ is off); the PEAK/MUTE LED.
+- **Controls**: drag vertically, use the mouse wheel (Shift = fine), or click and use the arrow keys, Home and End.
+  Double-click resets a control to its default. Hovering shows the value.
+- **Right-click** on a control: Set to default, Copy value, Paste value (system clipboard; pasted text may carry
+  units, e.g. "6.5" or "-3 dB"). In VST3 hosts that offer a parameter menu, the host's items (such as Show
+  Automation) appear in the same menu; Ableton Live doesn't offer one.
+- **Toolbar**: plugin power (same as POWER), undo and redo (also Cmd/Ctrl+Z and Cmd/Ctrl+Shift+Z; a whole drag is one
+  step), the presets (only **R&B** has values so far; Rock, Synth and Upright are placeholders) and **FX Rack**.
+  Copy, Paste, Reset and About are placeholders.
+- **FX Rack panel** (toolbar button; Esc closes it): Input, Noise Gate (on, Threshold, Range), Tight and Smooth
+  (Off / Pre / Post and frequency), Cabinet, Horn, Power Soak and Dry/Wet, as plain sliders and buttons. Double-click
+  a slider to reset it. Changes made here aren't in the undo history.
+
 ## Stack
 
 | Layer | Technology |
@@ -67,7 +89,7 @@ Input ─┬─► InputGain ► [Tight Pre] ► [Smooth Pre] ► PreFilters ►
 - Each stage is a header-only class in `Source/DSP/` with `prepare()`, `setParams()` and `process()`.
   `PluginProcessor::processBlock` reads the parameters once per host block, then runs the chain in sub-blocks no
   larger than the size announced in `prepareToPlay`. The output doesn't depend on the host's block size.
-- Every parameter change glides (10–50 ms; Tube Gain 200 ms). Filter coefficients are recomputed every 32 samples
+- Every parameter change glides (10–50 ms; Dry/Wet 20 ms; Tube Gain 200 ms). Filter coefficients are recomputed every 32 samples
   and glide across them (`Biquad::glideTo`), so moving a knob doesn't buzz.
 - Everything runs at the host sample rate with no oversampling and no latency; filters run in double precision.
   Left and right are processed independently.
@@ -119,6 +141,9 @@ These constants shape the sound and aren't parameters, so changing them doesn't 
 | Smooth cutoff | `kCutoffScale`, `kMatchFraction` | `Smooth.h` |
 | Noise gate detector | `kHighPassHz`, `kLowPassHz`, `kEnvelopeSeconds`, `kGainSeconds` | `NoiseGate.h` |
 | PEAK thresholds | `kPeakInput`, `kPeakDrive`, `kPeakPreMaster` | `PluginProcessor.h` |
+
+There are no automated tests in the repository; the DSP tests, an offline VST3 host and the comparison against the
+reference plugin are kept in the git tag `sound-matching-archive`.
 
 Known limitations: after a very loud note at Tube Gain 0 the reference briefly chokes, which the 5 Hz envelope
 doesn't reproduce; at extreme input levels there is 1–3 dB too little compression; one cabinet only, matched in

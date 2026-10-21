@@ -8,3 +8,4 @@
 - Faceplate UI with undo/redo, keyboard control, a right-click menu (set to default, copy, paste) and a PEAK/MUTE LED.
 - Knobs and switches change smoothly: no clicks or zipper noise during playback.
 - Sessions saved with earlier builds load and keep their sound.
+- Project cleaned up: the repository holds only the plugin and its UI; README describes the current plugin.
