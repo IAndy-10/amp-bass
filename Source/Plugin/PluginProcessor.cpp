@@ -107,7 +107,7 @@ void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     cabinet.prepare (sampleRate, samplesPerBlock);
     powerSoak.prepare (sampleRate, samplesPerBlock);
     noiseGate.prepare (sampleRate, samplesPerBlock);
-    dryWetMixer.prepare (2, samplesPerBlock);
+    dryWetMixer.prepare (sampleRate, 2, samplesPerBlock);
     outputSwitch.prepare (sampleRate, samplesPerBlock);
 
     updateDSPParameters();

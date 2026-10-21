@@ -107,7 +107,7 @@ namespace
             preparedBlock = block;
             inputGain.prepare (sr, block);  preFilters.prepare (sr, block); tubePreamp.prepare (sr, block);
             toneStack.prepare (sr, block);  graphicEQ.prepare (sr, block);  masterVolume.prepare (sr, block);
-            powerSection.prepare (sr, block); cabinet.prepare (sr, block); dryWet.prepare (2, block);
+            powerSection.prepare (sr, block); cabinet.prepare (sr, block); dryWet.prepare (sr, 2, block);
             tightPre.prepare (sr, block); tightPost.prepare (sr, block); powerSoak.prepare (sr, block);
             smoothPre.prepare (sr, block); smoothPost.prepare (sr, block); noiseGate.prepare (sr, block);
         }
@@ -749,6 +749,41 @@ namespace
                    + fmt (", GEQ 2k %.0f, Tight %.0f, Smooth %.0f dBc", geq2k, tightHz, smoothHz));
     }
 
+    void testDryWet()
+    {
+        section ("Dry/Wet");
+
+        // Dry = a 100 Hz sine, wet = the same sine inverted, mix jumped 1 -> 0 halfway: the output must glide
+        // from -sine to +sine, not jump (a jump steps by up to 2 x 0.5 = 1.0 in one sample).
+        DryWetMixer mixer;
+        mixer.prepare (kSr, 1, kBlock);
+        const auto in = sine (kSr, 100.0, 0.5f, 0.5);
+        const int total = static_cast<int> (in.size());
+        double maxStep = 0.0, endErr = 0.0;
+        float prev = -in[0];
+
+        for (int start = 0; start < total; start += kBlock)
+        {
+            const int n = std::min (kBlock, total - start);
+            mixer.setMix (start >= total / 2 ? 0.0f : 1.0f);
+            juce::AudioBuffer<float> buf (1, n);
+            for (int i = 0; i < n; ++i) buf.setSample (0, i, in[(size_t) (start + i)]);
+            mixer.saveDry (buf);
+            for (int i = 0; i < n; ++i) buf.setSample (0, i, -in[(size_t) (start + i)]);
+            mixer.mixToOutput (buf);
+            for (int i = 0; i < n; ++i)
+            {
+                const float v = buf.getSample (0, i);
+                maxStep = std::max (maxStep, (double) std::abs (v - prev));
+                prev = v;
+                if (start + i > total * 3 / 4) endErr = std::max (endErr, (double) std::abs (v - in[(size_t) (start + i)]));
+            }
+        }
+        // A 100 Hz sine at 0.5 moves at most 2 pi 100 / 48000 x 0.5 = 0.0065 per sample.
+        check (maxStep < 0.02, "moving the mix glides (no click)", fmt ("max step %.4f", maxStep));
+        check (endErr < 1e-6, "mix 0 passes the dry signal", fmt ("max err %.2g", endErr));
+    }
+
     void testOutputSwitch()
     {
         section ("Output — bypass / mute");
@@ -1111,6 +1146,7 @@ int main()
     testFxRack();
     testNoiseGate();
     testZipper();
+    testDryWet();
     testOutputSwitch();
     testChainSensitivity();
     testDefaultsAndSafety();

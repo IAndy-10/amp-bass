@@ -104,9 +104,9 @@ amp-bass/
 | Gain | Gain (preamp level), Tube Gain (in the power stage) |
 | Tone | Bass, Midrange, Mid Frequency (220/450/800/1.6k/3k), Treble |
 | Graphic EQ | On, 9 bands (ID `geq8k` = 9k band), Level |
-| Output | Master Volume, Dry/Wet (not on faceplate), Bypass, Mute |
-| Cabinet | Cabinet, Horn (both on by default; not on the faceplate yet) |
-| FX Rack | Tight (Off/Pre/Post, default Post), Tight Frequency (30 Hz–3 kHz, default 50 Hz), Power Soak (−40…0 dB, default −4), Smooth (Off/Pre/Post, default Post), Smooth Frequency (3–35 kHz, default 21 kHz), Noise Gate (default on), Gate Threshold (−120…0 dB, default −88), Gate Range (0…100 dB, default 50; 100 = muted); not on the faceplate yet |
+| Output | Master Volume, Dry/Wet (FX Rack panel), Bypass, Mute |
+| Cabinet | Cabinet, Horn (both on by default; FX Rack panel) |
+| FX Rack | Tight (Off/Pre/Post, default Post), Tight Frequency (30 Hz–3 kHz, default 50 Hz), Power Soak (−40…0 dB, default −4), Smooth (Off/Pre/Post, default Post), Smooth Frequency (3–35 kHz, default 21 kHz), Noise Gate (default on), Gate Threshold (−120…0 dB, default −88), Gate Range (0…100 dB, default 50; 100 = muted), Input Gain; in the FX Rack panel (toolbar) |
 | Later | Preset (no function yet) |
 
 ## License

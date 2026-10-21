@@ -4,6 +4,8 @@
 	import Faceplate from './Faceplate.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import ContextMenu from './ContextMenu.svelte';
+	import FxRack from './FxRack.svelte';
+	import { fxRackOpen } from '$lib/stores/overlay';
 	import { undo, redo } from '$lib/stores/history';
 
 	// Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo (spec §10).
@@ -23,6 +25,9 @@
 		<Chassis>
 			<Faceplate />
 		</Chassis>
+		{#if $fxRackOpen}
+			<FxRack />
+		{/if}
 	</div>
 </div>
 

@@ -23,6 +23,9 @@ export interface MenuState {
 
 export const menu = writable<MenuState | null>(null);
 
+/** FX Rack panel shown over the faceplate (toolbar button). */
+export const fxRackOpen = writable(false);
+
 /** Flash a message in the tooltip at an element (e.g. "Can't paste"). */
 export function flashTooltip(node: Element, text: string, ms = 1200): void {
     tooltip.set({ text, anchor: node.getBoundingClientRect() });

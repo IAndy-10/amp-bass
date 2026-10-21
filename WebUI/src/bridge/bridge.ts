@@ -26,7 +26,8 @@ const comboChoiceCount: Record<ComboParamId, number> = {
 // check_native_interop.js installs a placeholder window.__JUCE__ outside the
 // plugin, so check that the backend actually registered each relay.
 function backendHas(kind: '__juce__sliders' | '__juce__toggles' | '__juce__functions', id: string): boolean {
-    return window.__JUCE__?.initialisationData?.[kind]?.includes(id) ?? false;
+    const ids: unknown = window.__JUCE__?.initialisationData?.[kind];
+    return Array.isArray(ids) && ids.includes(id);
 }
 
 let warnedNoBackend = false;

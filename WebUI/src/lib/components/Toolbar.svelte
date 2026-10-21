@@ -3,18 +3,18 @@
 	import { setFlag } from '$lib/stores/amp';
 	import { undo, redo, canUndo, canRedo } from '$lib/stores/history';
 	import PresetBar from './PresetBar.svelte';
+	import { fxRackOpen } from '$lib/stores/overlay';
 
 	const bypass = toggles.bypass;
 	const active = $derived(!$bypass);
 
-	// Copy, Paste, Reset, FX Rack and About are visual stubs in this build
-	// (spec §0, §4): they render and focus but do nothing. The A-D settings
-	// slots are replaced by the named presets (PresetBar).
+	// Copy, Paste, Reset and About are visual stubs in this build (spec §0, §4):
+	// they render and focus but do nothing. The A-D settings slots are replaced
+	// by the named presets (PresetBar). FX Rack opens the FxRack panel.
 	const STUBS = [
 		{ label: 'Copy', x: 1373 },
 		{ label: 'Paste', x: 1506 },
-		{ label: 'Reset', x: 1667 },
-		{ label: 'FX Rack', x: 1848 }
+		{ label: 'Reset', x: 1667 }
 	];
 </script>
 
@@ -74,6 +74,16 @@
 		>
 	{/each}
 
+	<button
+		type="button"
+		class="at text"
+		class:open={$fxRackOpen}
+		style:--x={1848}
+		style:--y={30}
+		aria-pressed={$fxRackOpen}
+		onclick={() => fxRackOpen.update((o) => !o)}>FX Rack</button
+	>
+
 	<button type="button" class="text about" aria-disabled="true">About</button>
 </div>
 
@@ -110,7 +120,8 @@
 		border-bottom: calc(2 * var(--u)) solid transparent;
 		white-space: nowrap;
 	}
-	.text:hover {
+	.text:hover,
+	.text.open {
 		color: #ffffff;
 		border-bottom-color: currentColor;
 	}

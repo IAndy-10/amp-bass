@@ -221,7 +221,7 @@ stack and GEQ (too much boost). Same causes the reference manual lists.
 
 ### Dry/Wet · `Source/DSP/Primitives/DryWetMixer.h`
 Equal-power crossfade (`cos/sin`) between the untouched input and the chain
-output. Default 100 % wet.
+output, gliding over 20 ms when the knob moves. Default 100 % wet (the chain output passes untouched).
 
 ---
 
