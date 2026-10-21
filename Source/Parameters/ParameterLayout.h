@@ -77,10 +77,6 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::ParameterID { ParameterIDs::inputPad, 1 },
         "Input Pad", false));
 
-    params.push_back (std::make_unique<juce::AudioParameterBool> (
-        juce::ParameterID { ParameterIDs::inputHiLo, 1 },
-        "Input Select", true));
-
     // --- Stage 2: PreFilters ---
 
     params.push_back (std::make_unique<juce::AudioParameterBool> (

@@ -79,7 +79,6 @@ private:
 
     // ── Cached parameter pointers (set once in constructor) ──
     std::atomic<float>* paramInputPad   = nullptr;
-    std::atomic<float>* paramInputHiLo  = nullptr;
     std::atomic<float>* paramBright     = nullptr;
     std::atomic<float>* paramUltraHi    = nullptr;
     std::atomic<float>* paramUltraLo    = nullptr;

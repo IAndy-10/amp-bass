@@ -55,9 +55,8 @@ Emulates the amp's input jacks.
 |---|---|
 | Input Pad | −15 dB (×0.178) |
 | Input Gain | −20 … +20 dB, linear in dB, 0 dB by default: the reference's Input knob, a pure gain before everything (plan 9.1) |
-| Input Select LO | −6 dB (×0.501); HI = unity |
 
-Why it matters: everything up to the power stage is linear, so Pad/LO lower the level
+Why it matters: everything up to the power stage is linear, so the Pad and Input Gain set the level
 the power stage sees. The plugin gets quieter *and* cleaner.
 
 ### Stage 2 — PreFilters · `Source/DSP/PreFilters.h`

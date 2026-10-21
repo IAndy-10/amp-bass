@@ -6,7 +6,6 @@ namespace ParameterIDs
 {
     // Stage 1 — InputGain
     static constexpr const char* inputPad      = "inputPad";
-    static constexpr const char* inputHiLo     = "inputHiLo";
 
     // Stage 2 — PreFilters
     static constexpr const char* bright        = "bright";

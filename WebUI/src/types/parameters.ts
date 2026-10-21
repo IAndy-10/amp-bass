@@ -27,7 +27,6 @@ export type SliderParamId =
 
 export type ToggleParamId =
     | 'inputPad'
-    | 'inputHiLo'
     | 'bright'
     | 'ultraHi'
     | 'ultraLo'

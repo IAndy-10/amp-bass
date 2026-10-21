@@ -19,7 +19,6 @@ AmpBassAudioProcessor::AmpBassAudioProcessor()
 {
     // Cache raw parameter pointers (safe — APVTS lifetime matches processor)
     paramInputPad  = apvts.getRawParameterValue (ParameterIDs::inputPad);
-    paramInputHiLo = apvts.getRawParameterValue (ParameterIDs::inputHiLo);
     paramBright    = apvts.getRawParameterValue (ParameterIDs::bright);
     paramUltraHi   = apvts.getRawParameterValue (ParameterIDs::ultraHi);
     paramUltraLo   = apvts.getRawParameterValue (ParameterIDs::ultraLo);
@@ -139,9 +138,7 @@ juce::AudioParameterBool* AmpBassAudioProcessor::getBypassParameter() const
 
 void AmpBassAudioProcessor::updateDSPParameters() {
     // Stage 1: InputGain
-    inputGain.setParams (paramInputPad->load() >= 0.5f,
-                         paramInputHiLo->load() >= 0.5f,
-                         paramInputGain->load());
+    inputGain.setParams (paramInputPad->load() >= 0.5f, paramInputGain->load());
 
     // Stage 2: PreFilters
     preFilters.setParams (paramBright->load() >= 0.5f,
@@ -265,8 +262,8 @@ juce::AudioProcessorEditor* AmpBassAudioProcessor::createEditor() {
 // states in setStateInformation so existing sessions keep sounding the same.
 // 1 = no version attribute (before the reference-matched ranges), 2 = reference-matched ranges,
 // 3 = cabinet added, 4 = Tight and Power Soak added, 5 = Smooth added (and Input Gain, neutral by default),
-// 6 = Noise Gate added.
-static constexpr int kStateVersion = 6;
+// 6 = Noise Gate added, 7 = Input Select (HI/LO) removed.
+static constexpr int kStateVersion = 7;
 static const juce::Identifier kStateVersionId { "stateVersion" };
 
 void AmpBassAudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
@@ -306,6 +303,16 @@ void AmpBassAudioProcessor::setStateInformation(const void* data, int sizeInByte
         setValue(ParameterIDs::smooth, 0.0f);      // Off
     if (version < 6)
         setValue(ParameterIDs::gate, 0.0f);        // Off
+    // The removed Input Select: a session saved on LO (-6 dB) gets the same level from Input Gain.
+    if (auto hiLo = state.getChildWithProperty("id", "inputHiLo"); hiLo.isValid())
+    {
+        if (static_cast<float>(hiLo.getProperty("value", 1.0f)) < 0.5f)
+        {
+            const float inputDb = state.getChildWithProperty("id", ParameterIDs::inputGain).getProperty("value", 0.0f);
+            setValue(ParameterIDs::inputGain, juce::jmax(-20.0f, inputDb - 6.0f));
+        }
+        state.removeChild(hiLo, nullptr);
+    }
     apvts.replaceState(state);
 }
 

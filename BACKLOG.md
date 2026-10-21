@@ -26,7 +26,7 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 ## Sanity check (2026-10-17)
 
 ### Bugs
-- [ ] **P3** Hidden parameters still exposed to the host: `inputHiLo` (LO = −6 dB, no faceplate control) and `presetSelect` (does nothing). A recalled session with LO on is invisible in the UI. Decide: hide from host, wire up, or document.
+- [ ] **P3** Hidden parameter still exposed to the host: `presetSelect` (does nothing; it belongs to the deferred presets step). Decide: hide from host, wire up, or remove.
 - [ ] **P3** Right-click: VST3 hosts that offer a parameter menu get one native menu with the host's items and ours.
   Ableton doesn't offer it (user, 2026-10-21: page menu only; automation via the device's parameter list). Copy/Paste go
   through the plugin's system clipboard: check in an AU host.

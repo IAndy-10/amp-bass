@@ -28,7 +28,6 @@ void NativeBridge::connectToAPVTS (juce::AudioProcessorValueTreeState& apvts)
 
     // --- Bool attachments ---
     inputPadAttach  = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::inputPad),  inputPadRelay);
-    inputHiLoAttach = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::inputHiLo), inputHiLoRelay);
     brightAttach    = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::bright),    brightRelay);
     ultraHiAttach   = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::ultraHi),   ultraHiRelay);
     ultraLoAttach   = std::make_unique<juce::WebToggleButtonParameterAttachment> (*params.getParameter (ParameterIDs::ultraLo),   ultraLoRelay);
@@ -81,7 +80,6 @@ juce::WebBrowserComponent::Options NativeBridge::buildOptions (
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (dryWetRelay))
         // Bool relays
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (inputPadRelay))
-        .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (inputHiLoRelay))
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (brightRelay))
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (ultraHiRelay))
         .withOptionsFrom (const_cast<juce::WebToggleButtonRelay&> (ultraLoRelay))

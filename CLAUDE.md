@@ -21,14 +21,13 @@ cd WebUI && npm install && npm run dev
 # UI checks (run before committing UI changes)
 cd WebUI && npm run build && npx svelte-check
 
-# Tests: DSP diagnostics + offline VST3 host (see docs/how-ampbass-works.md §5)
-cmake -S . -B build-tests -G Ninja -DAMPBASS_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release \
-      -DFETCHCONTENT_SOURCE_DIR_JUCE=$PWD/build/_deps/juce-src
-cmake --build build-tests
-build-tests/Tests/AmpBassDSPTests_artefacts/Release/AmpBassDSPTests   # expect 0 FAIL
 ```
 
-Prerequisites: CMake 3.22+, C++17 compiler, Node.js 18+, Python 3 with numpy/scipy/matplotlib (comparison only).
+No tests in the repository since the clean-up (user's choice, 2026-10-21). The DSP tests, the offline VST3 host and the
+reference comparison (`Tests/`) are in the git tag `sound-matching-archive`; fit scripts and renders' sources are in
+`../amp-bass-archive/`. To measure a sound change, check out `Tests/` from that tag into a scratch worktree.
+
+Prerequisites: CMake 3.22+, C++17 compiler, Node.js 18+.
 No C++ linter is configured.
 
 ## Architecture
@@ -60,11 +59,11 @@ size given to `prepareToPlay`. `docs/how-ampbass-works.md` explains every stage 
 
 ### Parameters
 
-- 38 parameters in `Source/Parameters/ParameterIDs.h` (**frozen IDs** — changing one breaks saved sessions)
+- 37 parameters in `Source/Parameters/ParameterIDs.h` (**frozen IDs** — changing one breaks saved sessions)
   and `ParameterLayout.h`; TypeScript mirror in `WebUI/src/types/parameters.ts`.
 - `geq8k` is labelled 9k on the faceplate. `dryWet`, `cabinet`, `horn`, `tight`, `tightFreq`, `powerSoak`, `smooth`,
   `smoothFreq`, `inputGain`, `gate`, `gateThreshold` and `gateRange` are in the FX Rack panel (toolbar, `FxRack.svelte`),
-  not on the faceplate. `inputHiLo` and `presetSelect` have no control. `bypass` is also the host's bypass parameter.
+  not on the faceplate. `presetSelect` has no control. `bypass` is also the host's bypass parameter.
 - Every float parameter is smoothed on the audio thread with `juce::SmoothedValue` (10 ms minimum).
 - Scales, display text and defaults match the reference plugin (same 0–1 value = same setting): knobs show 0.0–10.0,
   GEQ Level is piecewise (0 dB at the centre, mirrored in `WebUI/src/lib/stores/amp.ts`), defaults Gain 3.4 / Mid Freq 1.
@@ -84,13 +83,12 @@ size given to `prepareToPlay`. `docs/how-ampbass-works.md` explains every stage 
 - **Filter cutoff interpolation**: logarithmic, not linear Hz.
 - **Bridge threading**: all bridge calls on the message thread.
 - **Denormals**: `ScopedNoDenormals` in `processBlock`; filters also flush their state.
-- **Sound changes are measured**: check `AmpBassDSPTests` and, against the reference plugin, `Tests/compare/`.
+- **Sound changes are measured**: with the archived tests (`git worktree add ../amp-bass-tests sound-matching-archive`).
 
 ## Project files
 
 - `BACKLOG.md` — open bugs, cleanup and planned work (P1–P3). Add findings here.
 - `CHANGELOG.md` — one line per merge to `dev`.
-- `Tests/compare/` — AmpBass vs reference comparison (see its README); `behaviour.py` for rates, blocks, stereo, switches.
 - `docs/sound-matching-plan.md` — the matching plan: steps, the user's decisions, log. Read it before any DSP change.
 - `docs/` is gitignored except `how-ampbass-works.md` and `sound-matching-plan.md`; the UI spec and reference material are local only.
 

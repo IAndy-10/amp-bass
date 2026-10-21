@@ -47,7 +47,6 @@ private:
 
     // --- Bool parameter relays (toggle buttons) ---
     juce::WebToggleButtonRelay inputPadRelay  { "inputPad" };
-    juce::WebToggleButtonRelay inputHiLoRelay { "inputHiLo" };
     juce::WebToggleButtonRelay brightRelay    { "bright" };
     juce::WebToggleButtonRelay ultraHiRelay   { "ultraHi" };
     juce::WebToggleButtonRelay ultraLoRelay   { "ultraLo" };
@@ -92,7 +91,6 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment> dryWetAttach;
 
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> inputPadAttach;
-    std::unique_ptr<juce::WebToggleButtonParameterAttachment> inputHiLoAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> brightAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> ultraHiAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> ultraLoAttach;

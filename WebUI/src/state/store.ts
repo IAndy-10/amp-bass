@@ -87,7 +87,6 @@ export const sliders = {
 
 export const toggles = {
     inputPad:  createToggleStore('inputPad'),
-    inputHiLo: createToggleStore('inputHiLo'),
     bright:    createToggleStore('bright'),
     ultraHi:   createToggleStore('ultraHi'),
     ultraLo:   createToggleStore('ultraLo'),

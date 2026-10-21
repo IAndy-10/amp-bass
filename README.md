@@ -79,11 +79,11 @@ amp-bass/
 
 ## Parameters
 
-38 parameters. IDs are frozen — changing one breaks saved sessions.
+37 parameters. IDs are frozen — changing one breaks saved sessions.
 
 | Group | Parameters |
 |---|---|
-| Input | −15 dB Pad, Input Select (HI/LO, not on faceplate), Input Gain (−20…+20 dB like the reference's Input, not on faceplate) |
+| Input | −15 dB Pad, Input Gain (−20…+20 dB like the reference's Input; FX Rack panel) |
 | Pre-filters | Bright, Ultra Hi, Ultra Lo |
 | Gain | Gain (preamp level), Tube Gain (in the power stage) |
 | Tone | Bass, Midrange, Mid Frequency (220/450/800/1.6k/3k), Treble |
