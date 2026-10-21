@@ -11,7 +11,7 @@ AmpBassAudioProcessorEditor::AmpBassAudioProcessorEditor (AmpBassAudioProcessor&
     auto options = nativeBridge.buildOptions (
         juce::WebBrowserComponent::Options{}
             .withBackend (juce::WebBrowserComponent::Options::Backend::webview2)
-            .withResourceProvider ([this] (const juce::String& url) -> std::optional<juce::WebBrowserComponent::Resource>
+            .withResourceProvider ([] (const juce::String& url) -> std::optional<juce::WebBrowserComponent::Resource>
             {
                 // Serve embedded binary data resources
                 const auto urlToRetrieve = url.fromFirstOccurrenceOf ("://", false, false);
@@ -102,11 +102,11 @@ void AmpBassAudioProcessorEditor::showParameterMenu (const juce::Array<juce::var
 
     menu.showMenuAsync (juce::PopupMenu::Options{}.withTargetComponent (webView.get()).withMousePosition(),
                         [safeThis = juce::Component::SafePointer<AmpBassAudioProcessorEditor> (this),
-                         completion = std::move (completion)] (int result)
+                         answer = std::move (completion)] (int result)
                         {
                             // The page is gone with the editor; nothing to answer.
                             if (safeThis != nullptr)
-                                completion (result > 0 ? result - 1 : -1);
+                                answer (result > 0 ? result - 1 : -1);
                         });
 }
 
