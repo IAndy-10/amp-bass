@@ -61,6 +61,7 @@ declare global {
                 __juce__sliders: string[];
                 __juce__toggles: string[];
                 __juce__comboBoxes: string[];
+                __juce__functions: string[];
                 [key: string]: unknown;
             };
             backend: unknown;

@@ -23,6 +23,7 @@
 		onclick={() => setFlag('bypass', on)}
 		use:tooltip={{ text: `POWER ${on ? 'On' : 'Off'}` }}
 		use:menu={{
+			param: 'bypass',
 			reset: () => setFlag('bypass', false),
 			copy: () => (on ? 'on' : 'off'),
 			paste: (t) => {

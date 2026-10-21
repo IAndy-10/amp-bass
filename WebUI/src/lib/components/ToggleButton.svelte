@@ -33,6 +33,7 @@
 		onclick={() => setFlag(key, !$flag)}
 		use:tooltip={{ text: `${label} ${$flag ? 'On' : 'Off'}` }}
 		use:menu={{
+			param: key,
 			reset: () => setFlag(key, false),
 			copy: () => (getFlag(key) ? 'on' : 'off'),
 			paste: (t) => {

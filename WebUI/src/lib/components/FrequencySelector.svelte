@@ -63,6 +63,7 @@
 	use:wheel={(dir) => commit($midFreqPos + dir)}
 	use:tooltip={{ text: `FREQUENCY ${valueText}`, active: dragging }}
 	use:menu={{
+		param: 'midFreq',
 		reset,
 		copy: () => String($midFreqPos),
 		paste: (t) => {

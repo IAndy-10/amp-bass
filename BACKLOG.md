@@ -31,7 +31,8 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 ### Bugs
 - [ ] **P2** `dryWet` is applied without smoothing (`DryWetMixer::setMix`), so automating it clicks. It is hidden in the UI but still automatable from the DAW. Smooth it (CLAUDE.md: every float param uses SmoothedValue) or remove it from the host.
 - [ ] **P3** Hidden parameters still exposed to the host: `inputHiLo` (LO = −6 dB, no faceplate control), `dryWet`, and `presetSelect` (does nothing). A recalled session with LO on is invisible in the UI. Decide: hide from host, wire up, or document.
-- [ ] **P3** Clipboard (context menu Copy/Paste) may be blocked in the plugin WebView; it falls back to an in-plugin clipboard silently. Verify in the plugin.
+- [ ] **P3** Right-click: in VST3 hosts the plugin shows one native menu with the host's parameter items (Show Automation)
+  and ours; elsewhere the page's menu. Copy/Paste go through the plugin's system clipboard. Verify in Ableton (VST3) and an AU host.
 
 ### Build / platform
 - [ ] **P3** `BuildSvelteUI` runs `npm install` on every build (slow, needs network). Use `npm ci` only when `package-lock.json` changes, or run it at configure time.

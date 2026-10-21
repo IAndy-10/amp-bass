@@ -115,6 +115,7 @@
 	}}
 	use:tooltip={{ text: `${label} ${valueText}`, active: dragging }}
 	use:menu={{
+		param: key,
 		reset,
 		copy: () => formatValue(key, getNumeric(key)),
 		paste: (t) => {

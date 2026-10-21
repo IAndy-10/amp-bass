@@ -92,6 +92,7 @@
 	use:wheel={(dir, shift) => commitNumeric(key, getNumeric(key) + dir * (shift ? 0.1 : 0.5))}
 	use:tooltip={{ text: `${label} ${valueText}`, active: dragging }}
 	use:menu={{
+		param: key,
 		reset,
 		copy: () => formatValue(key, getNumeric(key)),
 		paste: (t) => {

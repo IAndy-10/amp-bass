@@ -17,6 +17,10 @@ public:
 private:
     void timerCallback() override;
 
+    // Right-click on a control: the host's parameter menu plus the page's items (see the .cpp).
+    void showParameterMenu (const juce::Array<juce::var>& args,
+                            juce::WebBrowserComponent::NativeFunctionCompletion completion);
+
     AmpBassAudioProcessor& processorRef;
 
     // PEAK LED: held lit for kPeakHoldMs after the last overload so short
