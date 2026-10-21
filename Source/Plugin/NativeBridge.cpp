@@ -46,6 +46,8 @@ void NativeBridge::connectToAPVTS (juce::AudioProcessorValueTreeState& apvts)
     // --- FX Rack ---
     tightFreqAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::tightFreq),    tightFreqRelay);
     powerSoakAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::powerSoak),    powerSoakRelay);
+    smoothAttach       = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::smooth),       smoothRelay);
+    smoothFreqAttach   = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::smoothFreq),   smoothFreqRelay);
 }
 
 juce::WebBrowserComponent::Options NativeBridge::buildOptions (
@@ -90,7 +92,9 @@ juce::WebBrowserComponent::Options NativeBridge::buildOptions (
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (tightRelay))
         // FX Rack sliders
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (tightFreqRelay))
-        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (powerSoakRelay));
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (powerSoakRelay))
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (smoothRelay))
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (smoothFreqRelay));
 
     return options;
 }

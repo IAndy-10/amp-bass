@@ -10,6 +10,7 @@
 #include "../DSP/PowerSection.h"
 #include "../DSP/Cabinet.h"
 #include "../DSP/Tight.h"
+#include "../DSP/Smooth.h"
 #include "../DSP/PowerSoak.h"
 #include "../DSP/OutputSwitch.h"
 #include "../DSP/Primitives/DryWetMixer.h"
@@ -62,6 +63,7 @@ private:
     PowerSection  powerSection;
     Cabinet       cabinet;
     Tight         tightPre, tightPost;   // FX Rack Tight, before the amp / after the power stage
+    Smooth        smoothPre, smoothPost; // FX Rack Smooth, same places
     PowerSoak     powerSoak;
     DryWetMixer   dryWetMixer;
     OutputSwitch  outputSwitch;
@@ -105,6 +107,8 @@ private:
     std::atomic<float>* paramTight      = nullptr;
     std::atomic<float>* paramTightFreq  = nullptr;
     std::atomic<float>* paramPowerSoak  = nullptr;
+    std::atomic<float>* paramSmooth     = nullptr;
+    std::atomic<float>* paramSmoothFreq = nullptr;
 
     void updateDSPParameters();
 

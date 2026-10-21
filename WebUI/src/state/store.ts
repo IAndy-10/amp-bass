@@ -79,6 +79,7 @@ export const sliders = {
     dryWet:    createSliderStore('dryWet'),
     tightFreq: createSliderStore('tightFreq'),
     powerSoak: createSliderStore('powerSoak'),
+    smoothFreq: createSliderStore('smoothFreq'),
 } as const;
 
 export const toggles = {
@@ -102,4 +103,5 @@ export const combos = {
     midFreq:       createComboStore('midFreq'),
     presetSelect:  createComboStore('presetSelect'),
     tight:         createComboStore('tight'),
+    smooth:        createComboStore('smooth'),
 } as const;

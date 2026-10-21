@@ -51,7 +51,18 @@ def tight(mode: str, hz: float) -> dict[str, dict[str, float | str]]:
             "ampbass": {"Tight": t, "Tight Frequency": tight_norm(hz)}}
 
 
-AMP_FX_DEFAULTS: dict[str, float | str] = {"Tight": 1.0, "Tight Frequency": 0.111, "Power Soak": 0.9}
+def smooth_norm(hz: float) -> float:
+    return math.log(hz / 3000.0) / math.log(35.0 / 3.0)
+
+
+def smooth(mode: str, hz: float) -> dict[str, dict[str, float | str]]:
+    t = {"pre": 0.5, "post": 1.0}[mode]
+    return {"reference": {"Smooth": t, "SmoothFrequency": smooth_norm(hz)},
+            "ampbass": {"Smooth": t, "Smooth Frequency": smooth_norm(hz)}}
+
+
+AMP_FX_DEFAULTS: dict[str, float | str] = {"Tight": 1.0, "Tight Frequency": 0.111, "Power Soak": 0.9,
+                                           "Smooth": 1.0, "Smooth Frequency": 0.792}
 
 # Both plugins as a fresh instance: cabinet, horn, FX Rack and (reference) gate at their defaults.
 FACTORY: dict[str, dict[str, float | str]] = {
@@ -139,7 +150,7 @@ def all_cases() -> list[Case]:
         }, LINEAR_SIGNALS + DRIVE_SIGNALS),
     ]
     # Same settings with the reference's FX Rack at its defaults (cabinet still bypassed): what the
-    # screenshots sound like if the FX Rack was untouched. AmpBass has no Tight / Power Soak yet (step 9).
+    # screenshots sound like if the FX Rack was untouched.
     shot = cases[-1]
     cases.append(Case("screenshot_preset_fxdefault", shot.settings, shot.signals,
                       {"reference": REF_FX_DEFAULTS, "ampbass": AMP_FX_DEFAULTS}))
@@ -153,6 +164,8 @@ def all_cases() -> list[Case]:
         *[Case(f"tight_post_{hz}", {**DEFAULTS, **CLEAN}, LINEAR_SIGNALS, tight("post", hz)) for hz in (50, 300, 1500)],
         Case("tight_pre_300_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS, tight("pre", 300)),
         Case("tight_post_300_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS, tight("post", 300)),
+        *[Case(f"smooth_post_{hz // 1000}k", {**DEFAULTS, **CLEAN}, LINEAR_SIGNALS, smooth("post", hz)) for hz in (3000, 21000)],
+        Case("smooth_pre_6k_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS, smooth("pre", 6000)),
         Case("powersoak_-20_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS,
              {"reference": {"PowerSoak": 0.5}, "ampbass": {"Power Soak": 0.5}}),
         Case("factory_defaults", dict(DEFAULTS), LINEAR_SIGNALS + DRIVE_SIGNALS, FACTORY),

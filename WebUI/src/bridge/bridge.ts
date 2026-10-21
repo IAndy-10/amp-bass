@@ -20,6 +20,7 @@ const comboChoiceCount: Record<ComboParamId, number> = {
     midFreq: 5,
     presetSelect: 4,
     tight: 3,
+    smooth: 3,
 };
 
 // check_native_interop.js installs a placeholder window.__JUCE__ outside the

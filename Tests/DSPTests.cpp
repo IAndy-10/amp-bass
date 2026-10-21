@@ -19,6 +19,7 @@
 #include "PowerSection.h"
 #include "Cabinet.h"
 #include "Tight.h"
+#include "Smooth.h"
 #include "PowerSoak.h"
 #include "OutputSwitch.h"
 #include "Primitives/DryWetMixer.h"
@@ -86,13 +87,15 @@ namespace
         bool  cabinet = false, horn = true;   // the plugin defaults to the cabinet on; the amp tests measure without it
         int   tight = 0;                      // 0 Off, 1 Pre, 2 Post (the plugin defaults to Post 50 Hz)
         float tightHz = 50.0f, powerSoakDb = 0.0f;   // the plugin defaults to -4 dB
+        int   smooth = 0;                     // 0 Off, 1 Pre, 2 Post (the plugin defaults to Post 21 kHz)
+        float smoothHz = 21000.0f;
     };
 
     struct Chain
     {
         InputGain inputGain; PreFilters preFilters; TubePreamp tubePreamp; ToneStack toneStack;
         GraphicEQ graphicEQ; MasterVolume masterVolume; PowerSection powerSection; Cabinet cabinet; DryWetMixer dryWet;
-        Tight tightPre, tightPost; PowerSoak powerSoak;
+        Tight tightPre, tightPost; Smooth smoothPre, smoothPost; PowerSoak powerSoak;
 
         int preparedBlock = kBlock;
 
@@ -103,6 +106,7 @@ namespace
             toneStack.prepare (sr, block);  graphicEQ.prepare (sr, block);  masterVolume.prepare (sr, block);
             powerSection.prepare (sr, block); cabinet.prepare (sr, block); dryWet.prepare (2, block);
             tightPre.prepare (sr, block); tightPost.prepare (sr, block); powerSoak.prepare (sr, block);
+            smoothPre.prepare (sr, block); smoothPost.prepare (sr, block);
         }
 
         void process (juce::AudioBuffer<float>& b, const Params& p)
@@ -117,6 +121,8 @@ namespace
             cabinet.setParams (p.cabinet, p.horn);
             tightPre.setParams (p.tight == 1, p.tightHz);
             tightPost.setParams (p.tight == 2, p.tightHz);
+            smoothPre.setParams (p.smooth == 1, p.smoothHz);
+            smoothPost.setParams (p.smooth == 2, p.smoothHz);
             powerSoak.setParams (p.powerSoakDb);
             dryWet.setMix (p.dryWet);
 
@@ -126,8 +132,8 @@ namespace
                 const int n = std::min (preparedBlock, b.getNumSamples() - start);
                 juce::AudioBuffer<float> sub (b.getArrayOfWritePointers(), b.getNumChannels(), start, n);
                 dryWet.saveDry (sub);
-                inputGain.process (sub); tightPre.process (sub); preFilters.process (sub); tubePreamp.process (sub); toneStack.process (sub);
-                graphicEQ.process (sub); masterVolume.process (sub); powerSection.process (sub); tightPost.process (sub); cabinet.process (sub); powerSoak.process (sub);
+                inputGain.process (sub); tightPre.process (sub); smoothPre.process (sub); preFilters.process (sub); tubePreamp.process (sub); toneStack.process (sub);
+                graphicEQ.process (sub); masterVolume.process (sub); powerSection.process (sub); tightPost.process (sub); smoothPost.process (sub); cabinet.process (sub); powerSoak.process (sub);
                 dryWet.mixToOutput (sub);
             }
         }
@@ -506,7 +512,7 @@ namespace
 
     void testFxRack()
     {
-        section ("FX Rack — Tight, Power Soak");
+        section ("FX Rack — Tight, Smooth, Power Soak");
 
         // Reference Tight at 300 Hz (Tight on minus off): high-pass + makeup gain
         const auto tight = [] (double f, float hz)
@@ -536,6 +542,26 @@ namespace
         const double soak = stageGainDb<PowerSoak> (1000, [] (auto& p) { p.setParams (-4.0f); });
         check (std::abs (soak + 4.0) < 0.01, "Power Soak -4 dB is a -4 dB gain", fmt ("%.3f dB", soak));
 
+        // Reference Smooth (on minus off), measured at 44.1 / 48 / 96 kHz: an analog-shaped first-order low-pass
+        struct SmoothPoint { double sr, setHz, hz, db; };
+        const SmoothPoint sp[] = { { 48000, 3000, 1000, -0.46 }, { 48000, 3000, 4000, -4.47 }, { 48000, 3000, 16000, -15.49 },
+                                   { 48000, 21000, 8000, -0.46 }, { 48000, 21000, 16000, -2.02 }, { 48000, 21000, 20000, -2.92 },
+                                   { 44100, 21000, 16000, -2.10 }, { 44100, 21000, 20000, -2.93 }, { 44100, 3000, 20000, -16.99 },
+                                   { 96000, 21000, 20000, -2.61 }, { 96000, 35000, 20000, -0.98 } };
+        double worstSmooth = 0.0;
+        for (const auto& p : sp)
+        {
+            const double db = stageGainDb<Smooth> (p.hz, [&] (auto& s) { s.setParams (true, static_cast<float> (p.setHz)); s.prepare (p.sr, kBlock); },
+                                                   p.sr);
+            worstSmooth = std::max (worstSmooth, std::abs (db - p.db));
+        }
+        check (worstSmooth < 0.3, "Smooth follows the reference (3 / 21 / 35 kHz at 44.1 / 48 / 96 kHz)", fmt ("worst %.2f dB", worstSmooth));
+        Smooth sm;  sm.setParams (false, 21000.0f);  sm.prepare (kSr, kBlock);
+        const auto smOut = render (in, kBlock, [&] (auto& b) { sm.process (b); });
+        bool smExact = true;
+        for (int i = 0; i < smOut.getNumSamples(); ++i)
+            smExact = smExact && smOut.getSample (0, i) == in[static_cast<size_t> (i)];
+        check (smExact, "Smooth off is bit-exact", smExact ? "identical" : "differs");
     }
 
     // Energy above 2 kHz of a 98 Hz tone through a stage while `set (stage, knob)` moves the knob 0 -> 1 over 1 s in
@@ -581,9 +607,11 @@ namespace
             g.setParams (true, bands, 0.0f);
         });
         const double tightHz = zipperDb<Tight> ([] (auto& t, float k) { t.setParams (true, 30.0f * std::pow (100.0f, k)); });
-        const double worst = std::max ({ treble, mid, midFreq, geq2k, tightHz });
-        check (worst < -90.0, "Treble, Mid, Mid Freq, GEQ, Tight Frequency moving: < -90 dBc above 2 kHz (no glide: -57)",
-               fmt ("treble %.0f, mid %.0f, mid freq %.0f", treble, mid, midFreq) + fmt (", GEQ 2k %.0f, Tight %.0f dBc", geq2k, tightHz));
+        const double smoothHz = zipperDb<Smooth> ([] (auto& t, float k) { t.setParams (true, 3000.0f * std::pow (35.0f / 3.0f, k)); });
+        const double worst = std::max ({ treble, mid, midFreq, geq2k, tightHz, smoothHz });
+        check (worst < -90.0, "Treble, Mid, Mid Freq, GEQ, Tight / Smooth Frequency moving: < -90 dBc above 2 kHz (no glide: -57)",
+               fmt ("treble %.0f, mid %.0f, mid freq %.0f", treble, mid, midFreq)
+                   + fmt (", GEQ 2k %.0f, Tight %.0f, Smooth %.0f dBc", geq2k, tightHz, smoothHz));
     }
 
     void testOutputSwitch()
@@ -905,6 +933,14 @@ namespace
                    && tightMode->getText (tightMode->getDefaultValue(), 8) == "Post",
                "Tight 30 / 300 / 3000 Hz at 0 / 0.5 / 1, defaults Post 50 Hz and Power Soak -4 dB like the reference",
                fmt ("%.1f / %.1f / %.1f Hz", f0, fHalf, f1));
+
+        auto* sf = probe.apvts.getParameter (ParameterIDs::smoothFreq);
+        auto* smoothMode = probe.apvts.getParameter (ParameterIDs::smooth);
+        const float s0 = sf->convertFrom0to1 (0.0f), sHalf = sf->convertFrom0to1 (0.5f), s1 = sf->convertFrom0to1 (1.0f);
+        check (std::abs (s0 - 3.0f) < 0.01f && std::abs (sHalf - 10.25f) < 0.01f && std::abs (s1 - 35.0f) < 0.01f
+                   && std::abs (sf->getDefaultValue() - 0.792f) < 0.001f && sf->getText (sf->getDefaultValue(), 8) == "21.0"
+                   && smoothMode->getText (smoothMode->getDefaultValue(), 8) == "Post",
+               "Smooth 3 / 10.2 / 35 kHz at 0 / 0.5 / 1, default Post 21.0 like the reference", fmt ("%.2f / %.2f / %.2f kHz", s0, sHalf, s1));
 
         auto* band = probe.apvts.getParameter (ParameterIDs::geq300);
         check (band->getText (band->getValueForText ("-4.5"), 16) == "-4.5", "GEQ bands show and accept dB",

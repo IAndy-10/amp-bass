@@ -40,6 +40,23 @@ namespace ParameterText
                  [] (float, float, float v) { return std::log (v / 30.0f) / std::log (100.0f); } };
     }
 
+    /// Smooth frequency like the reference: 3 kHz at 0 to 35 kHz at 1 on a log scale (21 kHz at 0.792), in kHz.
+    inline juce::NormalisableRange<float> smoothFrequencyRange()
+    {
+        return { 3.0f, 35.0f,
+                 [] (float, float, float x) { return 3.0f * std::pow (35.0f / 3.0f, x); },
+                 [] (float, float, float v) { return std::log (v / 3.0f) / std::log (35.0f / 3.0f); } };
+    }
+
+    /// kHz attributes: one decimal, typed as a plain number.
+    inline juce::AudioParameterFloatAttributes kilohertz()
+    {
+        return juce::AudioParameterFloatAttributes()
+            .withLabel ("kHz")
+            .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 1); })
+            .withValueFromStringFunction ([] (const juce::String& t) { return t.getFloatValue(); });
+    }
+
     /// Hz attributes: one decimal, typed as a plain number.
     inline juce::AudioParameterFloatAttributes hertz()
     {
@@ -244,6 +261,18 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         "Power Soak",
         juce::NormalisableRange<float> (-40.0f, 0.0f, 0.0f, 1.0f),
         -4.0f, ParameterText::decibels()));
+
+    // --- FX Rack: Smooth (default like the reference: Post, 21 kHz) ---
+
+    params.push_back (std::make_unique<juce::AudioParameterChoice> (
+        juce::ParameterID { ParameterIDs::smooth, 1 },
+        "Smooth", juce::StringArray { "Off", "Pre", "Post" }, 2));
+
+    params.push_back (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { ParameterIDs::smoothFreq, 1 },
+        "Smooth Frequency",
+        ParameterText::smoothFrequencyRange(),
+        21.0f, ParameterText::kilohertz()));
 
     return { params.begin(), params.end() };
 }

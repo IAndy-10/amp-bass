@@ -49,6 +49,8 @@ AmpBassAudioProcessor::AmpBassAudioProcessor()
     paramTight     = apvts.getRawParameterValue (ParameterIDs::tight);
     paramTightFreq = apvts.getRawParameterValue (ParameterIDs::tightFreq);
     paramPowerSoak = apvts.getRawParameterValue (ParameterIDs::powerSoak);
+    paramSmooth    = apvts.getRawParameterValue (ParameterIDs::smooth);
+    paramSmoothFreq = apvts.getRawParameterValue (ParameterIDs::smoothFreq);
 }
 
 AmpBassAudioProcessor::~AmpBassAudioProcessor() {}
@@ -89,6 +91,7 @@ void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
 
     inputGain.prepare (sampleRate, samplesPerBlock);
     tightPre.prepare (sampleRate, samplesPerBlock);
+    smoothPre.prepare (sampleRate, samplesPerBlock);
     preFilters.prepare (sampleRate, samplesPerBlock);
     tubePreamp.prepare (sampleRate, samplesPerBlock);
     toneStack.prepare (sampleRate, samplesPerBlock);
@@ -96,6 +99,7 @@ void AmpBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     masterVolume.prepare (sampleRate, samplesPerBlock);
     powerSection.prepare (sampleRate, samplesPerBlock);
     tightPost.prepare (sampleRate, samplesPerBlock);
+    smoothPost.prepare (sampleRate, samplesPerBlock);
     cabinet.prepare (sampleRate, samplesPerBlock);
     powerSoak.prepare (sampleRate, samplesPerBlock);
     dryWetMixer.prepare (2, samplesPerBlock);
@@ -114,6 +118,8 @@ void AmpBassAudioProcessor::releaseResources() {
     powerSection.reset();
     tightPre.reset();
     tightPost.reset();
+    smoothPre.reset();
+    smoothPost.reset();
     cabinet.reset();
     powerSoak.reset();
     outputSwitch.reset();
@@ -165,6 +171,9 @@ void AmpBassAudioProcessor::updateDSPParameters() {
     const int tightMode = static_cast<int> (paramTight->load() + 0.5f);
     tightPre.setParams (tightMode == 1, paramTightFreq->load());
     tightPost.setParams (tightMode == 2, paramTightFreq->load());
+    const int smoothMode = static_cast<int> (paramSmooth->load() + 0.5f);   // same choices; frequency in kHz
+    smoothPre.setParams (smoothMode == 1, 1000.0f * paramSmoothFreq->load());
+    smoothPost.setParams (smoothMode == 2, 1000.0f * paramSmoothFreq->load());
     powerSoak.setParams (paramPowerSoak->load());
 
     // Global dry/wet
@@ -204,6 +213,7 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         // ── Signal chain (8 stages) ──
         inputGain.process (sub);      // Stage 1
         tightPre.process (sub);       // FX Rack Tight, Pre
+        smoothPre.process (sub);      // FX Rack Smooth, Pre
         preFilters.process (sub);     // Stage 2
         tubePreamp.process (sub);     // Stage 3
         toneStack.process (sub);      // Stage 4
@@ -223,6 +233,7 @@ void AmpBassAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         masterVolume.process (sub);   // Stage 6
         powerSection.process (sub);   // Stage 7
         tightPost.process (sub);      // FX Rack Tight, Post
+        smoothPost.process (sub);     // FX Rack Smooth, Post
         cabinet.process (sub);        // Stage 8
         powerSoak.process (sub);      // FX Rack Power Soak
 
@@ -243,8 +254,8 @@ juce::AudioProcessorEditor* AmpBassAudioProcessor::createEditor() {
 // Saved-state format. Bump it when a parameter's range or meaning changes, and convert older
 // states in setStateInformation so existing sessions keep sounding the same.
 // 1 = no version attribute (before the reference-matched ranges), 2 = reference-matched ranges,
-// 3 = cabinet added, 4 = Tight and Power Soak added.
-static constexpr int kStateVersion = 4;
+// 3 = cabinet added, 4 = Tight and Power Soak added, 5 = Smooth added.
+static constexpr int kStateVersion = 5;
 static const juce::Identifier kStateVersionId { "stateVersion" };
 
 void AmpBassAudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
@@ -280,6 +291,8 @@ void AmpBassAudioProcessor::setStateInformation(const void* data, int sizeInByte
         setValue(ParameterIDs::tight, 0.0f);       // Off
         setValue(ParameterIDs::powerSoak, 0.0f);   // 0 dB
     }
+    if (version < 5)
+        setValue(ParameterIDs::smooth, 0.0f);      // Off
     apvts.replaceState(state);
 }
 

@@ -57,4 +57,8 @@ namespace ParameterIDs
     static constexpr const char* tight         = "tight";
     static constexpr const char* tightFreq     = "tightFreq";
     static constexpr const char* powerSoak     = "powerSoak";
+
+    // FX Rack — Smooth (Off / Pre / Post the amp: a gentle low-pass, 3-35 kHz)
+    static constexpr const char* smooth        = "smooth";
+    static constexpr const char* smoothFreq    = "smoothFreq";
 }

@@ -63,6 +63,8 @@ private:
     juce::WebSliderRelay tightRelay          { "tight" };
     juce::WebSliderRelay tightFreqRelay      { "tightFreq" };
     juce::WebSliderRelay powerSoakRelay      { "powerSoak" };
+    juce::WebSliderRelay smoothRelay         { "smooth" };
+    juce::WebSliderRelay smoothFreqRelay     { "smoothFreq" };
 
     // --- Parameter attachments (own gesture begin/end) ---
     // Stored as unique_ptrs because they're constructed after APVTS is ready.
@@ -101,6 +103,8 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment> tightAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> tightFreqAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> powerSoakAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> smoothAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> smoothFreqAttach;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NativeBridge)
 };

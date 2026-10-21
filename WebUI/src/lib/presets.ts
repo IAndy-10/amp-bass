@@ -22,7 +22,7 @@ const AMPEG_FILE_MATCH: PresetValues = {
     },
     flags: { bright: false, inputPad: false, ultraHi: true, ultraLo: false, geqOn: true },
     midFreqPos: 3,
-    fx: { cabinet: true, horn: true, tight: 2, tightFreq: 0.111, powerSoak: 0.9 },
+    fx: { cabinet: true, horn: true, tight: 2, tightFreq: 0.111, powerSoak: 0.9, smooth: 2, smoothFreq: 0.792 },
 };
 
 export const PRESETS: readonly Preset[] = [
