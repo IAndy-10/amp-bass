@@ -2,18 +2,14 @@
 	import { toggles } from '../../state/store';
 	import { setFlag } from '$lib/stores/amp';
 	import { undo, redo, canUndo, canRedo } from '$lib/stores/history';
+	import PresetBar from './PresetBar.svelte';
 
 	const bypass = toggles.bypass;
 	const active = $derived(!$bypass);
 
-	// Presets, Copy, Paste, Reset, FX Rack and About are visual stubs in this
-	// build (spec §0, §4): they render and focus but do nothing.
-	const PRESETS = [
-		{ id: 'A', x: 1050 },
-		{ id: 'B', x: 1112 },
-		{ id: 'C', x: 1172 },
-		{ id: 'D', x: 1232 }
-	];
+	// Copy, Paste, Reset, FX Rack and About are visual stubs in this build
+	// (spec §0, §4): they render and focus but do nothing. The A-D settings
+	// slots are replaced by the named presets (PresetBar).
 	const STUBS = [
 		{ label: 'Copy', x: 1373 },
 		{ label: 'Paste', x: 1506 },
@@ -70,20 +66,7 @@
 		</svg>
 	</button>
 
-	<div role="radiogroup" aria-label="Presets" class="presets">
-		{#each PRESETS as p (p.id)}
-			<button
-				type="button"
-				class="at text preset"
-				class:selected={p.id === 'A'}
-				style:--x={p.x}
-				style:--y={30}
-				role="radio"
-				aria-checked={p.id === 'A'}
-				aria-disabled="true">{p.id}</button
-			>
-		{/each}
-	</div>
+	<PresetBar />
 
 	{#each STUBS as s (s.label)}
 		<button type="button" class="at text" style:--x={s.x} style:--y={30} aria-disabled="true"
@@ -102,9 +85,6 @@
 		width: 100%;
 		height: calc(60 * var(--u));
 		background: var(--toolbar-bg);
-	}
-	.presets {
-		display: contents;
 	}
 	/* No `all: unset` here: it would also reset the global .at positioning. */
 	button {
@@ -133,9 +113,6 @@
 	.text:hover {
 		color: #ffffff;
 		border-bottom-color: currentColor;
-	}
-	.preset.selected {
-		color: var(--accent-blue);
 	}
 	.about {
 		position: absolute;

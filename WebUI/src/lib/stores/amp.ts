@@ -230,3 +230,61 @@ export function getNumeric(key: NumericKey): number {
 export function getFlag(key: FlagKey): boolean {
     return get(toggles[key]);
 }
+
+// --- Presets (toolbar) ---
+
+export type PresetFlagKey = Exclude<FlagKey, 'bypass' | 'mute'>;
+const PRESET_FLAGS: readonly PresetFlagKey[] = ['bright', 'inputPad', 'ultraHi', 'ultraLo', 'geqOn'];
+
+/** A full setting: faceplate values in display units, FX Rack values as the plugin stores them. */
+export interface PresetValues {
+    numeric: Record<NumericKey, number>;
+    flags: Record<PresetFlagKey, boolean>;
+    midFreqPos: number; // 1-5
+    fx: {
+        cabinet: boolean;
+        horn: boolean;
+        tight: 0 | 1 | 2; // Off / Pre / Post
+        tightFreq: number; // normalised: 30 Hz x 100^n (0.111 = 50 Hz)
+        powerSoak: number; // normalised: -40 + 40n dB (0.9 = -4 dB)
+    };
+}
+
+/** Apply a preset as one undo step. Values are written unsnapped (Mid 6.75 stays 6.75).
+ *  The FX Rack isn't in the undo history (it has no faceplate controls yet). */
+export function applyPreset(p: PresetValues): void {
+    beginGesture(null);
+    for (const k of [...KNOB_KEYS, ...GEQ_KEYS]) {
+        sliderDragStarted(k);
+        writeNormalised(k, toNormalised(k, p.numeric[k]));
+        sliderDragEnded(k);
+    }
+    for (const k of PRESET_FLAGS) writeFlag(k, p.flags[k]);
+    writeMidFreqIndex(p.midFreqPos - 1);
+    writeFlag('cabinet', p.fx.cabinet);
+    writeFlag('horn', p.fx.horn);
+    if (getCombo('tight')) setComboIndex('tight', p.fx.tight);
+    combos.tight.set(p.fx.tight);
+    writeNormalised('tightFreq', p.fx.tightFreq);
+    writeNormalised('powerSoak', p.fx.powerSoak);
+    endGesture(null);
+}
+
+/** True while every value still equals the preset (knobs within 0.05, dB within 0.05 dB). */
+export function presetActive(p: PresetValues): Readable<boolean> {
+    const keys = [...KNOB_KEYS, ...GEQ_KEYS];
+    const stores = [
+        ...keys.map((k) => sliders[k]),
+        ...PRESET_FLAGS.map((k) => toggles[k]),
+        combos.midFreq, toggles.cabinet, toggles.horn, combos.tight, sliders.tightFreq, sliders.powerSoak,
+    ] as Readable<number | boolean>[];
+    return derived(stores, (values) => {
+        const n = keys.length, f = PRESET_FLAGS.length;
+        const knobsMatch = keys.every((k, i) => Math.abs(toDisplay(k, values[i] as number) - p.numeric[k]) < 0.05);
+        const flagsMatch = PRESET_FLAGS.every((k, i) => values[n + i] === p.flags[k]);
+        const [mid, cab, horn, tight, tightFreq, soak] = values.slice(n + f);
+        return knobsMatch && flagsMatch && mid === p.midFreqPos - 1 && cab === p.fx.cabinet && horn === p.fx.horn
+            && tight === p.fx.tight && Math.abs((tightFreq as number) - p.fx.tightFreq) < 1e-3
+            && Math.abs((soak as number) - p.fx.powerSoak) < 1e-3;
+    });
+}
