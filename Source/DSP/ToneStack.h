@@ -132,7 +132,7 @@ public:
             const float trebleKnob = smoothTreble.getNextValue();
             const float midPos   = smoothMidPos.getNextValue();
 
-            // Update coefficients at block-rate (every 32 samples)
+            // Retune every 32 samples, gliding to the new coefficients over those 32 (no zipper noise)
             if (s % kCoeffUpdateInterval == 0)
             {
                 float bassDb, bassHz, bassQ, trebleDb, trebleHz, trebleQ;
@@ -155,11 +155,12 @@ public:
 
                 for (int ch = 0; ch < numChannels; ++ch)
                 {
-                    lowShelf[ch].setParams (Biquad::Type::LowShelf, bassHz, bassQ, bassDb);
-                    midPeak[ch].setParams (Biquad::Type::Peak, midHz, midQ, midDb);
-                    highShelf[ch].setParams (Biquad::Type::HighShelf, trebleHz, trebleQ, trebleDb);
-                    trebleTop[ch].setGainDb (topDb);
-                    interaction[ch].setParams (Biquad::Type::Peak, interHz, interQ, interDb);
+                    constexpr int n = kCoeffUpdateInterval;
+                    lowShelf[ch].glideTo (Biquad::Type::LowShelf, bassHz, bassQ, bassDb, n);
+                    midPeak[ch].glideTo (Biquad::Type::Peak, midHz, midQ, midDb, n);
+                    highShelf[ch].glideTo (Biquad::Type::HighShelf, trebleHz, trebleQ, trebleDb, n);
+                    trebleTop[ch].glideTo (Biquad::Type::Peak, trebleTopHz, kTrebleTopQ, topDb, n);
+                    interaction[ch].glideTo (Biquad::Type::Peak, interHz, interQ, interDb, n);
                 }
             }
 

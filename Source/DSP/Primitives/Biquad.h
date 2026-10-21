@@ -10,6 +10,7 @@ public:
 
     void prepare(double sampleRate) {
         sr = sampleRate;
+        glideLeft = 0;
         reset();
         updateCoefficients();
     }
@@ -24,7 +25,25 @@ public:
         freq = hz;
         Q = q;
         gainDb = db;
+        glideLeft = 0;
         updateCoefficients();
+    }
+
+    // Like setParams, but the coefficients move to the new values in a straight line over `samples` samples.
+    // For a filter retuned while it runs (a knob being moved): a jump clicks, because the state still belongs
+    // to the old filter, and retuning every N samples turns the clicks into a buzz at sampleRate / N (zipper
+    // noise). Retuning every N samples with a glide of N gives a continuous path. Same values: no change.
+    void glideTo(Type t, float hz, float q, float db, int samples) {
+        const double from[5] = { b0, b1, b2, a1, a2 };
+        setParams(t, hz, q, db);
+        if (samples <= 1) { glideLeft = 0; return; }
+        const double to[5] = { b0, b1, b2, a1, a2 };
+        for (int i = 0; i < 5; ++i) {
+            target[i] = to[i];
+            step[i] = (to[i] - from[i]) / samples;
+        }
+        b0 = from[0]; b1 = from[1]; b2 = from[2]; a1 = from[3]; a2 = from[4];
+        glideLeft = samples;
     }
 
     void reset() { s1 = 0.0; s2 = 0.0; }
@@ -36,6 +55,7 @@ public:
         // Denormal flush
         s1 += 1e-18; s1 -= 1e-18;
         s2 += 1e-18; s2 -= 1e-18;
+        if (glideLeft > 0) advanceGlide();
         return static_cast<float>(y);
     }
 
@@ -53,6 +73,18 @@ private:
 
     // State (Direct Form II Transposed)
     double s1 = 0.0, s2 = 0.0;
+
+    // Coefficient glide (glideTo)
+    double target[5] = {}, step[5] = {};
+    int glideLeft = 0;
+
+    void advanceGlide() {
+        if (--glideLeft == 0) {
+            b0 = target[0]; b1 = target[1]; b2 = target[2]; a1 = target[3]; a2 = target[4];
+            return;
+        }
+        b0 += step[0]; b1 += step[1]; b2 += step[2]; a1 += step[3]; a2 += step[4];
+    }
 
     void updateCoefficients() {
         if (sr <= 0.0 || freq <= 0.0f || Q <= 0.0f) return;

@@ -45,10 +45,12 @@ public:
 
         for (int s = 0; s < numSamples; ++s)
         {
-            const bool gliding = smoothHz.isSmoothing();
+            // Retune every 32 samples, gliding over those 32 (no zipper noise while the frequency moves)
             const float hz = smoothHz.getNextValue();
-            if (gliding && s % kCoeffUpdateInterval == 0)
-                updateCoefficients (hz);
+            if (s % kCoeffUpdateInterval == 0)
+                updateCoefficients (hz, kCoeffUpdateInterval);
+            if (glideLeft > 0)
+                advanceGlide();
 
             const float m = mix.getNextValue();
 
@@ -76,19 +78,36 @@ private:
 
     struct State { double x1 = 0.0, y1 = 0.0; };
 
-    void updateCoefficients (float hz)
+    /// Glides to the new values over `glideSamples` (0: at once).
+    void updateCoefficients (float hz, int glideSamples = 0)
     {
         // Bilinear first-order high-pass: H(z) = (1 - z^-1) / ((1 + K) + (K - 1) z^-1)
         const double k = std::tan (juce::MathConstants<double>::pi * juce::jmin (static_cast<double> (hz), 0.45 * sr) / sr);
         const double norm = 1.0 / (1.0 + k);
-        b0 = norm;
-        b1 = -norm;
-        a1 = (k - 1.0) * norm;
-        makeup = std::pow (10.0, kMakeupDbPerDecade * std::log10 (static_cast<double> (hz) / kMinHz) / 20.0);
+        const double to[4] = { norm, -norm, (k - 1.0) * norm,
+                               std::pow (10.0, kMakeupDbPerDecade * std::log10 (static_cast<double> (hz) / kMinHz) / 20.0) };
+        double* c[4] = { &b0, &b1, &a1, &makeup };
+        for (int i = 0; i < 4; ++i)
+        {
+            target[i] = to[i];
+            step[i] = glideSamples > 1 ? (to[i] - *c[i]) / glideSamples : 0.0;
+            if (glideSamples <= 1) *c[i] = to[i];
+        }
+        glideLeft = glideSamples > 1 ? glideSamples : 0;
+    }
+
+    void advanceGlide()
+    {
+        const bool last = --glideLeft == 0;
+        double* c[4] = { &b0, &b1, &a1, &makeup };
+        for (int i = 0; i < 4; ++i)
+            *c[i] = last ? target[i] : *c[i] + step[i];
     }
 
     double sr = 48000.0;
     double b0 = 1.0, b1 = 0.0, a1 = 0.0, makeup = 1.0;
+    double target[4] = {}, step[4] = {};
+    int glideLeft = 0;
     State state[2];
     bool on = false;
     float targetHz = 50.0f;

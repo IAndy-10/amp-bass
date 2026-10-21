@@ -535,6 +535,55 @@ namespace
 
         const double soak = stageGainDb<PowerSoak> (1000, [] (auto& p) { p.setParams (-4.0f); });
         check (std::abs (soak + 4.0) < 0.01, "Power Soak -4 dB is a -4 dB gain", fmt ("%.3f dB", soak));
+
+    }
+
+    // Energy above 2 kHz of a 98 Hz tone through a stage while `set (stage, knob)` moves the knob 0 -> 1 over 1 s in
+    // 10 ms steps (a mouse drag), in dB relative to the tone. A filter that jumps to new coefficients every few samples
+    // clicks at that rate (zipper noise); a held knob leaves next to nothing up there.
+    template <typename Stage, typename Set>
+    double zipperDb (Set&& set)
+    {
+        const auto in = sine (kSr, 98.0, 0.0316f, 1.2);
+        const int step = static_cast<int> (kSr / 100.0);
+        Stage st;
+        st.prepare (kSr, kBlock);
+        set (st, 0.0f);
+        juce::AudioBuffer<float> b (1, static_cast<int> (in.size()));
+        b.copyFrom (0, 0, in.data(), b.getNumSamples());
+        for (int start = 0; start < b.getNumSamples(); start += step)
+        {
+            const int n = std::min (step, b.getNumSamples() - start);
+            set (st, std::min (1.0f, static_cast<float> (start) / static_cast<float> (kSr)));
+            juce::AudioBuffer<float> sub (b.getArrayOfWritePointers(), 1, start, n);
+            st.process (sub);
+        }
+        Biquad hp[4];
+        for (auto& f : hp) { f.prepare (kSr); f.setParams (Biquad::Type::HighPass, 2000.0f, 0.707f); }
+        float* d = b.getWritePointer (0);
+        for (int i = 0; i < b.getNumSamples(); ++i)
+            for (auto& f : hp) d[i] = f.processSample (d[i]);
+        const int n = static_cast<int> (in.size());
+        return toDb (rms (d, static_cast<int> (0.1 * kSr), static_cast<int> (1.0 * kSr)) / rms (in.data(), 0, n) + 1e-12);
+    }
+
+    void testZipper()
+    {
+        section ("Moving controls — no zipper noise");
+
+        const double treble = zipperDb<ToneStack> ([] (auto& t, float k) { t.setParams (0.5f, 0.5f, 3, k); });
+        const double mid = zipperDb<ToneStack> ([] (auto& t, float k) { t.setParams (0.5f, k, 3, 0.5f); });
+        const double midFreq = zipperDb<ToneStack> ([] (auto& t, float k) { t.setParams (0.5f, 1.0f, 1 + static_cast<int> (k * 4.0f + 0.5f), 0.5f); });
+        const double geq2k = zipperDb<GraphicEQ> ([] (auto& g, float k)
+        {
+            float bands[GraphicEQ::kNumBands] = {};
+            bands[6] = -12.0f + 24.0f * k;
+            g.setParams (true, bands, 0.0f);
+        });
+        const double tightHz = zipperDb<Tight> ([] (auto& t, float k) { t.setParams (true, 30.0f * std::pow (100.0f, k)); });
+        const double worst = std::max ({ treble, mid, midFreq, geq2k, tightHz });
+        check (worst < -90.0, "Treble, Mid, Mid Freq, GEQ, Tight Frequency moving: < -90 dBc above 2 kHz (no glide: -57)",
+               fmt ("treble %.0f, mid %.0f, mid freq %.0f", treble, mid, midFreq) + fmt (", GEQ 2k %.0f, Tight %.0f dBc", geq2k, tightHz));
     }
 
     void testOutputSwitch()
@@ -875,6 +924,7 @@ int main()
     testPowerSection();
     testCabinet();
     testFxRack();
+    testZipper();
     testOutputSwitch();
     testChainSensitivity();
     testDefaultsAndSafety();

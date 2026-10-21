@@ -70,7 +70,7 @@ public:
 
         for (int s = 0; s < numSamples; ++s)
         {
-            // Advance smoothed values every sample, update coefficients every 32
+            // Advance smoothed values every sample; retune every 32, gliding over those 32 (no zipper noise)
             float bandDb[kNumBands];
             for (int b = 0; b < kNumBands; ++b)
                 bandDb[b] = smoothBandDb[b].getNextValue();
@@ -82,7 +82,7 @@ public:
                     float gainDb, q;
                     bandResponse (b, bandDb[b], gainDb, q);
                     for (int ch = 0; ch < numChannels; ++ch)
-                        bands[b][ch].setParams (Biquad::Type::Peak, kBandHz[b], q, gainDb);
+                        bands[b][ch].glideTo (Biquad::Type::Peak, kBandHz[b], q, gainDb, kCoeffUpdateInterval);
                 }
             }
 

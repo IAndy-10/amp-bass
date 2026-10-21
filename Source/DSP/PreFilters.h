@@ -63,9 +63,9 @@ public:
             const float ultraHi = smoothUltraHi.getNextValue();
             const float ultraLo = smoothUltraLo.getNextValue();
 
-            // Update filter coefficients at block-rate (every 32 samples)
+            // Retune every 32 samples, gliding over those 32 (no zipper noise)
             if (s % kCoeffUpdateInterval == 0)
-                setGains (bright, ultraHi, ultraLo);
+                setGains (bright, ultraHi, ultraLo, kCoeffUpdateInterval);
 
             for (int ch = 0; ch < numChannels; ++ch)
             {
@@ -90,15 +90,15 @@ private:
     // Ultra Lo: -12.4 dB at 530 Hz. The manual's +2 dB at 40 Hz isn't in the reference plugin.
     static constexpr float kUltraLoHz = 530.2f, kUltraLoQ = 0.713f, kUltraLoDb = -12.36f;
 
-    void setGains (float bright, float ultraHi, float ultraLo)
+    void setGains (float bright, float ultraHi, float ultraLo, int glideSamples = 0)
     {
         for (int ch = 0; ch < 2; ++ch)
         {
-            brightPeak[ch].setParams (Biquad::Type::Peak, kBrightPeakHz, kBrightPeakQ, kBrightPeakDb * bright);
-            brightShelf[ch].setParams (Biquad::Type::HighShelf, kBrightShelfHz, kBrightShelfQ, kBrightShelfDb * bright);
-            ultraHiPeak[ch].setParams (Biquad::Type::Peak, kUltraHiPeakHz, kUltraHiPeakQ, kUltraHiPeakDb * ultraHi);
-            ultraHiShelf[ch].setParams (Biquad::Type::HighShelf, kUltraHiShelfHz, kUltraHiShelfQ, kUltraHiShelfDb * ultraHi);
-            ultraLoCut[ch].setParams (Biquad::Type::Peak, kUltraLoHz, kUltraLoQ, kUltraLoDb * ultraLo);
+            brightPeak[ch].glideTo (Biquad::Type::Peak, kBrightPeakHz, kBrightPeakQ, kBrightPeakDb * bright, glideSamples);
+            brightShelf[ch].glideTo (Biquad::Type::HighShelf, kBrightShelfHz, kBrightShelfQ, kBrightShelfDb * bright, glideSamples);
+            ultraHiPeak[ch].glideTo (Biquad::Type::Peak, kUltraHiPeakHz, kUltraHiPeakQ, kUltraHiPeakDb * ultraHi, glideSamples);
+            ultraHiShelf[ch].glideTo (Biquad::Type::HighShelf, kUltraHiShelfHz, kUltraHiShelfQ, kUltraHiShelfDb * ultraHi, glideSamples);
+            ultraLoCut[ch].glideTo (Biquad::Type::Peak, kUltraLoHz, kUltraLoQ, kUltraLoDb * ultraLo, glideSamples);
         }
     }
 
