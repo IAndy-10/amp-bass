@@ -474,10 +474,10 @@ Fitting scratch scripts from this session (`fitpower*.py`, `fittube.py`, targets
   mute = digital silence, both fade linearly (10–90 % in 43 ms; it reacts ~12 ms after the change, likely its control
   rate, not copied). AmpBass had 10 ms fades and a −138 dB bypass residue; now 50 ms linear (40 ms 10–90 %) and
   bit-exact bypass. (Dry/Wet keeps its equal-power crossfade; this is the bypass switch.)
-- [ ] **8.5 PEAK/MUTE LED** *(code check 2026-10-19: the UI already lights it on Mute, `Faceplate.svelte` `$peak || $mute`; only the DAW check is left)* (in a DAW, not measurable offline): per the manual it lights on input overload, high Gain,
+- [x] **8.5 PEAK/MUTE LED** *(user, Ableton, 2026-10-21: OK)* *(code check 2026-10-19: the UI already lights it on Mute, `Faceplate.svelte` `$peak || $mute`; only the DAW check is left)* (in a DAW, not measurable offline): per the manual it lights on input overload, high Gain,
   **or too much tone boost**, and **whenever Mute is on**. Check that AmpBass's LED logic (`PluginProcessor.cpp`, PEAK block)
   also lights on Mute.
-- [ ] **8.6 Knob moves** (in a DAW): sweep every control during playback in both plugins. No zipper noise or clicks.
+- [x] **8.6 Knob moves** (in a DAW): sweep every control during playback in both plugins. No zipper noise or clicks. *(user, Ableton, 2026-10-21: OK. Separate open issue: a steady Treble hiss, BACKLOG P1.)*
   Mid Freq and switches change without clicks.
 - **Milestone C: behaviour matches.**
 
@@ -637,6 +637,12 @@ Milestone C), because those steps need the comparison harness, the reference ren
 - **D13.5 Fitting scripts** (`build-tests/compare/**/*.py`, `step6-fits/envasym.c`, about 60 files; they generated the
   tables in `Cabinet.h`, `ToneStack.h`, `PowerSection.h` and the output low-pass): (a) commit them once, with
   repo-relative paths, so the archive tag holds them; or (b) keep them only in the local backup (13.1).
+
+**User's answers (2026-10-21):** D13.1 (a) untrack, keep on disk. D13.2 (b) remove `Tests/` entirely (no unit tests in
+the repo; the archive tag and the local backup hold them). D13.4 decide later: 13.8's licence part stays open. D13.3 and
+D13.5 not asked: (a) README and (b) local backup only (the user declined committing the fit scripts earlier the same day).
+`inputHiLo`: remove the parameter (13.2). The user wants to focus on this step now; the open matching items (Treble hiss,
+12.5 cabinet phase, 12.6 listening, which the user links to the Treble hiss) continue from the archive tag if needed.
 
 Steps (one commit each, `chore:` / `docs:` / `test:` / `refactor:`):
 
