@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(AmpBass VERSION 1.0.0)
+project(AmpBass VERSION 1.1.0)
 
 # ============================================================
 # C++ Standard
