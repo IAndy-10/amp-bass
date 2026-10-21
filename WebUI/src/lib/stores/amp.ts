@@ -38,7 +38,7 @@ export const LABELS: Record<NumericKey | FlagKey, string> = {
 };
 
 export const MID_FREQ_HZ = ['220 Hz', '450 Hz', '800 Hz', '1.6 kHz', '3 kHz'] as const;
-export const MID_FREQ_DEFAULT_POS = 1; // reference default (ParameterLayout.h)
+export const MID_FREQ_DEFAULT_POS = 1; // default (ParameterLayout.h)
 
 /** Double-click / "Set to default" values in display units. Must match ParameterLayout.h. */
 export const DEFAULTS: Record<NumericKey, number> = {
@@ -67,7 +67,7 @@ export function rangeOf(key: NumericKey): Range {
     return { start: props.start, end: props.end, skew: props.skew || 1 };
 }
 
-// GEQ Level is piecewise like the reference (ParameterText::geqLevelRange in ParameterLayout.h):
+// GEQ Level is piecewise (ParameterText::geqLevelRange in ParameterLayout.h):
 // -10 dB at 0, 0 dB at the centre, +8 dB at 1, linear on each side. The relay only sends start/end/skew,
 // so this mapping is mirrored here.
 const levelToDisplay = (n: number): number => (n < 0.5 ? -10 + 20 * n : 16 * (n - 0.5));

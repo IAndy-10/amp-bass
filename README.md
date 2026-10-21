@@ -1,9 +1,12 @@
 # AmpBass
 
-Bass amplifier plugin (faceplate name **EPIC-AMP-1**): a clean preamp with three voicing switches, a passive-style
+Bass amplifier plugin (faceplate name **EPIC-AMP-1**) that aims to replicate the sound of the **Ampeg SVT-3 PRO**
+bass amplifier head (hardware): a clean preamp with three voicing switches, a passive-style
 3-band tone stack with a 5-position mid frequency, a 9-band graphic EQ, a tube-style power stage with Tube Gain,
-a 4x10 cabinet with horn and an FX Rack (Tight, Smooth, Noise Gate, Power Soak). Most constants are fitted to
-measurements of a reference amp plugin.
+a 4x10 cabinet with horn and an FX Rack (Tight, Smooth, Noise Gate, Power Soak). The stage order and controls follow
+the amp's owner's manual and schematics; the constants are fitted to measured responses.
+
+Ampeg and SVT are trademarks of their owner. This project is not affiliated with or endorsed by Ampeg.
 
 Version 1.0.0, by Epica Audio. VST3, AU and Standalone on macOS.
 
@@ -142,10 +145,10 @@ These constants shape the sound and aren't parameters, so changing them doesn't 
 | Noise gate detector | `kHighPassHz`, `kLowPassHz`, `kEnvelopeSeconds`, `kGainSeconds` | `NoiseGate.h` |
 | PEAK thresholds | `kPeakInput`, `kPeakDrive`, `kPeakPreMaster` | `PluginProcessor.h` |
 
-There are no automated tests in the repository; the DSP tests, an offline VST3 host and the comparison against the
-reference plugin are kept in the git tag `sound-matching-archive`.
+There are no automated tests in the repository; the DSP tests and an offline VST3 host are kept in the git tag
+`sound-matching-archive`.
 
-Known limitations: after a very loud note at Tube Gain 0 the reference briefly chokes, which the 5 Hz envelope
+Known limitations: after a very loud note at Tube Gain 0 the amp briefly chokes, which the 5 Hz envelope
 doesn't reproduce; at extreme input levels there is 1–3 dB too little compression; one cabinet only, matched in
 magnitude but not in phase; at 88.2 kHz and up about 1 dB of top-end difference.
 

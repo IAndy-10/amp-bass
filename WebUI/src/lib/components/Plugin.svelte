@@ -35,7 +35,7 @@
 <ContextMenu />
 
 <style>
-	/* 2562 × 558 reference-pixel canvas, capped at 1800 px, scrolls below 960 px. */
+	/* 2562 × 558 design-pixel canvas, capped at 1800 px, scrolls below 960 px. */
 	.stage {
 		container-type: inline-size;
 		width: 100%;

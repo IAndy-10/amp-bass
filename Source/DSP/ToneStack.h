@@ -56,7 +56,7 @@ public:
 
         for (int ch = 0; ch < 2; ++ch)
         {
-            // Fixed voicing: the reference's response with every tone knob at noon
+            // Fixed voicing: the amp's response with every tone knob at noon
             // (bass bump, mid scoop, presence bump). The knobs themselves are flat at noon.
             voicingLow[ch].prepare (sampleRate);
             voicingLow[ch].setParams (Biquad::Type::Peak, kVoicingLowHz, kVoicingLowQ, kVoicingLowDb);
@@ -106,7 +106,7 @@ public:
 
     void setParams (float bassKnob, float midKnob, int midFreqSelect, float trebleKnob)
     {
-        // Bass: shelf shape and depth follow the reference per knob position (kBassCurve)
+        // Bass: shelf shape and depth per knob position (kBassCurve)
         smoothBass.setTargetValue (bassKnob);
 
         // Mid: peak per frequency position and knob position (kMid*). The selector is smoothed as a
@@ -148,7 +148,7 @@ public:
                                  + mt * (atKnob (kMidQ[mi + 1], midKnob) - atKnob (kMidQ[mi], midKnob));
                 const float midHz = kMidHz[mi] * std::pow (kMidHz[mi + 1] / kMidHz[mi], mt);
 
-                // Bass/treble interaction (the reference's passive stack): Hz interpolated on a log scale
+                // Bass/treble interaction (the passive stack): Hz interpolated on a log scale
                 const float interDb = atKnobs (kInteractionDb, bassKnob, trebleKnob);
                 const float interHz = atKnobs (kInteractionHz, bassKnob, trebleKnob, true);
                 const float interQ  = atKnobs (kInteractionQ, bassKnob, trebleKnob);
@@ -180,13 +180,13 @@ public:
     }
 
 private:
-    // Fitted to the reference (cabinet bypassed, all tone knobs at noon), 30 Hz-20 kHz within 0.5 dB:
+    // Fitted with the cabinet off and all tone knobs at noon, 30 Hz-20 kHz within 0.5 dB:
     // +4.6 dB at 57 Hz, -3.2 dB at 1 kHz, +2.3 dB at 5.9 kHz.
     static constexpr float kVoicingLowHz  = 57.5f,  kVoicingLowQ  = 0.44f, kVoicingLowDb  = 8.36f;
     static constexpr float kVoicingHighHz = 5906.0f, kVoicingHighQ = 0.69f, kVoicingHighDb = 6.08f;
     static constexpr float kVoicingGain   = 0.6485f;  // -3.76 dB
 
-    // The knobs' tapers are curved, so each is measured densely: the filter is fitted to the reference at
+    // The knobs' tapers are curved, so each is measured densely: the filter is fitted at
     // every 0.25 of the knob and tabulated every 0.5 (bass, mid) or 0.25 (treble, whose shape changes fastest near 0
     // and 10). Between table points the error stays within ~1 dB (2.3 dB at treble 0.125).
 
@@ -201,7 +201,7 @@ private:
     };
 
     // Treble: high shelf plus a peak at 19 kHz whose gain follows the knob (it brings the response back toward 0 dB at
-    // the top like the reference), per knob position 0, 0.25 ... 10 (fit within 1.6 dB, 100 Hz-20 kHz).
+    // the top), per knob position 0, 0.25 ... 10 (fit within 1.6 dB, 100 Hz-20 kHz).
     static constexpr KnobCurve<41> kTrebleCurve {
         { -29.91f, -23.49f, -19.26f, -16.28f, -13.98f, -12.09f, -10.51f, -9.14f, -7.94f, -6.88f, -5.93f,
           -5.07f, -4.30f, -3.60f, -2.96f, -2.37f, -1.83f, -1.32f, -0.85f, -0.41f, 0.00f, 0.39f,
@@ -222,7 +222,7 @@ private:
           -5.18f, -5.69f, -6.22f, -6.74f, -7.15f, -7.23f, -6.30f, -2.58f };
     static constexpr float kTrebleTopHz = 19000.0f, kTrebleTopQ = 1.2f;
 
-    // Mid peak, fitted to the reference at every selector position and knob position 0, 0.5 ... 10 (within 0.3 dB;
+    // Mid peak, fitted at every selector position and knob position 0, 0.5 ... 10 (within 0.3 dB;
     // 1.3 dB at position 5 cut). Centres per selector position (manual: 220 / 450 / 800 / 1.6k / 3k).
     static constexpr float kMidHz[5] = { 249.1f, 542.9f, 894.9f, 1772.7f, 2883.9f };
     static constexpr float kMidGainDb[5][21] = {
@@ -249,7 +249,7 @@ private:
         { 0.429f, 0.488f, 0.496f, 0.467f, 0.410f, 0.329f, 0.363f, 0.393f, 0.421f, 0.446f, 0.200f,
           0.456f, 0.442f, 0.429f, 0.417f, 0.405f, 0.382f, 0.374f, 0.373f, 0.375f, 0.380f }
     };
-    // Bass x treble interaction. The reference's tone stack is passive (schematic 07S534): bass and treble share
+    // Bass x treble interaction. The amp's tone stack is passive (preamp schematic 07S534): bass and treble share
     // components, so together they reshape the low mids. Measured as the combined response minus the sum of the single
     // knobs on a 5 x 5 x 5 x 5 grid (it does not depend on Mid or Mid Freq, within 0.3 dB) and fitted with one peak per
     // [bass][treble] knob position 0, 1.25 ... 10 (residual <= 0.71 dB; it rises steeply above 7.5). Largest at bass 10 +

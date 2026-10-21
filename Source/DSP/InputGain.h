@@ -3,8 +3,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 
-/// Stage 1: input level. The reference's Input knob (-20 ... +20 dB, a pure gain before everything: renders null to
-/// -110 dB against the same input scaled) and the faceplate's -15 dB pad.
+/// Stage 1: input level. The Input knob (-20 ... +20 dB, a pure gain before everything) and the faceplate's -15 dB pad.
 class InputGain
 {
 public:

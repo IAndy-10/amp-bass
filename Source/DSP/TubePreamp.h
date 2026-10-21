@@ -4,11 +4,11 @@
 #include <algorithm>
 #include <cmath>
 
-/// Stage 3: preamp. Measured on the reference plugin, the preamp is clean at every Gain setting with
+/// Stage 3: preamp. As measured, the preamp is clean at every Gain setting with
 /// Tube Gain at 10: its odd-harmonic distortion comes from the power stage (PowerSection). So this
-/// stage is linear: a 25 Hz high-pass, the Gain level (a linear pot like the reference: small-signal
+/// stage is linear: a 25 Hz high-pass, the Gain level (a linear pot: small-signal
 /// gain 19 x Gain, +6 dB per doubling, silent at 0). Being linear it adds no DC, so the chain's DC blocker
-/// sits after the nonlinearity in PowerSection. Tube Gain lives in PowerSection, where the reference has it.
+/// sits after the nonlinearity in PowerSection. Tube Gain lives in PowerSection (it sets the power amp's driver tubes, schematic 07S426).
 class TubePreamp
 {
 public:
@@ -70,7 +70,7 @@ public:
     }
 
 private:
-    // Small-signal gain at full GAIN (x1.9 at GAIN 1, where AmpBass matches the reference)
+    // Small-signal gain at full GAIN (x1.9 at GAIN 1)
     static constexpr float kLevelAtFullGain = 19.0f;
 
     float peakOut = 0.0f;

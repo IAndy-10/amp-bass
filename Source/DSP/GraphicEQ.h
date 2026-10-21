@@ -4,7 +4,7 @@
 #include "Primitives/Biquad.h"
 #include <cmath>
 
-/// Stage 5: 9-band graphic EQ fitted to the reference plugin. Like an analog proportional-Q EQ, a band
+/// Stage 5: 9-band graphic EQ. Like an analog proportional-Q EQ, a band
 /// gets narrower as it moves away from 0, and the slider is strongly non-linear: +6 on the slider is only
 /// +1.5 dB, +12 is about +9.8 dB. Switching the EQ on also adds a broad +0.46 dB hump around 500 Hz.
 class GraphicEQ

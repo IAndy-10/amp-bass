@@ -18,7 +18,7 @@ public:
 
     void setParams (float masterKnob)
     {
-        // Linear taper like the reference: level follows the knob (+6 dB per doubling), silent at 0
+        // Linear taper: level follows the knob (+6 dB per doubling), silent at 0
         smoothedGain.setTargetValue (masterKnob * kGainAtFull);
     }
 
@@ -45,7 +45,7 @@ public:
     }
 
 private:
-    // Gain at full Master. Keeps Master 5 where it was (-12 dB), which matches the reference there.
+    // Gain at full Master: -12 dB at Master 5.
     static constexpr float kGainAtFull = 0.5f;
 
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedGain;

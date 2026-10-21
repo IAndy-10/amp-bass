@@ -11,7 +11,7 @@
 	];
 </script>
 
-<!-- Decoration only. All positions in plugin reference px. -->
+<!-- Decoration only. All positions in design px. -->
 <div class="shell" aria-hidden="true">
 	<div class="top-strip"></div>
 	<div class="grip left"></div>
