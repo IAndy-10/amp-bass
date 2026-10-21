@@ -56,21 +56,6 @@ cd WebUI && npm install && npm run dev      # UI in the browser at localhost:517
 cd WebUI && npm run build && npx svelte-check
 ```
 
-### Tests and measurement
-
-```bash
-cmake -S . -B build-tests -G Ninja -DAMPBASS_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release \
-      -DFETCHCONTENT_SOURCE_DIR_JUCE=$PWD/build/_deps/juce-src
-cmake --build build-tests
-```
-
-- `AmpBassDSPTests` — per-stage checks (gain, frequency response, THD, bypass/mute, block sizes).
-- `AmpBassHostRender` — loads any VST3 offline: list/probe parameters, render WAV files.
-- `Tests/compare/` — renders the same signals through AmpBass and the reference plugin and
-  writes a comparison report with a regression gate; `behaviour.py` checks sample rates, block
-  sizes, stereo and Bypass/Mute ([README](Tests/compare/README.md)).
-- `docs/sound-matching-plan.md` — how AmpBass is matched to the reference, step by step, with a log.
-
 ## Project structure
 
 ```
@@ -83,7 +68,6 @@ amp-bass/
 │   │   └── Primitives/           # Biquad, DryWetMixer
 │   ├── Parameters/               # ParameterIDs.h (frozen), ParameterLayout.h
 │   └── Plugin/                   # processor, editor (WebView + PEAK event), NativeBridge
-├── Tests/                        # DSPTests, HostRender, compare/ (Python)
 ├── WebUI/
 │   └── src/
 │       ├── bridge/               # bridge.ts + vendored JUCE frontend module

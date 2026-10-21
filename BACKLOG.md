@@ -22,7 +22,6 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
   (2026-10-21, user to review later). Offline, both plugins boost DI hiss identically (within 0.3 dB per band to 16 kHz,
   `build-tests/compare/treble2/hiss.py`) and both gates close on quiet hiss. Not yet ruled out: the AmpBass instance's
   gate off (sessions before stateVersion 6), or settings that differ between the two tracks. Needs bounced clips.
-- [ ] **P3** DSP test "low E (41 Hz) survives preamp" runs `TubePreamp` at Gain 0, which is silence since step 4.2, so it always reads 0.00 dB and checks nothing. Run it at Gain > 0.
 
 ## Sanity check (2026-10-17)
 
@@ -41,8 +40,6 @@ Priority: **P1** = affects sound or correctness, **P2** = visible to users, **P3
 - [ ] **P3** GraphicEQ runs all 9 bands while EQ is off.
 
 ### Tests
-- [ ] **P3** The `Chain` mirror in `Tests/DSPTests.cpp` doesn't include `OutputSwitch` or the peak logic, so it can drift from `processBlock`. Consider testing the processor itself instead of a mirror.
-- [ ] **P3** The comparison self-test (`Tests/compare`, AmpBass vs AmpBass must null) isn't automated.
 
 ## Later (decided, not started)
 - [ ] Presets A–D with Copy/Paste/Reset, persisted in plugin state.

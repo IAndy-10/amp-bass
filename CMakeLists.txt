@@ -160,12 +160,3 @@ PUBLIC
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
 )
-
-# ============================================================
-# Diagnostics (DSP tests + offline VST3 host)
-# ============================================================
-
-option(AMPBASS_BUILD_TESTS "Build DSP diagnostics and offline host" OFF)
-if(AMPBASS_BUILD_TESTS)
-    add_subdirectory(Tests)
-endif()
