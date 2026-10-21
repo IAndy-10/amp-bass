@@ -1,5 +1,5 @@
 /**
- * Toolbar presets, named like the reference's four factory presets. Only those with values are active;
+ * Toolbar presets. Only those with values are active;
  * the others have no values yet.
  */
 

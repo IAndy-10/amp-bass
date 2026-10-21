@@ -4,13 +4,13 @@
 #include <algorithm>
 #include <cmath>
 
-/// FX Rack Noise Gate, fitted to the reference. It listens to the plugin input after the Input knob (the pad and the
+/// FX Rack Noise Gate. It listens to the plugin input after the Input knob (the pad and the
 /// Hi/Lo input don't move it) and turns the amp's output down by Range dB while that input is below the threshold
 /// (Range 100 = muted). The detector band-limits the input (first-order high-pass at 348 Hz and low-pass at 3.9 kHz,
 /// so bass fundamentals need more level to open it: +11 dB at 100 Hz, +19 dB at 41 Hz) and follows |x| with a 32 ms
 /// one-pole, the same up and down, scaled so a sine reads its peak level. The gate opens and closes at the same level
-/// (no hysteresis) and the gain moves with a 1.6 ms one-pole. Each channel has its own detector, like the reference.
-/// Measured against the reference on level steps, slow ramps, a two-tone and decaying notes; off, or open, the signal
+/// (no hysteresis) and the gain moves with a 1.6 ms one-pole. Each channel has its own detector.
+/// Checked on level steps, slow ramps, a two-tone and decaying notes; off, or open, the signal
 /// passes bit for bit.
 class NoiseGate
 {

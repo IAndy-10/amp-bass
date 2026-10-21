@@ -48,7 +48,7 @@ namespace ParameterIDs
     static constexpr const char* bypass        = "bypass";
     static constexpr const char* mute          = "mute";
 
-    // Stage 8 — Cabinet (after the power stage, like the reference's Rec Chain)
+    // Stage 8 — Cabinet (after the power stage)
     static constexpr const char* cabinet       = "cabinet";
     static constexpr const char* horn          = "horn";
 
@@ -57,7 +57,7 @@ namespace ParameterIDs
     static constexpr const char* tightFreq     = "tightFreq";
     static constexpr const char* powerSoak     = "powerSoak";
 
-    // Stage 1 — input level knob like the reference's Input (-20 ... +20 dB), appended to keep the order
+    // Stage 1 — input level knob (-20 ... +20 dB), appended to keep the order
     static constexpr const char* inputGain     = "inputGain";
 
     // FX Rack — Smooth (Off / Pre / Post the amp: a gentle low-pass, 3-35 kHz)

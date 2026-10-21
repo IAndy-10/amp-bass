@@ -1,4 +1,4 @@
-/* Design tokens. Sizes are in reference px × --u. */
+/* Design tokens. Sizes are in design px × --u. */
 :root {
     --ink-strong: #f2f2f2;
     --ink-soft: #cdd0d4;
@@ -40,8 +40,8 @@ body {
 /* Shared caption style: control captions. */
 .caption {
     font-family: var(--font-ui);
-    /* Spec says 28; the reference reads closer to 24 and 28 makes MIDRANGE
-       collide with FREQUENCY. Captions are written in their printed case. */
+    /* 24, not 28: at 28 MIDRANGE collides with FREQUENCY. Captions are written
+       in their printed case. */
     font-size: calc(24 * var(--u));
     font-weight: 600;
     font-style: italic;
@@ -60,7 +60,7 @@ body {
     line-height: 1;
 }
 
-/* Absolute placement at a reference-pixel centre point. */
+/* Absolute placement at a design-pixel centre point. */
 .at {
     position: absolute;
     left: calc(var(--x) * var(--u));

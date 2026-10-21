@@ -3,9 +3,9 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 
-/// FX Rack Tight, fitted to the reference: a first-order high-pass (6 dB/octave, -3 dB at the set frequency,
+/// FX Rack Tight: a first-order high-pass (6 dB/octave, -3 dB at the set frequency,
 /// 30 Hz-3 kHz) with a makeup gain that grows with the frequency, 2.47 dB per decade above 30 Hz (+0.55 dB at 50 Hz,
-/// +4.9 dB at 3 kHz); within 0.65 dB of the reference. The processor runs one instance before the amp (Pre: it changes
+/// +4.9 dB at 3 kHz); within 0.65 dB of the target. The processor runs one instance before the amp (Pre: it changes
 /// what reaches the power stage) and one after the power stage (Post). Switching crossfades linearly over 50 ms;
 /// off, the signal passes bit for bit.
 class Tight

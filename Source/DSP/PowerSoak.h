@@ -2,8 +2,8 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
-/// FX Rack Power Soak: output attenuation after the power stage and cabinet, -40 ... 0 dB. In the reference it is a
-/// pure gain: renders at different settings null to -149 dB after level matching, so it
+/// FX Rack Power Soak: output attenuation after the power stage and cabinet, -40 ... 0 dB. It is a
+/// pure gain, so it
 /// lowers the level without changing the drive. Changes glide over 50 ms.
 class PowerSoak
 {

@@ -165,7 +165,7 @@ void AmpBassAudioProcessor::updateDSPParameters() {
     // Stage 6: MasterVolume
     masterVolume.setParams (paramMaster->load());
 
-    // Stage 7: PowerSection (Tube Gain acts here, as in the reference)
+    // Stage 7: PowerSection (Tube Gain acts here, on the power amp's driver tubes)
     powerSection.setParams (paramTubeGain->load());
 
     // Stage 8: Cabinet
@@ -260,7 +260,7 @@ juce::AudioProcessorEditor* AmpBassAudioProcessor::createEditor() {
 
 // Saved-state format. Bump it when a parameter's range or meaning changes, and convert older
 // states in setStateInformation so existing sessions keep sounding the same.
-// 1 = no version attribute (before the reference-matched ranges), 2 = reference-matched ranges,
+// 1 = no version attribute (before the current ranges), 2 = current ranges,
 // 3 = cabinet added, 4 = Tight and Power Soak added, 5 = Smooth added (and Input Gain, neutral by default),
 // 6 = Noise Gate added, 7 = Input Select (HI/LO) removed.
 static constexpr int kStateVersion = 7;

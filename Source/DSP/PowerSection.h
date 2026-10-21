@@ -5,9 +5,9 @@
 #include <cmath>
 #include "Primitives/Biquad.h"
 
-/// Stage 7: power amp with the Tube Gain stage, fitted to the reference plugin with its cabinet bypassed.
+/// Stage 7: power amp with the Tube Gain stage, fitted with the cabinet off.
 ///
-/// The reference's main odd-harmonic distortion sits after Master and depends only on how loud the
+/// The amp's main odd-harmonic distortion sits after Master and depends only on how loud the
 /// signal would be there, not on how it got there. It is a soft static curve whose 3rd harmonic grows
 /// about 1.7 dB per dB, and it distorts more at higher frequencies, most in the low mids. (The hardware,
 /// schematic 07S426: a tube driver, 12AX7 + 12AU7, into a MOSFET output stage with global negative feedback.) Modelled as: wide emphasis peak -> static curve -> inverse
@@ -166,8 +166,8 @@ private:
     static constexpr float kEmphasisQ    = 0.3254f;
     static constexpr float kEmphasisDb   = 7.9087f;
     // Fixed output low-pass, fitted together with the tone-stack voicing (-4 dB at 10 kHz, -19 dB at 20 kHz at 48 kHz).
-    // The reference's top octave depends on the sample rate (at 88.2 kHz and up it is ~5 dB darker at 14-16 kHz),
-    // so each rate family has its own fit to the reference's change from 48 kHz.
+    // The top octave depends on the sample rate (at 88.2 kHz and up it is ~5 dB darker at 14-16 kHz),
+    // so each rate family has its own fit to the change from 48 kHz.
     struct LowPass { float hz, q; };
     static constexpr LowPass kOutputLowPass48  { 14602.0f, 0.382f };
     static constexpr LowPass kOutputLowPass441 { 21098.2f, 0.05f };    // f near Nyquist: reads as the 48 kHz design
@@ -183,7 +183,7 @@ private:
     }
     static constexpr float kDcBlockHz       = 10.0f;
 
-    // Tube Gain, per knob position 0 / 2.5 / 5 / 7.5 / 10 (fitted on the reference's stepped tones)
+    // Tube Gain, per knob position 0 / 2.5 / 5 / 7.5 / 10 (fitted on stepped tones)
     static constexpr float kLevelDb[5]       = { 3.1f, 3.1f, 2.9f, 1.5f, 0.0f };        // small-signal level
     static constexpr float kKinkDb[5]        = { -8.71f, -18.60f, -49.78f, -49.77f, -120.0f };
     static constexpr float kDriveDb[5]       = { 3.167f, 2.638f, 0.0f, 0.0f, 0.086f };
