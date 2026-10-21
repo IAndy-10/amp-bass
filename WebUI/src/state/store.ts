@@ -6,11 +6,12 @@
  * bridge functions which call the relay directly.
  */
 
-import { writable } from 'svelte/store';
+import { readable, writable } from 'svelte/store';
 import {
     getSlider, onSliderChanged,
     getToggle, onToggleChanged,
     getComboIndex, onComboChanged,
+    onPeakChanged,
 } from '../bridge/bridge';
 import type { SliderParamId, ToggleParamId, ComboParamId } from '../types/parameters';
 
@@ -76,18 +77,34 @@ export const sliders = {
     geq8k:     createSliderStore('geq8k'),
     geqLevel:  createSliderStore('geqLevel'),
     dryWet:    createSliderStore('dryWet'),
+    tightFreq: createSliderStore('tightFreq'),
+    powerSoak: createSliderStore('powerSoak'),
+    smoothFreq: createSliderStore('smoothFreq'),
+    inputGain: createSliderStore('inputGain'),
+    gateThreshold: createSliderStore('gateThreshold'),
+    gateRange: createSliderStore('gateRange'),
 } as const;
 
 export const toggles = {
     inputPad:  createToggleStore('inputPad'),
-    inputHiLo: createToggleStore('inputHiLo'),
     bright:    createToggleStore('bright'),
     ultraHi:   createToggleStore('ultraHi'),
     ultraLo:   createToggleStore('ultraLo'),
     geqOn:     createToggleStore('geqOn'),
+    bypass:    createToggleStore('bypass'),
+    mute:      createToggleStore('mute'),
+    cabinet:   createToggleStore('cabinet'),
+    horn:      createToggleStore('horn'),
+    gate:      createToggleStore('gate'),
 } as const;
+
+// PEAK overload from the audio engine (read-only). The PEAK/MUTE LED is
+// lit when this is true or when the mute toggle is on.
+export const peak = readable(false, (set) => onPeakChanged(set));
 
 export const combos = {
     midFreq:       createComboStore('midFreq'),
     presetSelect:  createComboStore('presetSelect'),
+    tight:         createComboStore('tight'),
+    smooth:        createComboStore('smooth'),
 } as const;

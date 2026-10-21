@@ -1,0 +1,74 @@
+/* Design tokens. Sizes are in reference px × --u. */
+:root {
+    --ink-strong: #f2f2f2;
+    --ink-soft: #cdd0d4;
+    --toolbar-bg: #000000;
+    --toolbar-text: #e6e6e6;
+    --accent-blue: #3ea6e6;
+    --led-on: #9cf03c;
+    --led-off: #2a3a28;
+    --led-red: #e5392b;
+    --led-red-off: #4a1c19;
+    --shell-dark: #26292d;
+    --shell-mid: #3b3f44;
+    --faceplate: #4b4f55;
+    --faceplate-hi: #5c6168;
+    --faceplate-lo: #393c41;
+    --groove: #0d0e10;
+    --knob-face-hi: #34373c;
+    --knob-face-lo: #0f1012;
+    --button-face-lo: #17191c;
+    --button-face-hi: #2a2d32;
+    --button-edge: #8f949a;
+    --thumb-hi: #d8dadd;
+    --thumb-lo: #8c9096;
+    --field-inset: #33363b;
+
+    --font-ui: 'DM Sans', system-ui, sans-serif;
+    --font-wordmark: 'DM Serif Display', Georgia, serif;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: #111214;
+    color: var(--ink-strong);
+    font-family: var(--font-ui);
+}
+
+/* Shared caption style: control captions. */
+.caption {
+    font-family: var(--font-ui);
+    /* Spec says 28; the reference reads closer to 24 and 28 makes MIDRANGE
+       collide with FREQUENCY. Captions are written in their printed case. */
+    font-size: calc(24 * var(--u));
+    font-weight: 600;
+    font-style: italic;
+    color: var(--ink-strong);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.numeral {
+    font-family: var(--font-ui);
+    font-size: calc(22 * var(--u));
+    font-weight: 500;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    line-height: 1;
+}
+
+/* Absolute placement at a reference-pixel centre point. */
+.at {
+    position: absolute;
+    left: calc(var(--x) * var(--u));
+    top: calc(var(--y) * var(--u));
+    transform: translate(-50%, -50%);
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 3px;
+}

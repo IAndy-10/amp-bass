@@ -17,18 +17,30 @@ export type SliderParamId =
     | 'geq5k'
     | 'geq8k'
     | 'geqLevel'
-    | 'dryWet';
+    | 'dryWet'
+    | 'tightFreq'
+    | 'powerSoak'
+    | 'smoothFreq'
+    | 'inputGain'
+    | 'gateThreshold'
+    | 'gateRange';
 
 export type ToggleParamId =
     | 'inputPad'
-    | 'inputHiLo'
     | 'bright'
     | 'ultraHi'
     | 'ultraLo'
-    | 'geqOn';
+    | 'geqOn'
+    | 'bypass'
+    | 'mute'
+    | 'cabinet'
+    | 'horn'
+    | 'gate';
 
 export type ComboParamId =
     | 'midFreq'
-    | 'presetSelect';
+    | 'presetSelect'
+    | 'tight'
+    | 'smooth';
 
 export type ParameterId = SliderParamId | ToggleParamId | ComboParamId;

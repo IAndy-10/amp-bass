@@ -8,7 +8,7 @@ public:
     void prepare (double sampleRate, int /*maxBlockSize*/)
     {
         smoothedGain.reset (sampleRate, 0.01); // 10ms ramp
-        smoothedGain.setCurrentAndTargetValue (0.25f); // default 0.5^2
+        smoothedGain.setCurrentAndTargetValue (0.5f * kGainAtFull); // default knob 0.5
     }
 
     void reset()
@@ -18,8 +18,8 @@ public:
 
     void setParams (float masterKnob)
     {
-        // Quadratic taper: knob^2
-        smoothedGain.setTargetValue (masterKnob * masterKnob);
+        // Linear taper like the reference: level follows the knob (+6 dB per doubling), silent at 0
+        smoothedGain.setTargetValue (masterKnob * kGainAtFull);
     }
 
     void process (juce::AudioBuffer<float>& buffer)
@@ -45,5 +45,8 @@ public:
     }
 
 private:
+    // Gain at full Master. Keeps Master 5 where it was (-12 dB), which matches the reference there.
+    static constexpr float kGainAtFull = 0.5f;
+
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedGain;
 };

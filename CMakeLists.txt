@@ -24,12 +24,17 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(JUCE)
 
+# Turn off in secondary worktrees so their builds don't overwrite the
+# installed VST3/AU that the DAW loads.
+option(AMPBASS_COPY_PLUGIN "Copy built plugins to the system plugin folders" ON)
+
 # ============================================================
 # Plugin Definition
 # ============================================================
 
 juce_add_plugin(AmpBass
-    COMPANY_NAME "YourCompany"
+    COMPANY_NAME "Epica Audio"
+    BUNDLE_ID com.epicaaudio.AmpBass
     PLUGIN_MANUFACTURER_CODE AMPB
     PLUGIN_CODE AmpB
     FORMATS Standalone VST3 AU
@@ -39,7 +44,7 @@ juce_add_plugin(AmpBass
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
-    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS TRUE
 
     MICROPHONE_PERMISSION_ENABLED TRUE
     MICROPHONE_PERMISSION_TEXT "AmpBass needs audio input to process your instrument."
@@ -49,7 +54,7 @@ juce_add_plugin(AmpBass
     NEEDS_JUCE_GUI_BASICS TRUE
     NEEDS_WEB_BROWSER TRUE
 
-    COPY_PLUGIN_AFTER_BUILD TRUE
+    COPY_PLUGIN_AFTER_BUILD ${AMPBASS_COPY_PLUGIN}
 
     VST3_CATEGORIES Fx
     AU_MAIN_TYPE kAudioUnitType_Effect
@@ -75,11 +80,7 @@ target_sources(AmpBass PRIVATE
     Source/Parameters/ParameterLayout.h
 
     # DSP Primitives (header-only)
-    Source/DSP/Primitives/DelayLine.h
-    Source/DSP/Primitives/OnePoleFilter.h
     Source/DSP/Primitives/Biquad.h
-    Source/DSP/Primitives/SmoothedParam.h
-    Source/DSP/Primitives/LFO.h
     Source/DSP/Primitives/DryWetMixer.h
 
     # DSP stages (header-only)
@@ -90,6 +91,7 @@ target_sources(AmpBass PRIVATE
     Source/DSP/GraphicEQ.h
     Source/DSP/MasterVolume.h
     Source/DSP/PowerSection.h
+    Source/DSP/OutputSwitch.h
 )
 
 target_include_directories(AmpBass PRIVATE
@@ -158,29 +160,3 @@ PUBLIC
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
 )
-
-# ============================================================
-# Copy Resources to Bundle (Post-Build)
-# ============================================================
-
-macro(copy_resources_to_target target_name)
-    if(TARGET ${target_name})
-        add_custom_command(TARGET ${target_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${CMAKE_CURRENT_SOURCE_DIR}/WebUI/dist"
-                "$<TARGET_FILE_DIR:${target_name}>/../Resources"
-        )
-    endif()
-endmacro()
-
-copy_resources_to_target(AmpBass)
-copy_resources_to_target(AmpBass_Standalone)
-
-# ============================================================
-# Diagnostics (DSP tests + offline VST3 host)
-# ============================================================
-
-option(AMPBASS_BUILD_TESTS "Build DSP diagnostics and offline host" OFF)
-if(AMPBASS_BUILD_TESTS)
-    add_subdirectory(Tests)
-endif()
