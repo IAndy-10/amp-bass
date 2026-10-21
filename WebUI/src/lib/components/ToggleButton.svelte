@@ -52,7 +52,7 @@
 		width: calc(56 * var(--u));
 		height: calc(30 * var(--u));
 	}
-	/* LED sits 43 ref px left of the button centre; the row is ~40 px above
+	/* LED sits 43 design px left of the button centre; the row is ~40 px above
 	   or ~37 px below the button. */
 	.legend {
 		position: absolute;

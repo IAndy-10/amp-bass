@@ -3,7 +3,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 
 /// Final stage: plugin bypass (crossfade to the untouched input) and mute
-/// (fade to silence). Both ramp linearly over 50 ms, as the reference does, so switching never clicks.
+/// (fade to silence). Both ramp linearly over 50 ms, so switching never clicks.
 /// Fully bypassed, the output is the input bit for bit. Mute wins over bypass: a muted plugin is silent either way.
 class OutputSwitch
 {
@@ -65,7 +65,7 @@ public:
     }
 
 private:
-    static constexpr double kRampSeconds = 0.05;   // reference: linear, 10-90 % in 43 ms
+    static constexpr double kRampSeconds = 0.05;   // linear, 10-90 % in 40 ms
 
     float bypassTarget   = 0.0f;
     float muteGainTarget = 1.0f;

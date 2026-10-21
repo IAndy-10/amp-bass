@@ -4,7 +4,7 @@
 #include "Primitives/Biquad.h"
 #include <cmath>
 
-/// Stage 2: the Bright, Ultra Hi and Ultra Lo switches. Each filter is fitted to the reference
+/// Stage 2: the Bright, Ultra Hi and Ultra Lo switches. Each filter is fitted to the target
 /// plugin's response with the switch on minus off (within 0.1 dB, 30 Hz-20 kHz). Switching glides
 /// over 20 ms by scaling each filter's gain in dB.
 class PreFilters
@@ -87,7 +87,7 @@ private:
     // Ultra Hi: +6 dB around 6 kHz, +2.4 dB at the top.
     static constexpr float kUltraHiPeakHz  = 5602.0f, kUltraHiPeakQ  = 0.369f, kUltraHiPeakDb  = 5.323f;
     static constexpr float kUltraHiShelfHz = 9026.0f, kUltraHiShelfQ = 0.359f, kUltraHiShelfDb = 2.359f;
-    // Ultra Lo: -12.4 dB at 530 Hz. The manual's +2 dB at 40 Hz isn't in the reference plugin.
+    // Ultra Lo: -12.4 dB at 530 Hz (no +2 dB at 40 Hz, although the manual lists one).
     static constexpr float kUltraLoHz = 530.2f, kUltraLoQ = 0.713f, kUltraLoDb = -12.36f;
 
     void setGains (float bright, float ultraHi, float ultraLo, int glideSamples = 0)

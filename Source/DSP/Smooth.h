@@ -4,10 +4,10 @@
 #include <algorithm>
 #include <cmath>
 
-/// FX Rack Smooth, fitted to the reference: a first-order low-pass (6 dB/octave) at 3-35 kHz that keeps its analog
-/// shape at every sample rate (the reference's curve is the same at 44.1, 48 and 96 kHz). A bilinear one-pole would put
+/// FX Rack Smooth: a first-order low-pass (6 dB/octave) at 3-35 kHz that keeps its analog
+/// shape at every sample rate (the same curve at 44.1, 48 and 96 kHz). A bilinear one-pole would put
 /// a zero at Nyquist, so the filter is instead matched to the analog magnitude at DC, at Nyquist and at a mid frequency
-/// (closed form, below). The cutoff is 1.02 x the displayed frequency; within 0.17 dB of the reference at 3-35 kHz and
+/// (closed form, below). The cutoff is 1.02 x the displayed frequency; within 0.17 dB of the target at 3-35 kHz and
 /// 44.1-96 kHz. The processor runs one instance before the amp (Pre) and one after the power
 /// stage (Post). Switching crossfades linearly over 50 ms; off, the signal passes bit for bit.
 class Smooth

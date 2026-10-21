@@ -3,8 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "ParameterIDs.h"
 
-// Display and text entry follow the reference plugin, so the same normalised
-// value means the same setting in both: knobs read 0.0-10.0, dB values one decimal.
+// Display and text entry: knobs read 0.0-10.0, dB values one decimal.
 namespace ParameterText
 {
     /// Knob attributes: raw 0-1 shown and typed as 0.0-10.0.
@@ -24,7 +23,7 @@ namespace ParameterText
             .withValueFromStringFunction ([] (const juce::String& t) { return t.getFloatValue(); });
     }
 
-    /// GEQ Level like the reference: -10 dB at 0, 0 dB at the centre, +8 dB at 1 (linear on each side).
+    /// GEQ Level: -10 dB at 0, 0 dB at the centre, +8 dB at 1 (linear on each side).
     inline juce::NormalisableRange<float> geqLevelRange()
     {
         return { -10.0f, 8.0f,
@@ -32,7 +31,7 @@ namespace ParameterText
                  [] (float, float, float v) { return v < 0.0f ? (v + 10.0f) / 20.0f : 0.5f + v / 16.0f; } };
     }
 
-    /// Tight frequency like the reference: 30 Hz at 0 to 3 kHz at 1 on a log scale (300 Hz at the centre).
+    /// Tight frequency: 30 Hz at 0 to 3 kHz at 1 on a log scale (300 Hz at the centre).
     inline juce::NormalisableRange<float> tightFrequencyRange()
     {
         return { 30.0f, 3000.0f,
@@ -40,7 +39,7 @@ namespace ParameterText
                  [] (float, float, float v) { return std::log (v / 30.0f) / std::log (100.0f); } };
     }
 
-    /// Smooth frequency like the reference: 3 kHz at 0 to 35 kHz at 1 on a log scale (21 kHz at 0.792), in kHz.
+    /// Smooth frequency: 3 kHz at 0 to 35 kHz at 1 on a log scale (21 kHz at 0.792), in kHz.
     inline juce::NormalisableRange<float> smoothFrequencyRange()
     {
         return { 3.0f, 35.0f,
@@ -97,7 +96,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::ParameterID { ParameterIDs::gain, 1 },
         "Gain",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.0f, 1.0f),
-        0.34f, ParameterText::knob()));  // reference default 3.4
+        0.34f, ParameterText::knob()));  // default 3.4
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::tubeGain, 1 },
@@ -122,7 +121,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     params.push_back (std::make_unique<juce::AudioParameterInt> (
         juce::ParameterID { ParameterIDs::midFreq, 1 },
         "Mid Frequency",
-        1, 5, 1));  // reference default 1
+        1, 5, 1));  // default 1
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::treble, 1 },
@@ -229,7 +228,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::ParameterID { ParameterIDs::mute, 1 },
         "Mute", false));
 
-    // --- Stage 8: Cabinet (on by default, like the reference's default Rec Chain and Horn) ---
+    // --- Stage 8: Cabinet and Horn (both on by default) ---
     // Added last so the earlier parameters keep their indices.
 
     params.push_back (std::make_unique<juce::AudioParameterBool> (
@@ -240,7 +239,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::ParameterID { ParameterIDs::horn, 1 },
         "Horn", true));
 
-    // --- FX Rack: Tight and Power Soak (defaults like the reference: Tight Post 50 Hz, Power Soak -4 dB) ---
+    // --- FX Rack: Tight and Power Soak (defaults: Tight Post 50 Hz, Power Soak -4 dB) ---
 
     params.push_back (std::make_unique<juce::AudioParameterChoice> (
         juce::ParameterID { ParameterIDs::tight, 1 },
@@ -258,7 +257,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::NormalisableRange<float> (-40.0f, 0.0f, 0.0f, 1.0f),
         -4.0f, ParameterText::decibels()));
 
-    // --- FX Rack: Smooth (default like the reference: Post, 21 kHz) ---
+    // --- FX Rack: Smooth (default: Post, 21 kHz) ---
 
     params.push_back (std::make_unique<juce::AudioParameterChoice> (
         juce::ParameterID { ParameterIDs::smooth, 1 },
@@ -270,7 +269,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         ParameterText::smoothFrequencyRange(),
         21.0f, ParameterText::kilohertz()));
 
-    // --- Input level like the reference's Input knob: -20 ... +20 dB, linear in dB, 0 dB at the centre ---
+    // --- Input level knob: -20 ... +20 dB, linear in dB, 0 dB at the centre ---
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParameterIDs::inputGain, 1 },
@@ -278,7 +277,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::NormalisableRange<float> (-20.0f, 20.0f, 0.0f, 1.0f),
         0.0f, ParameterText::decibels()));
 
-    // --- FX Rack: Noise Gate (default like the reference: on, -88 dB, Range 50 dB; Range 100 = muted) ---
+    // --- FX Rack: Noise Gate (default: on, -88 dB, Range 50 dB; Range 100 = muted) ---
 
     params.push_back (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { ParameterIDs::gate, 1 },
