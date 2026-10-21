@@ -51,6 +51,7 @@ AmpBassAudioProcessor::AmpBassAudioProcessor()
     paramPowerSoak = apvts.getRawParameterValue (ParameterIDs::powerSoak);
     paramSmooth    = apvts.getRawParameterValue (ParameterIDs::smooth);
     paramSmoothFreq = apvts.getRawParameterValue (ParameterIDs::smoothFreq);
+    paramInputGain = apvts.getRawParameterValue (ParameterIDs::inputGain);
 }
 
 AmpBassAudioProcessor::~AmpBassAudioProcessor() {}
@@ -134,7 +135,8 @@ juce::AudioParameterBool* AmpBassAudioProcessor::getBypassParameter() const
 void AmpBassAudioProcessor::updateDSPParameters() {
     // Stage 1: InputGain
     inputGain.setParams (paramInputPad->load() >= 0.5f,
-                         paramInputHiLo->load() >= 0.5f);
+                         paramInputHiLo->load() >= 0.5f,
+                         paramInputGain->load());
 
     // Stage 2: PreFilters
     preFilters.setParams (paramBright->load() >= 0.5f,
@@ -254,7 +256,7 @@ juce::AudioProcessorEditor* AmpBassAudioProcessor::createEditor() {
 // Saved-state format. Bump it when a parameter's range or meaning changes, and convert older
 // states in setStateInformation so existing sessions keep sounding the same.
 // 1 = no version attribute (before the reference-matched ranges), 2 = reference-matched ranges,
-// 3 = cabinet added, 4 = Tight and Power Soak added, 5 = Smooth added.
+// 3 = cabinet added, 4 = Tight and Power Soak added, 5 = Smooth added (and Input Gain, neutral by default).
 static constexpr int kStateVersion = 5;
 static const juce::Identifier kStateVersionId { "stateVersion" };
 

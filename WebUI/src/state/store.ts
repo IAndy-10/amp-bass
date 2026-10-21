@@ -80,6 +80,7 @@ export const sliders = {
     tightFreq: createSliderStore('tightFreq'),
     powerSoak: createSliderStore('powerSoak'),
     smoothFreq: createSliderStore('smoothFreq'),
+    inputGain: createSliderStore('inputGain'),
 } as const;
 
 export const toggles = {

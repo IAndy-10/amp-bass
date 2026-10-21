@@ -274,5 +274,13 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         ParameterText::smoothFrequencyRange(),
         21.0f, ParameterText::kilohertz()));
 
+    // --- Input level like the reference's Input knob: -20 ... +20 dB, linear in dB, 0 dB at the centre ---
+
+    params.push_back (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { ParameterIDs::inputGain, 1 },
+        "Input Gain",
+        juce::NormalisableRange<float> (-20.0f, 20.0f, 0.0f, 1.0f),
+        0.0f, ParameterText::decibels()));
+
     return { params.begin(), params.end() };
 }

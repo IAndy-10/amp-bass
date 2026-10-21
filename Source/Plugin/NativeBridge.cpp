@@ -48,6 +48,7 @@ void NativeBridge::connectToAPVTS (juce::AudioProcessorValueTreeState& apvts)
     powerSoakAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::powerSoak),    powerSoakRelay);
     smoothAttach       = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::smooth),       smoothRelay);
     smoothFreqAttach   = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::smoothFreq),   smoothFreqRelay);
+    inputGainAttach    = std::make_unique<juce::WebSliderParameterAttachment> (*params.getParameter (ParameterIDs::inputGain),    inputGainRelay);
 }
 
 juce::WebBrowserComponent::Options NativeBridge::buildOptions (
@@ -94,7 +95,8 @@ juce::WebBrowserComponent::Options NativeBridge::buildOptions (
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (tightFreqRelay))
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (powerSoakRelay))
         .withOptionsFrom (const_cast<juce::WebSliderRelay&> (smoothRelay))
-        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (smoothFreqRelay));
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (smoothFreqRelay))
+        .withOptionsFrom (const_cast<juce::WebSliderRelay&> (inputGainRelay));
 
     return options;
 }

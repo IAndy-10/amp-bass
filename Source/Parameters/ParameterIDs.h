@@ -58,6 +58,9 @@ namespace ParameterIDs
     static constexpr const char* tightFreq     = "tightFreq";
     static constexpr const char* powerSoak     = "powerSoak";
 
+    // Stage 1 — input level knob like the reference's Input (-20 ... +20 dB), appended to keep the order
+    static constexpr const char* inputGain     = "inputGain";
+
     // FX Rack — Smooth (Off / Pre / Post the amp: a gentle low-pass, 3-35 kHz)
     static constexpr const char* smooth        = "smooth";
     static constexpr const char* smoothFreq    = "smoothFreq";

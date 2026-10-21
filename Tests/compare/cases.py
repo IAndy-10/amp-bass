@@ -166,6 +166,7 @@ def all_cases() -> list[Case]:
         Case("tight_post_300_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS, tight("post", 300)),
         *[Case(f"smooth_post_{hz // 1000}k", {**DEFAULTS, **CLEAN}, LINEAR_SIGNALS, smooth("post", hz)) for hz in (3000, 21000)],
         Case("smooth_pre_6k_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS, smooth("pre", 6000)),
+        Case("input_+10_gain5", dict(DEFAULTS), DRIVE_SIGNALS, {"reference": {"Input": 0.75}, "ampbass": {"Input Gain": 0.75}}),
         Case("powersoak_-20_gain7.5", {**DEFAULTS, "gain": 7.5}, DRIVE_SIGNALS,
              {"reference": {"PowerSoak": 0.5}, "ampbass": {"Power Soak": 0.5}}),
         Case("factory_defaults", dict(DEFAULTS), LINEAR_SIGNALS + DRIVE_SIGNALS, FACTORY),

@@ -155,9 +155,13 @@ namespace
         const double def = stageGainDb<InputGain> (200.0, [] (auto& s) { s.setParams (false, true); });
         const double pad = stageGainDb<InputGain> (200.0, [] (auto& s) { s.setParams (true, true); });
         const double lo  = stageGainDb<InputGain> (200.0, [] (auto& s) { s.setParams (false, false); });
+        const double up  = stageGainDb<InputGain> (200.0, [] (auto& s) { s.setParams (false, true, 12.0f); });
+        const double padDown = stageGainDb<InputGain> (200.0, [] (auto& s) { s.setParams (true, true, -20.0f); });
         check (std::abs (def) < 0.1,          "default is unity", fmt ("%.2f dB", def));
         check (std::abs (pad + 15.0) < 0.2,   "-15 dB pad",       fmt ("%.2f dB", pad));
         check (std::abs (lo + 6.0) < 0.2,     "LO input -6 dB",   fmt ("%.2f dB", lo));
+        check (std::abs (up - 12.0) < 0.05 && std::abs (padDown + 35.0) < 0.05, "Input Gain +12 dB; -20 dB with the pad = -35 dB",
+               fmt ("%.2f / %.2f dB", up, padDown));
     }
 
     void testPreFilters()
@@ -941,6 +945,11 @@ namespace
                    && std::abs (sf->getDefaultValue() - 0.792f) < 0.001f && sf->getText (sf->getDefaultValue(), 8) == "21.0"
                    && smoothMode->getText (smoothMode->getDefaultValue(), 8) == "Post",
                "Smooth 3 / 10.2 / 35 kHz at 0 / 0.5 / 1, default Post 21.0 like the reference", fmt ("%.2f / %.2f / %.2f kHz", s0, sHalf, s1));
+
+        auto* ig = probe.apvts.getParameter (ParameterIDs::inputGain);
+        check (std::abs (ig->convertFrom0to1 (0.0f) + 20.0f) < 1e-4f && std::abs (ig->convertFrom0to1 (0.75f) - 10.0f) < 1e-4f
+                   && std::abs (ig->getDefaultValue() - 0.5f) < 1e-6f,
+               "Input Gain -20 / +10 dB at 0 / 0.75, default 0 dB at 0.5 like the reference", "");
 
         auto* band = probe.apvts.getParameter (ParameterIDs::geq300);
         check (band->getText (band->getValueForText ("-4.5"), 16) == "-4.5", "GEQ bands show and accept dB",

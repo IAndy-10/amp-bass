@@ -249,6 +249,7 @@ export interface PresetValues {
         powerSoak: number; // normalised: -40 + 40n dB (0.9 = -4 dB)
         smooth: 0 | 1 | 2; // Off / Pre / Post
         smoothFreq: number; // normalised: 3 kHz x (35/3)^n (0.792 = 21 kHz)
+        inputGain: number; // normalised: -20 + 40n dB (0.5 = 0 dB)
     };
 }
 
@@ -272,6 +273,7 @@ export function applyPreset(p: PresetValues): void {
     if (getCombo('smooth')) setComboIndex('smooth', p.fx.smooth);
     combos.smooth.set(p.fx.smooth);
     writeNormalised('smoothFreq', p.fx.smoothFreq);
+    writeNormalised('inputGain', p.fx.inputGain);
     endGesture(null);
 }
 
@@ -282,16 +284,17 @@ export function presetActive(p: PresetValues): Readable<boolean> {
         ...keys.map((k) => sliders[k]),
         ...PRESET_FLAGS.map((k) => toggles[k]),
         combos.midFreq, toggles.cabinet, toggles.horn, combos.tight, sliders.tightFreq, sliders.powerSoak,
-        combos.smooth, sliders.smoothFreq,
+        combos.smooth, sliders.smoothFreq, sliders.inputGain,
     ] as Readable<number | boolean>[];
     return derived(stores, (values) => {
         const n = keys.length, f = PRESET_FLAGS.length;
         const knobsMatch = keys.every((k, i) => Math.abs(toDisplay(k, values[i] as number) - p.numeric[k]) < 0.05);
         const flagsMatch = PRESET_FLAGS.every((k, i) => values[n + i] === p.flags[k]);
-        const [mid, cab, horn, tight, tightFreq, soak, smooth, smoothFreq] = values.slice(n + f);
+        const [mid, cab, horn, tight, tightFreq, soak, smooth, smoothFreq, input] = values.slice(n + f);
         return knobsMatch && flagsMatch && mid === p.midFreqPos - 1 && cab === p.fx.cabinet && horn === p.fx.horn
             && tight === p.fx.tight && Math.abs((tightFreq as number) - p.fx.tightFreq) < 1e-3
             && Math.abs((soak as number) - p.fx.powerSoak) < 1e-3
-            && smooth === p.fx.smooth && Math.abs((smoothFreq as number) - p.fx.smoothFreq) < 1e-3;
+            && smooth === p.fx.smooth && Math.abs((smoothFreq as number) - p.fx.smoothFreq) < 1e-3
+            && Math.abs((input as number) - p.fx.inputGain) < 1e-3;
     });
 }

@@ -20,7 +20,8 @@ export type SliderParamId =
     | 'dryWet'
     | 'tightFreq'
     | 'powerSoak'
-    | 'smoothFreq';
+    | 'smoothFreq'
+    | 'inputGain';
 
 export type ToggleParamId =
     | 'inputPad'

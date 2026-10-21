@@ -109,6 +109,7 @@ private:
     std::atomic<float>* paramPowerSoak  = nullptr;
     std::atomic<float>* paramSmooth     = nullptr;
     std::atomic<float>* paramSmoothFreq = nullptr;
+    std::atomic<float>* paramInputGain  = nullptr;
 
     void updateDSPParameters();
 
