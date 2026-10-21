@@ -3,7 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "ParameterIDs.h"
 
-// Display and text entry follow the reference plugin (Ampeg SVT-3 PRO), so the same normalised
+// Display and text entry follow the reference plugin, so the same normalised
 // value means the same setting in both: knobs read 0.0-10.0, dB values one decimal.
 namespace ParameterText
 {
@@ -212,7 +212,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.0f, 1.0f),
         1.0f));  // default 100% wet (fully processed)
 
-    // --- Phase 2: Preset selection ---
+    // --- Preset selection (no function yet) ---
 
     params.push_back (std::make_unique<juce::AudioParameterInt> (
         juce::ParameterID { ParameterIDs::presetSelect, 1 },

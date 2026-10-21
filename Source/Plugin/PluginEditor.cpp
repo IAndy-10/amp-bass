@@ -39,7 +39,7 @@ AmpBassAudioProcessorEditor::AmpBassAudioProcessorEditor (AmpBassAudioProcessor&
     webView = std::make_unique<juce::WebBrowserComponent> (options);
     addAndMakeVisible (webView.get());
 
-    // Faceplate design canvas is 2562 x 558 (UI spec §2.1): keep that aspect.
+    // The faceplate is designed on a 2562 x 558 canvas: keep that aspect.
     constexpr double kAspect = 2562.0 / 558.0;
     setResizable (true, true);
     setResizeLimits (960, juce::roundToInt (960 / kAspect), 1800, juce::roundToInt (1800 / kAspect));

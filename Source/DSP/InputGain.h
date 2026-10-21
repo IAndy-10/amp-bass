@@ -4,7 +4,7 @@
 #include <cmath>
 
 /// Stage 1: input level. The reference's Input knob (-20 ... +20 dB, a pure gain before everything: renders null to
-/// -110 dB against the same input scaled, sound-matching plan 9.1) and the faceplate's -15 dB pad.
+/// -110 dB against the same input scaled) and the faceplate's -15 dB pad.
 class InputGain
 {
 public:

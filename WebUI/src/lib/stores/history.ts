@@ -1,5 +1,5 @@
 /**
- * JS-only undo/redo (spec §8): one snapshot per completed gesture, capped at 100.
+ * JS-only undo/redo: one snapshot per completed gesture, capped at 100.
  * Applying a snapshot writes through the bridge, so the DSP follows.
  */
 

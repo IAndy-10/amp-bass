@@ -186,7 +186,7 @@ private:
     static constexpr float kVoicingHighHz = 5906.0f, kVoicingHighQ = 0.69f, kVoicingHighDb = 6.08f;
     static constexpr float kVoicingGain   = 0.6485f;  // -3.76 dB
 
-    // The knobs' tapers are curved, so each is measured densely (step 11.3): the filter is fitted to the reference at
+    // The knobs' tapers are curved, so each is measured densely: the filter is fitted to the reference at
     // every 0.25 of the knob and tabulated every 0.5 (bass, mid) or 0.25 (treble, whose shape changes fastest near 0
     // and 10). Between table points the error stays within ~1 dB (2.3 dB at treble 0.125).
 

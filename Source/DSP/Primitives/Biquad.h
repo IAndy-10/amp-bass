@@ -67,7 +67,7 @@ private:
     float gainDb = 0.0f;
 
     // Coefficients (normalized: a0 = 1). Double precision: in float, low-frequency sections fall into
-    // limit cycles (a steady ~-90 dB pattern near 14 Hz on a 3 kHz tone, sound-matching plan 6.6).
+    // limit cycles (a steady ~-90 dB pattern near 14 Hz on a 3 kHz tone).
     double b0 = 1.0, b1 = 0.0, b2 = 0.0;
     double a1 = 0.0, a2 = 0.0;
 

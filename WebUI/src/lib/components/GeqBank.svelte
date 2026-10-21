@@ -3,7 +3,7 @@
 	import type { GeqKey } from '$lib/stores/amp';
 	import GeqSlider from './GeqSlider.svelte';
 
-	// Positions in plugin reference px (spec §2.4).
+	// Positions in plugin reference px.
 	const TRACK_Y = 357;
 	const BANDS: { key: GeqKey; caption: string; x: number }[] = [
 		{ key: 'geq33', caption: '33Hz', x: 1614 },

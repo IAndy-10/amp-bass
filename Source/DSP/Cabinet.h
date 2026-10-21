@@ -9,7 +9,7 @@
 /// 0.3 dB), so it is a cascade of biquads fitted to its magnitude response: a 4x10 with a broad dip around 400 Hz,
 /// a lift at 3-5 kHz and a steep roll-off above 10 kHz. The horn adds 3-7 dB between 3 and 9 kHz and takes ~1.5 dB
 /// off below 1 kHz. Like the amp's top end, the reference's cabinet changes with the sample rate above ~5 kHz, so
-/// each rate family has its own fit (sound-matching plan step 12).
+/// each rate family has its own fit.
 /// Switching the cabinet or the horn crossfades linearly over 50 ms (the paths are correlated, so no level dip).
 class Cabinet
 {
@@ -106,7 +106,7 @@ private:
     // Fitted per rate to the reference at 1/24-octave resolution (cabinet effect = Rec Chain 20 minus cabinet bypass;
     // horn effect = horn on minus off), 25 Hz-20 kHz. The narrow dips of its two-microphone mix (-8 dB at 2.4 kHz, -14 dB
     // at 4 kHz with the horn) need the narrow peaks. After 1/6-octave averaging, within 0.4 dB (cabinet) and 1.1 dB
-    // (horn) to 12 kHz (build-tests/compare/cab/fitcab.py). Individual stages trade large opposite gains; only the
+    // (horn) to 12 kHz. Individual stages trade large opposite gains; only the
     // whole cascade is meaningful.
     static constexpr Voicing k441 {
         -13.38f,

@@ -1,5 +1,5 @@
 /**
- * Display-unit view over the bridge stores (spec §8).
+ * Display-unit view over the bridge stores.
  *
  * Holds no parameter values of its own: everything is derived from
  * `sliders` / `toggles` / `combos` in state/store.ts and every write goes
@@ -29,7 +29,7 @@ export const GEQ_KEYS: readonly GeqKey[] = [
 ];
 export const FLAG_KEYS: readonly FlagKey[] = ['bright', 'inputPad', 'ultraHi', 'ultraLo', 'mute', 'geqOn', 'bypass'];
 
-/** Faceplate / tooltip labels. `geq8k` is printed 9k (ID frozen, spec §7.5). */
+/** Faceplate / tooltip labels. `geq8k` is printed 9k (ID frozen). */
 export const LABELS: Record<NumericKey | FlagKey, string> = {
     gain: 'GAIN', bass: 'BASS', midrange: 'MIDRANGE', treble: 'TREBLE', master: 'MASTER', tubeGain: 'TUBE GAIN',
     geq33: 'GEQ 33 Hz', geq80: 'GEQ 80 Hz', geq150: 'GEQ 150 Hz', geq300: 'GEQ 300 Hz', geq600: 'GEQ 600 Hz',
@@ -40,7 +40,7 @@ export const LABELS: Record<NumericKey | FlagKey, string> = {
 export const MID_FREQ_HZ = ['220 Hz', '450 Hz', '800 Hz', '1.6 kHz', '3 kHz'] as const;
 export const MID_FREQ_DEFAULT_POS = 1; // reference default (ParameterLayout.h)
 
-/** Double-click / "Set to default" values in display units (spec §8). Must match ParameterLayout.h. */
+/** Double-click / "Set to default" values in display units. Must match ParameterLayout.h. */
 export const DEFAULTS: Record<NumericKey, number> = {
     gain: 3.4, bass: 5, midrange: 5, treble: 5, master: 5, tubeGain: 5,
     geq33: 0, geq80: 0, geq150: 0, geq300: 0, geq600: 0,
@@ -57,7 +57,7 @@ function isKnob(key: NumericKey): key is KnobKey {
     return (KNOB_KEYS as readonly string[]).includes(key);
 }
 
-/** Display range. dB ranges come from the relay (spec §7.5); the fallback
+/** Display range. dB ranges come from the relay; the fallback
  *  covers dev mode and the moment before JUCE sends the real properties. */
 export function rangeOf(key: NumericKey): Range {
     if (isKnob(key)) return KNOB_RANGE;

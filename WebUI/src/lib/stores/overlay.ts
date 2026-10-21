@@ -1,4 +1,4 @@
-/** Shared tooltip and context-menu state (spec §9 Tooltip / ContextMenu, §10). */
+/** Shared tooltip and context-menu state. */
 
 import { writable } from 'svelte/store';
 import { nativeFunction } from '../../bridge/bridge';

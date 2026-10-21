@@ -8,7 +8,7 @@
 	const bypass = toggles.bypass;
 	const active = $derived(!$bypass);
 
-	// Copy, Paste, Reset and About are visual stubs in this build (spec §0, §4):
+	// Copy, Paste, Reset and About are visual stubs in this build:
 	// they render and focus but do nothing. The A-D settings slots are replaced
 	// by the named presets (PresetBar). FX Rack opens the FxRack panel.
 	const STUBS = [

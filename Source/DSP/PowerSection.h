@@ -45,7 +45,7 @@ public:
         envelope = OnePole::lowPass (kEnvelopeHz, sampleRate);
         dcBlock = OnePole::highPass (kDcBlockHz, sampleRate);
 
-        smoothTube.reset (sampleRate, 0.2);     // 200 ms: the bias moves the operating point; faster glides thump (plan 7.1)
+        smoothTube.reset (sampleRate, 0.2);     // 200 ms: the bias moves the operating point; faster glides thump
         smoothTube.setCurrentAndTargetValue (smoothTube.getTargetValue());
 
         reset();
@@ -167,7 +167,7 @@ private:
     static constexpr float kEmphasisDb   = 7.9087f;
     // Fixed output low-pass, fitted together with the tone-stack voicing (-4 dB at 10 kHz, -19 dB at 20 kHz at 48 kHz).
     // The reference's top octave depends on the sample rate (at 88.2 kHz and up it is ~5 dB darker at 14-16 kHz),
-    // so each rate family has its own fit to the reference's change from 48 kHz (plan 8.1).
+    // so each rate family has its own fit to the reference's change from 48 kHz.
     struct LowPass { float hz, q; };
     static constexpr LowPass kOutputLowPass48  { 14602.0f, 0.382f };
     static constexpr LowPass kOutputLowPass441 { 21098.2f, 0.05f };    // f near Nyquist: reads as the 48 kHz design

@@ -1,5 +1,5 @@
 /**
- * Vertical pointer drag with pointer capture (spec §9, §10).
+ * Vertical pointer drag with pointer capture.
  *
  * Reports the accumulated vertical distance in screen px (up = positive),
  * with Shift making movement 10× finer. Components combine it with the value

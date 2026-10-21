@@ -8,7 +8,7 @@
 	import PowerSwitch from './PowerSwitch.svelte';
 	import GeqBank from './GeqBank.svelte';
 
-	// Every position is a centre point in plugin reference px (spec §2.4).
+	// Every position is a centre point in plugin reference px.
 	const KNOB_Y = 380;
 	const CAPTION_Y = 292;
 	const NUMERAL_Y = 435;

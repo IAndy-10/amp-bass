@@ -1,6 +1,6 @@
 /**
  * Toolbar presets, named like the reference's four factory presets. Only those with values are active;
- * the reference's own R&B / Rock / Synth / Upright values aren't known yet (sound-matching plan 10.1).
+ * the others have no values yet.
  */
 
 import type { PresetValues } from './stores/amp';
@@ -12,9 +12,8 @@ export interface Preset {
     note: string;
 }
 
-/** The settings that reproduce build-tests/Bass for testing amp - Ampeg version.wav in the reference
- *  (search on the reference, null -45 dB, 2026-10-20), with the reference's FX Rack defaults (gate included) and Input 0 dB. */
-const AMPEG_FILE_MATCH: PresetValues = {
+/** R&B: the settings of the developer's bass test recording, with the FX Rack at its defaults and Input 0 dB. */
+const RNB: PresetValues = {
     numeric: {
         gain: 3.4, tubeGain: 3.9, bass: 7, midrange: 6.75, treble: 7, master: 6.4,
         geq33: 0, geq80: 6.9, geq150: 2.7, geq300: 0, geq600: 0, geq900: 1.9, geq2k: 2.8, geq5k: 3.5, geq8k: 0,
@@ -27,7 +26,7 @@ const AMPEG_FILE_MATCH: PresetValues = {
 };
 
 export const PRESETS: readonly Preset[] = [
-    { name: 'R&B', values: AMPEG_FILE_MATCH, note: 'Settings of the Ampeg test file (Bass for testing amp)' },
+    { name: 'R&B', values: RNB, note: 'Settings from a bass test recording' },
     { name: 'Rock', values: null, note: 'Not set yet' },
     { name: 'Synth', values: null, note: 'Not set yet' },
     { name: 'Upright', values: null, note: 'Not set yet' },

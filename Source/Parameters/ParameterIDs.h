@@ -41,7 +41,7 @@ namespace ParameterIDs
     // Global dry/wet mix
     static constexpr const char* dryWet        = "dryWet";
 
-    // Phase 2 — Preset selection
+    // Preset selection (no function yet)
     static constexpr const char* presetSelect  = "presetSelect";
 
     // Output switches (faceplate POWER / toolbar power icon = bypass)

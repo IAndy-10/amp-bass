@@ -1,4 +1,4 @@
-/** Right-click context menu (spec §10): Set to default, Copy value, Paste value. */
+/** Right-click context menu: Set to default, Copy value, Paste value. */
 
 import type { Action } from 'svelte/action';
 import { menu as menuStore, copyText, pasteText, flashTooltip, type MenuItem } from '../stores/overlay';

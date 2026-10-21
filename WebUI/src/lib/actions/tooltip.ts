@@ -1,6 +1,6 @@
 /**
  * Hover tooltip: shows after 350 ms of hover, immediately while `active`
- * (dragging), and follows `text` updates (spec §10).
+ * (dragging), and follows `text` updates.
  */
 
 import type { Action } from 'svelte/action';
