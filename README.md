@@ -8,7 +8,7 @@ the amp's owner's manual and schematics; the constants are fitted to measured re
 
 Ampeg and SVT are trademarks of their owner. This project is not affiliated with or endorsed by Ampeg.
 
-Version 1.0.0, by Epica Audio. VST3, AU and Standalone on macOS.
+Version 1.1.0, by Epica Audio. VST3, AU and Standalone on macOS.
 
 ## User interface
 

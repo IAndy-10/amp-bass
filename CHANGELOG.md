@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-10-21
 - EPIC-AMP-1 bass amplifier (VST3, AU, Standalone): preamp with Bright, Ultra Hi and Ultra Lo, a 3-band tone stack
   with a 5-position mid frequency, a 9-band graphic EQ and a tube-style power stage with Tube Gain.
 - 4x10 cabinet with horn, on by default.
