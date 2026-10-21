@@ -646,12 +646,15 @@ D13.5 not asked: (a) README and (b) local backup only (the user declined committ
 
 Steps (one commit each, `chore:` / `docs:` / `test:` / `refactor:`):
 
-- [ ] **13.1 Archive.** Copy everything local-only that is worth keeping to a backup outside the repo: `build-tests/compare/`
+- [x] **13.1 Archive.** *(2026-10-21: `../amp-bass-archive/` (339 MB: scripts, fit/summary JSON, report, listening
+  pairs, the user's test WAVs, local docs, `package-release.sh`; renders and self-test renders left out, re-creatable);
+  tag `sound-matching-archive` on 8f7491d, local until the user says to push.)* Copy everything local-only that is worth keeping to a backup outside the repo: `build-tests/compare/`
   without renders (fit scripts, fit `.json`, `summary-*.json`, `report/`), `build-tests/*.wav` (the user's test files),
   `docs/research/`, `docs/ui/`, `docs/decision-log.md`, `docs/findings.md`. Then make an annotated tag
   `sound-matching-archive` on the last commit that still has the harness and this plan, and push it. Check
   `git show sound-matching-archive:docs/sound-matching-plan.md` works.
-- [ ] **13.2 Backlog.** Close or move every open `BACKLOG.md` item to a GitHub issue (P1 DAW checks first: they are
+- [ ] **13.2 Backlog.** *(2026-10-21, in progress: `dryWet` smoothed and in the FX Rack panel; `inputHiLo` removed,
+  stateVersion 7; the test items went with `Tests/`. Open: GitHub issues (user to confirm), `presetSelect`, `npm install`.)* Close or move every open `BACKLOG.md` item to a GitHub issue (P1 DAW checks first: they are
   release blockers, not notes). Items that change code are done as normal fixes before this step ends: `dryWet`
   smoothing or removal, hidden `inputHiLo` / `dryWet` / `presetSelect` (hide, wire up or document), the DSP test that
   runs at Gain 0, the `Chain` mirror in `DSPTests.cpp`, `npm install` on every build, idle coefficient updates.
@@ -666,7 +669,7 @@ Steps (one commit each, `chore:` / `docs:` / `test:` / `refactor:`):
   `presets.ts`, "Ampeg SVT-3 PRO" in `ParameterLayout.h`'s comment ("the reference plugin" or plain units). Check
   with `git grep -niE "ampeg|svt|brainworx|plugin alliance" -- Source WebUI/src CMakeLists.txt`. The README may name
   the inspiration only if the user wants that.
-- [ ] **13.5 Tests** (D13.2). Delete `Tests/compare/` and `Tests/HostRender.cpp` and their target in
+- [x] **13.5 Tests** (D13.2). *(2026-10-21: option (b), `Tests/` removed with the CMake option; DSP tests 0 FAIL at the tag.)* Delete `Tests/compare/` and `Tests/HostRender.cpp` and their target in
   `Tests/CMakeLists.txt`. Register `AmpBassDSPTests` with `enable_testing()` / `add_test()` so `ctest --test-dir
   build-tests` runs it; rename the option text to "Build unit tests". Remove checks that only make sense against the
   reference renders. Still 0 FAIL.
