@@ -33,6 +33,7 @@
 		onclick={() => setFlag(key, !$flag)}
 		use:tooltip={{ text: `${label} ${$flag ? 'On' : 'Off'}` }}
 		use:menu={{
+			param: key,
 			reset: () => setFlag(key, false),
 			copy: () => (getFlag(key) ? 'on' : 'off'),
 			paste: (t) => {
@@ -52,7 +53,7 @@
 		height: calc(30 * var(--u));
 	}
 	/* LED sits 43 ref px left of the button centre; the row is ~40 px above
-	   or ~37 px below the button (spec §2.4). */
+	   or ~37 px below the button. */
 	.legend {
 		position: absolute;
 		left: calc(-22 * var(--u));

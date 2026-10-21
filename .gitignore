@@ -1,33 +1,28 @@
-# Building process toolkit (used to generate the plugin, not part of the plugin itself)
+# Local development notes and material (kept on disk, not in the repository)
 building-process/
+docs/
+BACKLOG.md
+CLAUDE.md
+WebUI/CLAUDE.md
+.claude/
+package-release.sh
 
-# Documentation (generated during research phase)
-docs/*
-!docs/how-ampbass-works.md
-
-# macOS
-.DS_Store
-
-# CMake build output
+# Build output
 build/
-build-tests/
+build-*/
 cmake-build-*/
-
-# JUCE generated
 Builds/
 JuceLibraryCode/
-
-# IDE
-.vs/
-.vscode/
-*.xcodeproj/
-*.xcworkspace/
 
 # Node (WebUI)
 node_modules/
 dist/
+*.tsbuildinfo
 
-# Compiled objects
+# Plugin binaries and compiled objects
+*.vst3
+*.component
+*.aax
 *.o
 *.obj
 *.a
@@ -36,11 +31,22 @@ dist/
 *.so
 *.dll
 
-# Plugin binaries
-*.vst3
-*.component
-*.aax
-package-release.sh
+# Audio files
+*.wav
+*.aif
+*.aiff
+*.flac
 
-# Python
-__pycache__/
+# OS and IDE
+.DS_Store
+.idea/
+.vscode/
+.vs/
+.cache/
+compile_commands.json
+*.xcodeproj/
+*.xcworkspace/
+
+# Logs and secrets
+*.log
+.env

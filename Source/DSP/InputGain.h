@@ -3,6 +3,8 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 
+/// Stage 1: input level. The reference's Input knob (-20 ... +20 dB, a pure gain before everything: renders null to
+/// -110 dB against the same input scaled) and the faceplate's -15 dB pad.
 class InputGain
 {
 public:
@@ -17,11 +19,10 @@ public:
         smoothedGain.setCurrentAndTargetValue (smoothedGain.getTargetValue());
     }
 
-    void setParams (bool padOn, bool hiInput)
+    void setParams (bool padOn, float inputDb = 0.0f)
     {
-        const float padGain   = padOn   ? 0.17783f : 1.0f;  // -15dB or unity
-        const float inputGain = hiInput ? 1.0f     : 0.50119f; // HI or LO (-6dB)
-        smoothedGain.setTargetValue (padGain * inputGain);
+        const float padGain = padOn ? 0.17783f : 1.0f;  // -15dB or unity
+        smoothedGain.setTargetValue (padGain * juce::Decibels::decibelsToGain (juce::jlimit (-20.0f, 20.0f, inputDb)));
     }
 
     void process (juce::AudioBuffer<float>& buffer)

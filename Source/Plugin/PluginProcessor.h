@@ -8,6 +8,11 @@
 #include "../DSP/GraphicEQ.h"
 #include "../DSP/MasterVolume.h" 
 #include "../DSP/PowerSection.h"
+#include "../DSP/Cabinet.h"
+#include "../DSP/Tight.h"
+#include "../DSP/Smooth.h"
+#include "../DSP/PowerSoak.h"
+#include "../DSP/NoiseGate.h"
 #include "../DSP/OutputSwitch.h"
 #include "../DSP/Primitives/DryWetMixer.h"
 
@@ -49,7 +54,7 @@ public:
     std::atomic<bool> peakFlag { false };
 
 private:
-    // ── DSP chain (7 stages) ──
+    // ── DSP chain (8 stages) ──
     InputGain     inputGain;
     PreFilters    preFilters;
     TubePreamp    tubePreamp;
@@ -57,19 +62,23 @@ private:
     GraphicEQ     graphicEQ;
     MasterVolume  masterVolume;
     PowerSection  powerSection;
+    Cabinet       cabinet;
+    Tight         tightPre, tightPost;   // FX Rack Tight, before the amp / after the power stage
+    Smooth        smoothPre, smoothPost; // FX Rack Smooth, same places
+    PowerSoak     powerSoak;
+    NoiseGate     noiseGate;             // FX Rack Noise Gate: hears the input, acts on the amp's output
     DryWetMixer   dryWetMixer;
     OutputSwitch  outputSwitch;
 
     // PEAK/MUTE LED thresholds (see processBlock)
     static constexpr float kPeakInput     = 0.98f; // raw input near full scale
-    static constexpr float kPeakDrive     = 4.0f;  // preamp drive, tanh(4) = 0.999
+    static constexpr float kPeakDrive     = 1.0f;  // preamp output at full scale (Gain too high)
     static constexpr float kPeakPreMaster = 1.0f;  // after tone stack + GEQ
 
     int preparedBlockSize = 512;   // max sub-block size passed to the DSP stages
 
     // ── Cached parameter pointers (set once in constructor) ──
     std::atomic<float>* paramInputPad   = nullptr;
-    std::atomic<float>* paramInputHiLo  = nullptr;
     std::atomic<float>* paramBright     = nullptr;
     std::atomic<float>* paramUltraHi    = nullptr;
     std::atomic<float>* paramUltraLo    = nullptr;
@@ -94,6 +103,17 @@ private:
     std::atomic<float>* paramDryWet     = nullptr;
     std::atomic<float>* paramBypass     = nullptr;
     std::atomic<float>* paramMute       = nullptr;
+    std::atomic<float>* paramCabinet    = nullptr;
+    std::atomic<float>* paramHorn       = nullptr;
+    std::atomic<float>* paramTight      = nullptr;
+    std::atomic<float>* paramTightFreq  = nullptr;
+    std::atomic<float>* paramPowerSoak  = nullptr;
+    std::atomic<float>* paramSmooth     = nullptr;
+    std::atomic<float>* paramSmoothFreq = nullptr;
+    std::atomic<float>* paramInputGain  = nullptr;
+    std::atomic<float>* paramGate       = nullptr;
+    std::atomic<float>* paramGateThreshold = nullptr;
+    std::atomic<float>* paramGateRange  = nullptr;
 
     void updateDSPParameters();
 

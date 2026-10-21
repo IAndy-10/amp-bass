@@ -1,9 +1,12 @@
-/** Right-click context menu (spec §10): Set to default, Copy value, Paste value. */
+/** Right-click context menu: Set to default, Copy value, Paste value. */
 
 import type { Action } from 'svelte/action';
 import { menu as menuStore, copyText, pasteText, flashTooltip, type MenuItem } from '../stores/overlay';
+import { nativeFunction } from '../../bridge/bridge';
 
 export interface ValueMenuParams {
+    /** Parameter ID: a VST3 host adds its own items for it (e.g. Ableton's Show Automation). */
+    param: string;
     /** Restore the default value. */
     reset: () => void;
     /** Displayed value as text. */
@@ -29,7 +32,21 @@ export const menu: Action<HTMLElement, ValueMenuParams> = (node, params) => {
     let p = params;
     const open = (e: MouseEvent) => {
         e.preventDefault();
-        menuStore.set({ x: e.clientX, y: e.clientY, items: valueMenuItems(node, p) });
+        const items = valueMenuItems(node, p);
+        const showOwn = () => menuStore.set({ x: e.clientX, y: e.clientY, items });
+        // The plugin shows one native menu with the host's items and ours, and answers with the index of
+        // ours that was picked (-1 = none), or false when the host has no menu for parameters.
+        const showWithHost = nativeFunction('showParameterMenu');
+        if (!showWithHost) return showOwn();
+        showWithHost(p.param, items.map((i) => i.label))
+            .then((picked) => {
+                if (picked === false) showOwn();
+                else if (typeof picked === 'number' && picked >= 0) void items[picked]?.action();
+            })
+            .catch((err) => {
+                console.warn('[menu] host parameter menu failed, showing the plugin menu', err);
+                showOwn();
+            });
     };
     node.addEventListener('contextmenu', open);
     return {

@@ -47,17 +47,27 @@ private:
 
     // --- Bool parameter relays (toggle buttons) ---
     juce::WebToggleButtonRelay inputPadRelay  { "inputPad" };
-    juce::WebToggleButtonRelay inputHiLoRelay { "inputHiLo" };
     juce::WebToggleButtonRelay brightRelay    { "bright" };
     juce::WebToggleButtonRelay ultraHiRelay   { "ultraHi" };
     juce::WebToggleButtonRelay ultraLoRelay   { "ultraLo" };
     juce::WebToggleButtonRelay geqOnRelay     { "geqOn" };
     juce::WebToggleButtonRelay bypassRelay    { "bypass" };
     juce::WebToggleButtonRelay muteRelay      { "mute" };
+    juce::WebToggleButtonRelay cabinetRelay   { "cabinet" };
+    juce::WebToggleButtonRelay hornRelay      { "horn" };
+    juce::WebToggleButtonRelay gateRelay      { "gate" };
 
     // --- Int parameter relays (combo box / selector) ---
     juce::WebSliderRelay midFreqRelay        { "midFreq" };
     juce::WebSliderRelay presetSelectRelay   { "presetSelect" };
+    juce::WebSliderRelay tightRelay          { "tight" };
+    juce::WebSliderRelay tightFreqRelay      { "tightFreq" };
+    juce::WebSliderRelay powerSoakRelay      { "powerSoak" };
+    juce::WebSliderRelay smoothRelay         { "smooth" };
+    juce::WebSliderRelay smoothFreqRelay     { "smoothFreq" };
+    juce::WebSliderRelay inputGainRelay      { "inputGain" };
+    juce::WebSliderRelay gateThresholdRelay  { "gateThreshold" };
+    juce::WebSliderRelay gateRangeRelay      { "gateRange" };
 
     // --- Parameter attachments (own gesture begin/end) ---
     // Stored as unique_ptrs because they're constructed after APVTS is ready.
@@ -81,16 +91,26 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment> dryWetAttach;
 
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> inputPadAttach;
-    std::unique_ptr<juce::WebToggleButtonParameterAttachment> inputHiLoAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> brightAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> ultraHiAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> ultraLoAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> geqOnAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> bypassAttach;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> muteAttach;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> cabinetAttach;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> hornAttach;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> gateAttach;
 
     std::unique_ptr<juce::WebSliderParameterAttachment> midFreqAttach;
     std::unique_ptr<juce::WebSliderParameterAttachment> presetSelectAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> tightAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> tightFreqAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> powerSoakAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> smoothAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> smoothFreqAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> inputGainAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> gateThresholdAttach;
+    std::unique_ptr<juce::WebSliderParameterAttachment> gateRangeAttach;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NativeBridge)
 };

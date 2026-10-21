@@ -1,4 +1,4 @@
-/* Design tokens — spec §3.1 (colors) and §3.2 (type). Sizes are in reference px × --u. */
+/* Design tokens. Sizes are in reference px × --u. */
 :root {
     --ink-strong: #f2f2f2;
     --ink-soft: #cdd0d4;
@@ -37,7 +37,7 @@ body {
     font-family: var(--font-ui);
 }
 
-/* Shared caption style: control captions (§3.2). */
+/* Shared caption style: control captions. */
 .caption {
     font-family: var(--font-ui);
     /* Spec says 28; the reference reads closer to 24 and 28 makes MIDRANGE
@@ -60,7 +60,7 @@ body {
     line-height: 1;
 }
 
-/* Absolute placement at a reference-pixel centre point (§2.3). */
+/* Absolute placement at a reference-pixel centre point. */
 .at {
     position: absolute;
     left: calc(var(--x) * var(--u));

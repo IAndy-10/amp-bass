@@ -4,9 +4,11 @@
 	import Faceplate from './Faceplate.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import ContextMenu from './ContextMenu.svelte';
+	import FxRack from './FxRack.svelte';
+	import { fxRackOpen } from '$lib/stores/overlay';
 	import { undo, redo } from '$lib/stores/history';
 
-	// Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo (spec §10).
+	// Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo.
 	function onKeydown(e: KeyboardEvent) {
 		if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z') return;
 		e.preventDefault();
@@ -23,6 +25,9 @@
 		<Chassis>
 			<Faceplate />
 		</Chassis>
+		{#if $fxRackOpen}
+			<FxRack />
+		{/if}
 	</div>
 </div>
 
@@ -30,7 +35,7 @@
 <ContextMenu />
 
 <style>
-	/* Spec §2: 2562 × 558 canvas, capped at 1800 px, scrolls below 960 px. */
+	/* 2562 × 558 reference-pixel canvas, capped at 1800 px, scrolls below 960 px. */
 	.stage {
 		container-type: inline-size;
 		width: 100%;

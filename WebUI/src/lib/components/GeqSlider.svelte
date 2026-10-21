@@ -100,7 +100,7 @@
 		onStart: () => {
 			dragging = true;
 			startValue = getNumeric(key);
-			// Full span of the track = full range (spec §10).
+			// Full span of the track = full range.
 			trackPx = el.getBoundingClientRect().height || 1;
 			beginGesture(key);
 		},
@@ -115,6 +115,7 @@
 	}}
 	use:tooltip={{ text: `${label} ${valueText}`, active: dragging }}
 	use:menu={{
+		param: key,
 		reset,
 		copy: () => formatValue(key, getNumeric(key)),
 		paste: (t) => {

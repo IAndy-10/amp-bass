@@ -19,12 +19,15 @@ import type { SliderParamId, ToggleParamId, ComboParamId } from '../types/parame
 const comboChoiceCount: Record<ComboParamId, number> = {
     midFreq: 5,
     presetSelect: 4,
+    tight: 3,
+    smooth: 3,
 };
 
 // check_native_interop.js installs a placeholder window.__JUCE__ outside the
 // plugin, so check that the backend actually registered each relay.
-function backendHas(kind: '__juce__sliders' | '__juce__toggles', id: string): boolean {
-    return window.__JUCE__?.initialisationData?.[kind]?.includes(id) ?? false;
+function backendHas(kind: '__juce__sliders' | '__juce__toggles' | '__juce__functions', id: string): boolean {
+    const ids: unknown = window.__JUCE__?.initialisationData?.[kind];
+    return Array.isArray(ids) && ids.includes(id);
 }
 
 let warnedNoBackend = false;
@@ -152,4 +155,11 @@ export function onPeakChanged(cb: (lit: boolean) => void): () => void {
     if (!backend) return () => {};
     const token = backend.addEventListener('peak', (payload) => cb(payload === true));
     return () => backend.removeEventListener(token);
+}
+
+// --- Native functions (registered with withNativeFunction in PluginEditor.cpp) ---
+
+/** The C++ function, or null outside the plugin (dev mode). */
+export function nativeFunction(name: string): ((...args: unknown[]) => Promise<unknown>) | null {
+    return backendHas('__juce__functions', name) ? Juce.getNativeFunction(name) : null;
 }

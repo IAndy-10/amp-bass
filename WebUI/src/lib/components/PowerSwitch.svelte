@@ -5,7 +5,7 @@
 	import { menu, parseFlag } from '$lib/actions/menu';
 	import Led from './Led.svelte';
 
-	// POWER = !bypass (spec §6, §7.3). Same parameter as the toolbar power icon.
+	// POWER = !bypass. Same parameter as the toolbar power icon.
 	const bypass = toggles.bypass;
 	const on = $derived(!$bypass);
 </script>
@@ -23,6 +23,7 @@
 		onclick={() => setFlag('bypass', on)}
 		use:tooltip={{ text: `POWER ${on ? 'On' : 'Off'}` }}
 		use:menu={{
+			param: 'bypass',
 			reset: () => setFlag('bypass', false),
 			copy: () => (on ? 'on' : 'off'),
 			paste: (t) => {

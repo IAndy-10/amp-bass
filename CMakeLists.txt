@@ -33,7 +33,8 @@ option(AMPBASS_COPY_PLUGIN "Copy built plugins to the system plugin folders" ON)
 # ============================================================
 
 juce_add_plugin(AmpBass
-    COMPANY_NAME "YourCompany"
+    COMPANY_NAME "Epica Audio"
+    BUNDLE_ID com.epicaaudio.AmpBass
     PLUGIN_MANUFACTURER_CODE AMPB
     PLUGIN_CODE AmpB
     FORMATS Standalone VST3 AU
@@ -159,12 +160,3 @@ PUBLIC
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
 )
-
-# ============================================================
-# Diagnostics (DSP tests + offline VST3 host)
-# ============================================================
-
-option(AMPBASS_BUILD_TESTS "Build DSP diagnostics and offline host" OFF)
-if(AMPBASS_BUILD_TESTS)
-    add_subdirectory(Tests)
-endif()

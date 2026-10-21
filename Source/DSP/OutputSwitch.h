@@ -3,15 +3,15 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 
 /// Final stage: plugin bypass (crossfade to the untouched input) and mute
-/// (fade to silence). Both ramp over 10 ms so switching never clicks.
-/// Mute wins over bypass: a muted plugin is silent either way.
+/// (fade to silence). Both ramp linearly over 50 ms, as the reference does, so switching never clicks.
+/// Fully bypassed, the output is the input bit for bit. Mute wins over bypass: a muted plugin is silent either way.
 class OutputSwitch
 {
 public:
     void prepare (double sampleRate, int /*maxBlockSize*/)
     {
-        smoothBypass.reset (sampleRate, 0.01);
-        smoothMuteGain.reset (sampleRate, 0.01);
+        smoothBypass.reset (sampleRate, kRampSeconds);
+        smoothMuteGain.reset (sampleRate, kRampSeconds);
         smoothBypass.setCurrentAndTargetValue (bypassTarget);
         smoothMuteGain.setCurrentAndTargetValue (muteGainTarget);
     }
@@ -43,6 +43,13 @@ public:
             && bypassTarget < 0.5f && muteGainTarget > 0.5f)
             return; // active and unmuted: nothing to do
 
+        if (isFullyBypassed() && ! smoothMuteGain.isSmoothing() && muteGainTarget > 0.5f)
+        {
+            for (int ch = 0; ch < numChannels; ++ch)   // exact input; the crossfade formula rounds
+                buffer.copyFrom (ch, 0, dry, ch, 0, numSamples);
+            return;
+        }
+
         for (int s = 0; s < numSamples; ++s)
         {
             const float b = smoothBypass.getNextValue();
@@ -58,6 +65,8 @@ public:
     }
 
 private:
+    static constexpr double kRampSeconds = 0.05;   // reference: linear, 10-90 % in 43 ms
+
     float bypassTarget   = 0.0f;
     float muteGainTarget = 1.0f;
 

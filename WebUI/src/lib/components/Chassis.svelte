@@ -11,7 +11,7 @@
 	];
 </script>
 
-<!-- Decoration only (spec §5). All positions in plugin reference px. -->
+<!-- Decoration only. All positions in plugin reference px. -->
 <div class="shell" aria-hidden="true">
 	<div class="top-strip"></div>
 	<div class="grip left"></div>
@@ -21,9 +21,7 @@
 	{/each}
 	<span class="at screw" style:--x={1283} style:--y={160} style:--d={28}></span>
 	<span class="at screw" style:--x={1280} style:--y={497} style:--d={24}></span>
-	<!-- Placeholder wordmark: Ampeg is a trademark (spec §12 #14). Swap for a cleared SVG. -->
-	<span class="at wordmark" style:--x={1830} style:--y={145}>Ampeg</span>
-	<span class="at model" style:--x={1826} style:--y={192}>EPIC-AMP-1</span>
+	<span class="at wordmark" style:--x={1830} style:--y={165}>EPIC-AMP-1</span>
 </div>
 
 {@render children?.()}
@@ -99,15 +97,6 @@
 		line-height: 1;
 		color: var(--ink-strong);
 		text-shadow: 0 calc(2 * var(--u)) calc(3 * var(--u)) rgba(0, 0, 0, 0.6);
-		white-space: nowrap;
-	}
-	.model {
-		font-family: var(--font-ui);
-		font-weight: 300;
-		font-size: calc(40 * var(--u));
-		letter-spacing: 0.08em;
-		line-height: 1;
-		color: var(--ink-strong);
 		white-space: nowrap;
 	}
 </style>

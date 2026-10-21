@@ -6,7 +6,6 @@ namespace ParameterIDs
 {
     // Stage 1 — InputGain
     static constexpr const char* inputPad      = "inputPad";
-    static constexpr const char* inputHiLo     = "inputHiLo";
 
     // Stage 2 — PreFilters
     static constexpr const char* bright        = "bright";
@@ -42,10 +41,31 @@ namespace ParameterIDs
     // Global dry/wet mix
     static constexpr const char* dryWet        = "dryWet";
 
-    // Phase 2 — Preset selection
+    // Preset selection (no function yet)
     static constexpr const char* presetSelect  = "presetSelect";
 
     // Output switches (faceplate POWER / toolbar power icon = bypass)
     static constexpr const char* bypass        = "bypass";
     static constexpr const char* mute          = "mute";
+
+    // Stage 8 — Cabinet (after the power stage, like the reference's Rec Chain)
+    static constexpr const char* cabinet       = "cabinet";
+    static constexpr const char* horn          = "horn";
+
+    // FX Rack — Tight (Off / Pre / Post the amp) and Power Soak (output attenuation)
+    static constexpr const char* tight         = "tight";
+    static constexpr const char* tightFreq     = "tightFreq";
+    static constexpr const char* powerSoak     = "powerSoak";
+
+    // Stage 1 — input level knob like the reference's Input (-20 ... +20 dB), appended to keep the order
+    static constexpr const char* inputGain     = "inputGain";
+
+    // FX Rack — Smooth (Off / Pre / Post the amp: a gentle low-pass, 3-35 kHz)
+    static constexpr const char* smooth        = "smooth";
+    static constexpr const char* smoothFreq    = "smoothFreq";
+
+    // FX Rack — Noise Gate (listens to the input, turns the amp's output down below the threshold)
+    static constexpr const char* gate          = "gate";
+    static constexpr const char* gateThreshold = "gateThreshold";
+    static constexpr const char* gateRange     = "gateRange";
 }
